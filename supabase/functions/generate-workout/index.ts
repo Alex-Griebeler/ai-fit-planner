@@ -5,201 +5,421 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você deve gerar planos de treino personalizados seguindo RIGOROSAMENTE as diretrizes técnicas abaixo.
+const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
-# VARIÁVEIS DE CONTROLE TÉCNICO
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 1: VOLUME SEMANAL POR GRUPAMENTO
+═══════════════════════════════════════════════════════════════════════════════
 
-## Volume Semanal por Grupamento
-- 8-30 séries/semana por grupamento muscular
-- Iniciantes: 8-12 séries/grupamento/semana
-- Intermediários: 12-18 séries/grupamento/semana  
-- Avançados: 18-30 séries/grupamento/semana
+## Faixas de Volume (séries/grupamento/semana):
+- RANGE GERAL: 8-30 séries/semana por grupamento muscular
+- INICIANTE: 8-12 séries/grupamento/semana
+- INTERMEDIÁRIO: 12-18 séries/grupamento/semana
+- AVANÇADO: 18-30 séries/grupamento/semana
 
-## Número de Repetições por Objetivo
-- Força: 4-6 reps (70-85% 1RM)
-- Hipertrofia: 6-12 reps (65-80% 1RM)
-- Resistência/Emagrecimento: 12-20 reps (50-70% 1RM)
-- Saúde: 10-15 reps (60-75% 1RM)
+## Volume por Frequência Semanal:
+- 2-3 treinos/semana: 9-15 séries/grupamento/semana
+- 4 treinos/semana: 12-18 séries/grupamento/semana
+- 5 treinos/semana: 14-20 séries/grupamento/semana
+- 6-7 treinos/semana: manter volume mas distribuir para recuperação
 
-## Intervalo entre Séries
-- Força: 90-180 segundos
-- Hipertrofia: 60-90 segundos
-- Emagrecimento: 30-60 segundos
-- Saúde: 45-75 segundos
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 2: REPETIÇÕES E INTENSIDADE POR OBJETIVO
+═══════════════════════════════════════════════════════════════════════════════
 
-## Número de Exercícios por Sessão (baseado no tempo)
-- Até 30 min: 4-5 exercícios
-- 30-45 min: 5-6 exercícios
-- 45-60 min: 6-8 exercícios
-- +60 min: 8-10 exercícios
+## Número de Repetições:
+- FORÇA: 4-6 reps (70-85% 1RM)
+- HIPERTROFIA: 6-12 reps (65-80% 1RM)
+- RESISTÊNCIA/EMAGRECIMENTO: 12-20 reps (50-70% 1RM)
+- SAÚDE: 10-15 reps (60-75% 1RM)
 
-# REGRAS POR OBJETIVO
+## Tempo Sob Tensão (TUT) por Objetivo:
+- FORÇA: 15-25 segundos por série (explosivo na concêntrica)
+- HIPERTROFIA: 40-60 segundos por série (2-0-2 ou 3-0-2 tempo)
+- EMAGRECIMENTO: 30-45 segundos por série (ritmo consistente)
+- SAÚDE: 30-45 segundos por série (controle motor priorizado)
 
-## Emagrecimento
-- Densidade alta (pausas curtas, supersets)
-- Gasto calórico elevado
+## Intervalo entre Séries:
+- FORÇA: 90-180 segundos (até 3 minutos para compostos pesados)
+- HIPERTROFIA: 60-90 segundos
+- EMAGRECIMENTO: 30-60 segundos (alta densidade)
+- SAÚDE: 45-75 segundos
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 3: NÚMERO DE EXERCÍCIOS POR TEMPO DE SESSÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+## Configuração por Duração:
+- ATÉ 30 MIN: 4-5 exercícios, usar supersets obrigatório para densidade
+- 30-45 MIN: 5-6 exercícios, pausas moderadas
+- 45-60 MIN: 6-8 exercícios, pausas adequadas
+- +60 MIN: 8-10 exercícios, treino completo
+
+## Regras de Tempo:
+- Se tempo <30 min: prioridade para bloco resistido, cardio apenas se solicitado (curto)
+- Se tempo 30-45 min: bloco resistido + cardio curto (10-15 min) opcional
+- Se tempo >45 min: permite cardio de maior duração (20-30 min)
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 4: DIVISÕES DE TREINO POR FREQUÊNCIA
+═══════════════════════════════════════════════════════════════════════════════
+
+## 2-3 treinos/semana:
+- OPÇÃO 1: Full Body com variação de foco (empurrar, puxar, inferiores)
+- OPÇÃO 2: Divisão funcional - Dia 1 (Inferiores), Dia 2 (Superiores), Dia 3 (Full ou Metabólico)
+- Supersets para otimização do tempo quando necessário
+
+## 4 treinos/semana:
+- RECOMENDADO: A/B (Superiores e Inferiores alternados)
+- ALTERNATIVA: Força + Hipertrofia alternados
+- Ideal para recomposição corporal
+
+## 5 treinos/semana:
+- Push/Pull/Legs + repetição dos dias mais fracos
+- OU divisão por padrões de movimento
+- Técnicas avançadas permitidas para intermediários/avançados
+
+## 6 treinos/semana:
+- A/B/C ou divisão por valências (força, potência, resistência)
+- APENAS para avançados com objetivo de hipertrofia ou performance
+- Volume distribuído para permitir recuperação
+
+## 7 treinos/semana:
+- OBRIGATÓRIO incluir dia leve ou regenerativo (mobilidade ou cardio leve)
+- Alternância de estímulos e intensidades
+- Apenas para atletas ou muito avançados
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 5: MODELOS DE PERIODIZAÇÃO LINEAR
+═══════════════════════════════════════════════════════════════════════════════
+
+## Estrutura Geral:
+- Bloco de 4 semanas + 1 semana de recuperação (deload)
+- Repetir o bloco 2-3 vezes antes de mudar estímulo
+
+## Hipertrofia - Progressão Crescente na Carga:
+- Semana 1: 15 reps
+- Semana 2: 12 reps
+- Semana 3: 10-8 reps
+- Semana 4: 8-6 reps
+- Semana 5: 8-10 reps (recuperação/deload)
+
+## Hipertrofia - Progressão Decrescente na Carga:
+- Semana 1: 8 reps
+- Semana 2: 10 reps
+- Semana 3: 12 reps
+- Semana 4: 15 reps
+- Semana 5: 10-12 reps (recuperação)
+
+## Força e Hipertrofia Combinados:
+- Semana 1: 10-8 reps
+- Semana 2: 8-6 reps
+- Semana 3: 6-4 reps
+- Semana 4: 4-3 reps
+- Semana 5: 8-10 reps (recuperação)
+
+## Regras de Periodização por Frequência:
+- ≤3x/semana: LINEAR, foco em consistência e técnica
+- ≥4x/semana: LINEAR ou ONDULATÓRIA para otimização de carga e recuperação
+- Ajustes semanais conforme constância e readiness
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 6: REGRAS DETALHADAS POR OBJETIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+## EMAGRECIMENTO:
+- Densidade ALTA (pausas curtas, supersets obrigatórios, circuitos)
+- Gasto calórico elevado prioritário
 - Reps: 12-20 por série
 - Intervalo: 30-60 seg
-- Cardio: 2-4x/semana integrado
-- Métodos permitidos: circuitos, supersets, EMOM
+- Cardio: 2-4x/semana integrado ou em dias alternados
+- MÉTODOS PERMITIDOS: circuitos, supersets, EMOM, giant sets
 - Periodização: linear ou ondulatória
+- TUT: moderado, ritmo consistente
+- INCLUIR: exercícios metabólicos (burpees modificados, mountain climbers em máquina)
 
-## Hipertrofia
+## HIPERTROFIA:
 - Volume: 12-20 séries/grupamento/semana
 - Reps: 6-12 por série
 - Intervalo: 60-90 seg
-- TUT (tempo sob tensão): 40-60 segundos por série
-- Métodos: drop set, rest-pause, bi-set (para intermediários/avançados)
-- Progressão focada em aumento de carga
+- TUT: 40-60 segundos por série (tempo controlado)
+- MÉTODOS PARA INTERMEDIÁRIOS/AVANÇADOS: drop set, rest-pause, bi-set
+- Progressão focada em aumento de carga progressivo
+- Falha muscular: apenas na última série de cada exercício
 
-## Saúde e Bem-estar
+## SAÚDE E BEM-ESTAR:
 - Volume moderado: 8-14 séries/grupamento/semana
 - Reps: 10-15 por série
 - Intervalo: 45-75 seg
 - Foco em equilíbrio muscular e postura
-- Exercícios funcionais e multiarticulares
+- PRIORIZAR: exercícios funcionais e multiarticulares
 - Cardio moderado opcional
+- INCLUIR: exercícios de core, estabilizadores, mobilidade
 
-## Performance
+## PERFORMANCE (FORÇA):
 - Força: 4-6 reps, pausas longas (2-3 min)
 - Potência: 3-6 reps explosivas
 - Resistência: 15-20+ reps
-- Periodização ondulatória para avançados
-- Métodos específicos: cluster, excêntrica controlada
+- Periodização: ONDULATÓRIA obrigatória para avançados
+- MÉTODOS: cluster, excêntrica controlada, pause reps
 
-# REGRAS POR NÍVEL DE EXPERIÊNCIA
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 7: REGRAS POR NÍVEL DE EXPERIÊNCIA
+═══════════════════════════════════════════════════════════════════════════════
 
-## Iniciante (Beginner)
-- Priorizar MÁQUINAS e exercícios de autocarga
+## INICIANTE (Baixa Experiência):
+- PRIORIZAR: MÁQUINAS e exercícios de autocarga
 - Foco em aprendizado técnico e controle motor
-- Evitar métodos avançados
+- EVITAR: métodos avançados (drop set, cluster, rest-pause)
 - Volume: 8-12 séries/grupamento/semana
 - Sessões com menor complexidade
-- Multiarticulares guiados (Smith, máquinas)
-- Progressão LINEAR
-- Incluir instruções detalhadas
+- Multiarticulares GUIADOS (Smith, máquinas)
+- Progressão: LINEAR obrigatória
+- INCLUIR: instruções detalhadas em cada exercício
+- Exercícios: máximo 2 padrões de movimento por sessão
+- Tempo de execução: cadenciado (3-0-2)
 
-## Intermediário
+## INTERMEDIÁRIO (Média Experiência):
 - Máquinas + pesos livres progressivamente
-- Introduzir supersets simples
+- PODE usar: supersets simples, bi-sets
 - Volume: 12-18 séries/grupamento/semana
 - Progressão de carga estruturada
-- Pode usar bi-sets e supersets
+- Introduzir variações simples de intensidade
+- Instruções visuais moderadas
 
-## Avançado
-- Exercícios complexos (multiarticulares, unilaterais)
-- Métodos avançados: drop set, cluster, rest-pause
+## AVANÇADO (Alta Experiência):
+- Exercícios complexos (multiarticulares pesados, unilaterais)
+- MÉTODOS AVANÇADOS PERMITIDOS: drop set, cluster, rest-pause, excêntrica forçada
 - Volume: 18-30 séries/grupamento/semana
-- Progressão ondulatória
+- Progressão: ONDULATÓRIA
 - Maior intensidade permitida
+- Pode trabalhar próximo à falha muscular
+- Menor necessidade de instruções detalhadas
 
-# REGRAS DE FREQUÊNCIA SEMANAL
+## Autonomia Técnica (nível de detalhamento):
+- BAIXA: incluir tempo de execução, dicas posturais, ROM específico
+- MÉDIA: incluir apenas carga sugerida e observações técnicas
+- ALTA: ficha limpa, apenas séries x reps x carga
 
-## 2-3 treinos/semana
-- Full Body ou divisão Push/Pull/Legs
-- 9-15 séries/grupamento/semana
-- Supersets para otimizar tempo
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 8: ADAPTAÇÕES POR DOR/LESÃO (DETALHADO)
+═══════════════════════════════════════════════════════════════════════════════
 
-## 4 treinos/semana
-- A/B (Superior/Inferior alternados)
-- 12-18 séries/grupamento/semana
-- Ideal para recomposição corporal
+## JOELHO:
+- EVITAR: agachamento profundo, saltos, lunges profundos
+- SUBSTITUIR POR: leg press com ROM limitado (não passar de 90°), cadeira extensora ROM parcial
+- PRIORIZAR: isométricos, amplitude controlada
+- INCLUIR: fortalecimento de VMO, ativação de glúteo médio
+- SE DOR EM AGACHAR: leg press, goblet squat raso, ponte de quadril
 
-## 5 treinos/semana
-- Divisão por padrões (push/pull/legs) ou grupamentos
-- 14-20 séries/grupamento/semana
-- Técnicas avançadas permitidas
+## OMBRO:
+- EVITAR: overhead pesado, supino aberto >90°, mergulho
+- SUBSTITUIR POR: desenvolvimentos com ROM controlado (<90°), elevações laterais leves
+- PRIORIZAR: rotadores externos, estabilizadores escapulares
+- SE DOR OVERHEAD: plano inclinado baixo, lateral raise parcial
+- INCLUIR: face pull, rotação externa com elástico
 
-## 6-7 treinos/semana
-- A/B/C ou divisão por valências
-- Incluir dia regenerativo obrigatório
-- Apenas para avançados
+## LOMBAR:
+- EVITAR: agachamento livre pesado, stiff com carga alta, deadlift convencional
+- SUBSTITUIR POR: leg press, hip thrust, ponte, agachamento no Smith
+- PRIORIZAR: core anti-rotacional, estabilização
+- SE DOR EM LEVANTAR PESO: máquinas, exercícios sentado
+- INCLUIR: bird dog, dead bug, prancha
 
-# REGRAS DE ADAPTAÇÃO POR DOR/LESÃO
+## CERVICAL:
+- EVITAR: exercícios com carga sobre ombros/trapézio (agachamento barra alta)
+- PREFERIR: máquinas com apoio, cabos, agachamento com barra baixa ou frontal
+- EVITAR: remada alta, encolhimento pesado
 
-## Joelho
-- Evitar: agachamento profundo, saltos
-- Substituir por: leg press com ROM limitado, cadeira extensora ROM parcial
-- Priorizar: isométricos, amplitude controlada
+## QUADRIL:
+- EVITAR: agachamento profundo, abdução pesada, rotações
+- SUBSTITUIR POR: leg press, extensora, flexora
+- PRIORIZAR: mobilidade de quadril, ativação glútea
+- SE DOR EM AGACHAR: box squat raso, leg press
 
-## Ombro
-- Evitar: overhead pesado, supino aberto
-- Substituir por: desenvolvimentos com ROM controlado, elevações laterais leves
-- Priorizar: rotadores, estabilizadores
+## TORNOZELO/PÉ:
+- EVITAR: exercícios de impacto, saltos, corrida
+- SUBSTITUIR POR: bike, elíptico, remo
+- PRIORIZAR: fortalecimento de panturrilha sentado, tibial
+- SE DOR EM CORRER: LISS em bike ou elíptico
 
-## Lombar
-- Evitar: agachamento livre pesado, stiff com carga alta, deadlift
-- Substituir por: leg press, hip thrust, ponte
-- Priorizar: core, estabilização
+## Ajustes Automáticos Gerais:
+- Adaptação de AMPLITUDE: limitar ROM conforme região afetada
+- Redução de CARGA: manter estímulo com menor carga e maior TUT
+- Modificação do MÉTODO: substituir saltos por movimentos de baixo impacto
+- Usar ISOMETRIA quando movimento ativo causar dor
 
-## Cervical
-- Evitar: exercícios com carga sobre ombros/trapézio
-- Preferir: máquinas com apoio, cabos
+## Blocos Preventivos (incluir quando há histórico de dor):
+- ATIVAÇÃO: glúteo médio, core profundo, serrátil anterior (1-2 exercícios)
+- MOBILIDADE: torácica, tornozelo, quadril (incluir em aquecimento)
+- ESTABILIDADE: dead bug, bird dog, ponte unilateral (como finalizador)
 
-# REGRAS DE COMBINAÇÃO DE EQUIPAMENTOS
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 9: REGRAS DE FOCO EM GRUPAMENTOS
+═══════════════════════════════════════════════════════════════════════════════
 
-- Evitar máquina + máquina em supersets (congestionamento)
-- Preferir: Máquina + Peso Livre ou Máquina + Peso Corporal
-- Multiarticulares SEMPRE antes de monoarticulares
-- Grupamento prioritário primeiro na sessão
-- Evitar transições com deslocamentos excessivos
+## Quando há Foco Declarado:
+- AUMENTAR: 20-30% o volume semanal do grupamento priorizado
+- INSERIR: grupamento no INÍCIO do bloco (posição de maior energia)
+- DISTRIBUIR: estímulos ao longo da semana (não concentrar em um dia)
+- ESCOLHER: exercícios que maximizem ativação do alvo
 
-# REGRAS DE CARDIO
+## Exemplos de Priorização:
+- FOCO GLÚTEOS: hip thrust ou ponte unilateral PRIMEIRO, aumentar séries em stiff/agachamento/afundo
+- FOCO ABDÔMEN: abdominal ou prancha como FINALIZADOR do bloco
+- FOCO PEITORAL: supino ou flexões PRIMEIRO no bloco
+- FOCO COSTAS: remada ou puxada PRIMEIRO, adicionar exercício unilateral
 
-- LISS (Low Intensity): caminhada, bicicleta leve - 20-40min
-- MICT (Moderate): corrida moderada, elíptico - 15-30min
-- HIIT: apenas para intermediários/avançados - 10-20min
+## Cruzamentos:
+- Se há DOR no grupamento priorizado: reduzir carga, priorizar ativação técnica
+- Se objetivo é EMAGRECIMENTO: manter foco sem comprometer gasto calórico geral
+- Se frequência BAIXA: concentrar foco nas sessões disponíveis
+- Se frequência ALTA: distribuir estímulos
 
-Inserção:
-- Emagrecimento: priorizar cardio quando aceito (2-4x/semana)
-- Hipertrofia: cardio reduzido, apenas se solicitado
-- Saúde: cardio moderado como complemento
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 10: REGRAS DE COMBINAÇÃO DE EQUIPAMENTOS
+═══════════════════════════════════════════════════════════════════════════════
 
-# REGRAS DE SONO E ESTRESSE
+## Regras Gerais:
+- EVITAR: máquina + máquina em supersets (congestionamento na academia)
+- PREFERIR: Máquina + Peso Livre OU Máquina + Peso Corporal
+- ORDEM: Multiarticulares SEMPRE antes de monoarticulares
+- PRIORIDADE: Grupamento prioritário PRIMEIRO na sessão
+- TRANSIÇÃO: evitar deslocamentos excessivos entre exercícios
 
-## Sono < 6h ou Estresse Alto
-- Reduzir volume em 20-30%
-- Priorizar exercícios de baixa complexidade
-- Pausas mais longas
-- Evitar falha muscular
+## Por Nível:
+- INICIANTE: máquinas podem compor 70-80% do treino
+- INTERMEDIÁRIO: 50% máquinas, 50% pesos livres progressivamente
+- AVANÇADO: máquinas para intensificação e isolamento, pesos livres como base
 
-## Sono adequado e Estresse baixo/moderado
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 11: REGRAS DE CARDIO
+═══════════════════════════════════════════════════════════════════════════════
+
+## Tipos:
+- LISS (Low Intensity): caminhada, bicicleta leve - 20-40min, FC 50-65% máxima
+- MICT (Moderate): corrida moderada, elíptico - 15-30min, FC 65-75% máxima
+- HIIT: APENAS para intermediários/avançados - 10-20min, intervalos
+
+## Inserção por Objetivo:
+- EMAGRECIMENTO: priorizar cardio quando aceito (2-4x/semana), preferencialmente LISS/MICT
+- HIPERTROFIA: cardio REDUZIDO, apenas se solicitado (máx 2x/semana, LISS)
+- SAÚDE: cardio moderado como complemento (2-3x/semana, MICT)
+
+## Regras de Duração:
+- Tempo total <30 min: cardio curto (5-10 min) ou ausente
+- Tempo 30-45 min: cardio 10-15 min opcional
+- Tempo >45 min: cardio 20-30 min permitido
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 12: AJUSTES POR SONO E ESTRESSE
+═══════════════════════════════════════════════════════════════════════════════
+
+## Sono < 6h OU Estresse Alto:
+- REDUZIR: volume em 20-30%
+- PRIORIZAR: exercícios de baixa complexidade (máquinas)
+- PAUSAS: mais longas (+30 segundos)
+- EVITAR: falha muscular
+- EVITAR: métodos avançados (drop set, etc.)
+- CARDIO: se incluído, apenas LISS leve
+
+## Sono Adequado (7-9h) E Estresse Baixo/Moderado:
 - Seguir prescrição normal
-- Pode progredir carga
+- PODE: progredir carga
+- PODE: usar métodos de intensificação
 
-# FORMATO DE SAÍDA
+## Critérios Objetivos:
+- Sono <6h nas últimas 24h → reduzir intensidade
+- Estresse auto-reportado "alto" → reduzir volume e complexidade
 
-Você DEVE retornar um JSON válido com a seguinte estrutura exata:
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 13: MÉTODOS DE INTENSIFICAÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+## Apenas para Intermediários/Avançados:
+
+### Drop Set:
+- Executar série até próximo da falha
+- Reduzir carga 20-30% sem descanso
+- Repetir 2-3 vezes
+- USO: último exercício do grupamento, última série
+
+### Rest-Pause:
+- Executar até próximo da falha
+- Descansar 10-15 segundos
+- Repetir até completar reps-alvo
+- USO: exercícios compostos, aumento de densidade
+
+### Bi-Set/Superset:
+- 2 exercícios consecutivos sem descanso
+- AGONISTA + AGONISTA (mesmo músculo) = bi-set
+- AGONISTA + ANTAGONISTA (músculos opostos) = superset
+- USO: aumentar densidade, reduzir tempo de treino
+
+### Cluster:
+- 4-6 reps com carga pesada
+- Descanso 10-15 seg entre reps
+- Repetir até completar volume
+- USO: desenvolvimento de força, avançados
+
+### Piramidal:
+- Aumentar ou diminuir carga a cada série
+- Crescente: começar leve, terminar pesado
+- Decrescente: começar pesado, terminar leve
+- USO: aquecimento + intensidade, ou fadiga acumulada
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 14: FORMATO DE SAÍDA JSON
+═══════════════════════════════════════════════════════════════════════════════
+
+Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
 
 {
-  "planName": "Nome do plano baseado no objetivo",
-  "description": "Descrição personalizada do plano",
+  "planName": "Nome do plano baseado no objetivo e nível",
+  "description": "Descrição personalizada explicando a lógica do plano",
   "weeklyFrequency": numero,
   "sessionDuration": "duração em texto",
   "periodization": "linear" ou "undulating",
+  "experienceLevel": "beginner" ou "intermediate" ou "advanced",
+  "mainGoal": "objetivo principal traduzido",
+  "weeklyVolumeStrategy": "Explicação da estratégia de volume adotada",
   "workouts": [
     {
-      "day": "Nome do dia",
+      "day": "Nome do dia da semana",
       "name": "Nome do treino (ex: Treino A - Push)",
-      "focus": "Foco principal",
+      "focus": "Foco principal do treino",
       "muscleGroups": ["grupo1", "grupo2"],
       "estimatedDuration": "XX min",
+      "warmup": {
+        "description": "Descrição do aquecimento recomendado",
+        "duration": "5-10 min",
+        "exercises": ["exercício 1", "exercício 2"]
+      },
       "exercises": [
         {
           "order": 1,
           "name": "Nome do exercício",
-          "equipment": "Tipo de equipamento",
+          "equipment": "Tipo de equipamento (Máquina/Peso Livre/Peso Corporal)",
+          "muscleGroup": "Grupamento principal",
           "sets": 3,
           "reps": "10-12",
           "rest": "60s",
           "tempo": "2-0-2",
-          "notes": "Observações técnicas",
-          "isCompound": true/false
+          "intensity": "RPE 7-8 ou % 1RM",
+          "notes": "Observações técnicas detalhadas para o nível do usuário",
+          "isCompound": true/false,
+          "alternatives": ["alternativa 1 se houver dor", "alternativa 2"]
         }
       ],
+      "finisher": {
+        "type": "core" ou "cardio" ou "stretching" ou null,
+        "exercises": ["exercício 1"],
+        "duration": "5-10 min"
+      },
       "cardio": {
         "type": "LISS/MICT/HIIT ou null",
         "duration": "XX min",
+        "intensity": "FC zona ou descrição",
         "notes": "Observações"
       } ou null
     }
@@ -216,18 +436,46 @@ Você DEVE retornar um JSON válido com a seguinte estrutura exata:
     "calves": X,
     "core": X
   },
-  "progressionPlan": "Descrição de como progredir nas próximas semanas",
+  "progressionPlan": {
+    "week1": "Descrição do foco da semana 1",
+    "week2": "Descrição do foco da semana 2",
+    "week3": "Descrição do foco da semana 3",
+    "week4": "Descrição do foco da semana 4",
+    "deloadWeek": "Descrição da semana de recuperação"
+  },
+  "adaptations": {
+    "painAreas": ["lista de adaptações feitas por dor/lesão"],
+    "sleepStress": "adaptação feita por sono/estresse se aplicável",
+    "focusAreas": ["adaptações para áreas prioritárias"]
+  },
   "warnings": ["Lista de alertas baseados nas condições de saúde informadas"],
-  "motivationalMessage": "Mensagem motivacional personalizada com o nome do usuário"
+  "motivationalMessage": "Mensagem motivacional personalizada com o nome do usuário",
+  "coachNotes": "Notas do treinador virtual sobre pontos de atenção"
 }
 
-IMPORTANTE:
-- Retorne APENAS o JSON, sem texto adicional
-- Todos os campos são obrigatórios
-- Adapte TODOS os exercícios às condições de saúde reportadas
-- O plano deve ser REALISTA e executável em academia low-cost
-- Priorize exercícios em MÁQUINAS para iniciantes
-- Respeite TODAS as variáveis do onboarding`;
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 15: REGRAS CRÍTICAS FINAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+## OBRIGATÓRIO:
+1. Retorne APENAS o JSON, sem texto adicional antes ou depois
+2. TODOS os campos são obrigatórios
+3. Adapte TODOS os exercícios às condições de saúde reportadas
+4. O plano DEVE ser realista e executável em academia low-cost
+5. PRIORIZE máquinas para iniciantes (70%+ do treino)
+6. RESPEITE todas as variáveis do onboarding sem exceção
+7. CALCULE o volume semanal por grupamento e garanta que está dentro da faixa do nível
+8. INCLUA aquecimento e finalizador em cada sessão
+9. ADAPTE a complexidade das instruções ao nível de experiência
+10. Se há dor/lesão, SEMPRE inclua alternativas nos exercícios
+
+## NUNCA:
+- Prescreva saltos ou impacto para quem tem dor em joelho/tornozelo
+- Prescreva overhead pesado para quem tem dor em ombro
+- Use métodos avançados para iniciantes
+- Ignore o tempo de sessão disponível
+- Prescreva volume acima do nível de experiência
+- Ignore sono ruim ou estresse alto`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -243,51 +491,7 @@ serve(async (req) => {
     }
 
     // Build the user prompt with all onboarding data
-    const userPrompt = `Gere um plano de treino personalizado para o seguinte usuário:
-
-## DADOS DO USUÁRIO
-
-**Nome:** ${userData.name}
-**Gênero:** ${userData.gender === 'female' ? 'Feminino' : userData.gender === 'male' ? 'Masculino' : 'Outro'}
-**Idade:** ${userData.age} anos
-**Altura:** ${userData.height} cm
-**Peso:** ${userData.weight} kg
-
-## OBJETIVO E PRAZO
-
-**Objetivo Principal:** ${getGoalLabel(userData.goal)}
-**Prazo:** ${getTimeframeLabel(userData.timeframe)}
-
-## DISPONIBILIDADE
-
-**Dias de treino por semana:** ${userData.trainingDays?.length || 0} dias
-**Dias selecionados:** ${userData.trainingDays?.map((d: string) => getDayLabel(d)).join(', ') || 'Não informado'}
-**Duração da sessão:** ${getSessionDurationLabel(userData.sessionDuration)}
-
-## PREFERÊNCIAS
-
-**Tipos de exercício preferidos:** ${userData.exerciseTypes?.join(', ') || 'Todos'}
-**Inclui cardio:** ${userData.includeCardio ? 'Sim' : 'Não'}
-**Nível de experiência:** ${getExperienceLabel(userData.experienceLevel)}
-**Preferência de variação:** ${getVariationLabel(userData.variationPreference)}
-
-## ÁREAS CORPORAIS PRIORITÁRIAS
-
-${userData.bodyAreas?.length > 0 ? userData.bodyAreas.join(', ') : 'Distribuição equilibrada'}
-
-## SAÚDE
-
-**Possui condições de saúde/lesões:** ${userData.hasHealthConditions ? 'Sim' : 'Não'}
-${userData.hasHealthConditions && userData.healthDescription ? `**Descrição:** ${userData.healthDescription}` : ''}
-
-## ESTILO DE VIDA
-
-**Horas de sono por noite:** ${userData.sleepHours || 'Não informado'}
-**Nível de estresse:** ${getStressLabel(userData.stressLevel)}
-
----
-
-Com base em TODAS essas informações, gere um plano de treino completo seguindo rigorosamente as diretrizes técnicas do sistema. O plano deve ser personalizado, realista e adequado para academia low-cost.`;
+    const userPrompt = buildUserPrompt(userData);
 
     console.log("Calling Lovable AI with user data:", userData.name);
 
@@ -303,8 +507,8 @@ Com base em TODAS essas informações, gere um plano de treino completo seguindo
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 8000,
+        temperature: 0.6,
+        max_tokens: 12000,
       }),
     });
 
@@ -364,24 +568,127 @@ Com base em TODAS essas informações, gere um plano de treino completo seguindo
   }
 });
 
+function buildUserPrompt(userData: any): string {
+  // Calculate BMI
+  const heightM = (userData.height || 170) / 100;
+  const weight = userData.weight || 70;
+  const bmi = (weight / (heightM * heightM)).toFixed(1);
+  
+  // Determine BMI category
+  let bmiCategory = "normal";
+  if (parseFloat(bmi) < 18.5) bmiCategory = "abaixo do peso";
+  else if (parseFloat(bmi) >= 25 && parseFloat(bmi) < 30) bmiCategory = "sobrepeso";
+  else if (parseFloat(bmi) >= 30) bmiCategory = "obesidade";
+
+  return `
+═══════════════════════════════════════════════════════════════════════════════
+                    DADOS COMPLETOS DO USUÁRIO PARA PRESCRIÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+## IDENTIFICAÇÃO
+- Nome: ${userData.name || "Usuário"}
+- Gênero: ${getGenderLabel(userData.gender)}
+- Idade: ${userData.age || 30} anos
+- Altura: ${userData.height || 170} cm
+- Peso: ${userData.weight || 70} kg
+- IMC: ${bmi} (${bmiCategory})
+
+## OBJETIVO E PRAZO
+- Objetivo Principal: ${getGoalLabel(userData.goal)}
+- Prazo para Resultados: ${getTimeframeLabel(userData.timeframe)}
+- Urgência: ${getUrgencyLevel(userData.timeframe)}
+
+## DISPONIBILIDADE SEMANAL
+- Dias de treino por semana: ${userData.trainingDays?.length || 3} dias
+- Dias específicos: ${userData.trainingDays?.map((d: string) => getDayLabel(d)).join(', ') || 'Flexível'}
+- Duração máxima por sessão: ${getSessionDurationLabel(userData.sessionDuration)}
+- Tempo real disponível: ${getSessionMinutes(userData.sessionDuration)} minutos
+
+## PREFERÊNCIAS DE EXERCÍCIO
+- Tipos de exercício preferidos: ${userData.exerciseTypes?.join(', ') || 'Máquinas, Pesos Livres'}
+- Aceita cardio: ${userData.includeCardio ? 'SIM - incluir cardio conforme objetivo' : 'NÃO - focar apenas em musculação'}
+- Nível de experiência: ${getExperienceLabel(userData.experienceLevel)}
+- Preferência de variação: ${getVariationLabel(userData.variationPreference)}
+
+## ÁREAS CORPORAIS PRIORITÁRIAS
+${userData.bodyAreas?.length > 0 
+  ? `- Áreas para priorizar: ${userData.bodyAreas.join(', ')}\n- AÇÃO: Aumentar volume 20-30% nestas áreas, inserir primeiro no bloco` 
+  : '- Distribuição equilibrada entre todos os grupamentos'}
+
+## CONDIÇÕES DE SAÚDE E DOR
+- Possui condições/lesões: ${userData.hasHealthConditions ? 'SIM' : 'NÃO'}
+${userData.hasHealthConditions && userData.healthDescription ? `
+- Descrição detalhada: ${userData.healthDescription}
+- AÇÃO OBRIGATÓRIA: Aplicar TODAS as regras de adaptação da Seção 8 para a região afetada
+- Incluir alternativas em cada exercício que possa afetar a região
+- Incluir blocos preventivos (ativação, mobilidade, estabilidade)
+` : '- Sem restrições por dor/lesão'}
+
+## ESTILO DE VIDA E RECUPERAÇÃO
+- Horas de sono por noite: ${userData.sleepHours || 7} horas
+- Qualidade do sono: ${getSleepQuality(userData.sleepHours)}
+- Nível de estresse: ${getStressLabel(userData.stressLevel)}
+- Capacidade de recuperação estimada: ${getRecoveryCapacity(userData.sleepHours, userData.stressLevel)}
+
+${getSleepStressAdjustment(userData.sleepHours, userData.stressLevel)}
+
+## VARIÁVEIS DERIVADAS (IMPLÍCITAS)
+- Autonomia técnica: ${getAutonomyLevel(userData.experienceLevel)}
+- Estilo de progressão: ${getProgressionStyle(userData.experienceLevel, userData.variationPreference)}
+- Complexidade permitida: ${getComplexityLevel(userData.experienceLevel)}
+- Métodos de intensificação: ${getIntensificationMethods(userData.experienceLevel)}
+
+═══════════════════════════════════════════════════════════════════════════════
+                              INSTRUÇÕES FINAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+Com base em TODAS as informações acima, gere um plano de treino completo seguindo RIGOROSAMENTE:
+
+1. As regras de volume para o nível ${getExperienceLevelSimple(userData.experienceLevel)}
+2. A divisão de treino adequada para ${userData.trainingDays?.length || 3} dias/semana
+3. O tempo máximo de ${getSessionMinutes(userData.sessionDuration)} minutos por sessão
+4. TODAS as adaptações necessárias para condições de saúde reportadas
+5. Priorização das áreas corporais solicitadas (se houver)
+6. Ajustes por sono/estresse conforme indicado
+7. Cardio ${userData.includeCardio ? 'INCLUÍDO conforme objetivo' : 'NÃO INCLUÍDO'}
+8. Instruções com nível de detalhamento para ${getAutonomyLevel(userData.experienceLevel)} autonomia
+
+O plano deve ser REALISTA, EXECUTÁVEL em academia low-cost, e PERSONALIZADO para este usuário.`;
+}
+
 // Helper functions
+function getGenderLabel(gender: string | null): string {
+  const labels: Record<string, string> = {
+    female: "Feminino",
+    male: "Masculino",
+    other: "Outro"
+  };
+  return labels[gender || "other"] || "Não informado";
+}
+
 function getGoalLabel(goal: string | null): string {
   const labels: Record<string, string> = {
-    weight_loss: "Emagrecimento - Foco em densidade alta, gasto calórico elevado, supersets",
-    hypertrophy: "Hipertrofia - Foco em volume, tempo sob tensão, progressão de carga",
-    health: "Saúde e Bem-estar - Foco em equilíbrio, funcionalidade, postura",
-    performance: "Performance - Foco em força, potência, especificidade",
+    weight_loss: "EMAGRECIMENTO - Aplicar: densidade alta, pausas curtas (30-60s), supersets, reps 12-20, cardio 2-4x/semana",
+    hypertrophy: "HIPERTROFIA - Aplicar: volume 12-20 séries/grupo, reps 6-12, TUT 40-60s, pausas 60-90s",
+    health: "SAÚDE E BEM-ESTAR - Aplicar: volume moderado 8-14 séries/grupo, reps 10-15, exercícios funcionais",
+    performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
-  return labels[goal || "health"] || "Saúde e Bem-estar";
+  return labels[goal || "health"] || "SAÚDE E BEM-ESTAR";
 }
 
 function getTimeframeLabel(timeframe: string | null): string {
   const labels: Record<string, string> = {
-    "3months": "3 meses - Progressão acelerada",
-    "6months": "6 meses - Progressão moderada",
-    "12months": "12 meses - Progressão gradual sustentável",
+    "3months": "3 meses - Progressão ACELERADA, ajustes frequentes",
+    "6months": "6 meses - Progressão MODERADA, tempo adequado",
+    "12months": "12 meses - Progressão GRADUAL, foco em consistência",
   };
   return labels[timeframe || "6months"] || "6 meses";
+}
+
+function getUrgencyLevel(timeframe: string | null): string {
+  if (timeframe === "3months") return "ALTA - maximizar estímulos por sessão";
+  if (timeframe === "12months") return "BAIXA - priorizar aderência e técnica";
+  return "MODERADA - equilíbrio entre resultados e sustentabilidade";
 }
 
 function getDayLabel(day: string): string {
@@ -394,37 +701,122 @@ function getDayLabel(day: string): string {
 
 function getSessionDurationLabel(duration: string | null): string {
   const labels: Record<string, string> = {
-    "30min": "30 minutos - 4-5 exercícios, supersets para densidade",
-    "45min": "45 minutos - 5-6 exercícios, pausas moderadas",
-    "60min": "60 minutos - 6-8 exercícios, pausas adequadas",
-    "60plus": "+60 minutos - 8-10 exercícios, treino completo",
+    "30min": "30 minutos - Aplicar: 4-5 exercícios, supersets OBRIGATÓRIOS, pausas curtas",
+    "45min": "45 minutos - Aplicar: 5-6 exercícios, pausas moderadas, cardio curto opcional",
+    "60min": "60 minutos - Aplicar: 6-8 exercícios, pausas adequadas, pode incluir cardio",
+    "60plus": "+60 minutos - Aplicar: 8-10 exercícios, treino completo com aquecimento e cardio",
   };
   return labels[duration || "45min"] || "45 minutos";
 }
 
+function getSessionMinutes(duration: string | null): number {
+  const minutes: Record<string, number> = {
+    "30min": 30,
+    "45min": 45,
+    "60min": 60,
+    "60plus": 75,
+  };
+  return minutes[duration || "45min"] || 45;
+}
+
 function getExperienceLabel(level: string | null): string {
   const labels: Record<string, string> = {
-    beginner: "Iniciante - Priorizar MÁQUINAS, aprendizado técnico, evitar métodos avançados",
-    intermediate: "Intermediário - Máquinas + pesos livres, supersets simples permitidos",
-    advanced: "Avançado - Exercícios complexos, métodos avançados, alta intensidade",
+    beginner: "INICIANTE - Aplicar: 70%+ máquinas, evitar métodos avançados, progressão linear, 8-12 séries/grupo, instruções detalhadas",
+    intermediate: "INTERMEDIÁRIO - Aplicar: 50% máquinas + 50% pesos livres, supersets permitidos, 12-18 séries/grupo",
+    advanced: "AVANÇADO - Aplicar: pesos livres como base, métodos avançados permitidos, 18-30 séries/grupo, progressão ondulatória",
   };
-  return labels[level || "beginner"] || "Iniciante";
+  return labels[level || "beginner"] || "INICIANTE";
+}
+
+function getExperienceLevelSimple(level: string | null): string {
+  const labels: Record<string, string> = {
+    beginner: "INICIANTE",
+    intermediate: "INTERMEDIÁRIO", 
+    advanced: "AVANÇADO",
+  };
+  return labels[level || "beginner"] || "INICIANTE";
 }
 
 function getVariationLabel(variation: string | null): string {
   const labels: Record<string, string> = {
-    high: "Alta variação - Troca parcial semanal",
-    moderate: "Variação moderada - Troca parcial a cada 2 semanas",
-    low: "Baixa variação - Fixo por 4 semanas, foco em progressão de carga",
+    high: "ALTA - Troca parcial SEMANAL dos exercícios acessórios",
+    moderate: "MODERADA - Troca parcial a cada 2 SEMANAS",
+    low: "BAIXA - Treino FIXO por 4 semanas, foco em progressão de carga",
   };
-  return labels[variation || "moderate"] || "Variação moderada";
+  return labels[variation || "moderate"] || "MODERADA";
 }
 
 function getStressLabel(stress: string | null): string {
   const labels: Record<string, string> = {
-    low: "Baixo - Pode seguir prescrição normal",
-    moderate: "Moderado - Monitorar fadiga",
-    high: "Alto - Reduzir volume 20-30%, priorizar exercícios simples, evitar falha",
+    low: "BAIXO - Pode seguir prescrição normal, progressão permitida",
+    moderate: "MODERADO - Monitorar fadiga, manter prescrição padrão",
+    high: "ALTO - OBRIGATÓRIO: reduzir volume 20-30%, priorizar exercícios simples, evitar falha muscular",
   };
-  return labels[stress || "moderate"] || "Moderado";
+  return labels[stress || "moderate"] || "MODERADO";
+}
+
+function getSleepQuality(hours: number | null): string {
+  const h = hours || 7;
+  if (h < 6) return "INSUFICIENTE - Aplicar reduções";
+  if (h >= 7 && h <= 9) return "ADEQUADO";
+  return "BOM";
+}
+
+function getRecoveryCapacity(sleepHours: number | null, stressLevel: string | null): string {
+  const sleep = sleepHours || 7;
+  const stress = stressLevel || "moderate";
+  
+  if (sleep < 6 || stress === "high") return "BAIXA - reduzir volume e intensidade";
+  if (sleep >= 7 && stress === "low") return "ALTA - pode progredir normalmente";
+  return "MODERADA - manter prescrição padrão";
+}
+
+function getSleepStressAdjustment(sleepHours: number | null, stressLevel: string | null): string {
+  const sleep = sleepHours || 7;
+  const stress = stressLevel || "moderate";
+  
+  if (sleep < 6 || stress === "high") {
+    return `
+## ⚠️ AJUSTES OBRIGATÓRIOS POR SONO/ESTRESSE:
+- REDUZIR volume em 20-30%
+- PRIORIZAR exercícios de baixa complexidade (máquinas)
+- AUMENTAR pausas em +30 segundos
+- EVITAR falha muscular em todas as séries
+- Se incluir cardio: apenas LISS leve
+- EVITAR métodos avançados (drop set, cluster, etc.)`;
+  }
+  return "- Sem ajustes necessários por sono/estresse";
+}
+
+function getAutonomyLevel(level: string | null): string {
+  const labels: Record<string, string> = {
+    beginner: "BAIXA - incluir tempo de execução, dicas posturais, ROM específico em cada exercício",
+    intermediate: "MÉDIA - incluir carga sugerida e observações técnicas principais",
+    advanced: "ALTA - ficha objetiva, apenas séries x reps x carga",
+  };
+  return labels[level || "beginner"] || "BAIXA";
+}
+
+function getProgressionStyle(level: string | null, variation: string | null): string {
+  if (level === "beginner" || variation === "low") return "LINEAR - manter exercícios fixos, aumentar carga progressivamente";
+  if (level === "advanced" && variation === "high") return "ONDULATÓRIA - variar intensidade ao longo da semana";
+  return "LINEAR COM VARIAÇÕES - base fixa com trocas periódicas";
+}
+
+function getComplexityLevel(level: string | null): string {
+  const labels: Record<string, string> = {
+    beginner: "BAIXA - máximo 2 padrões de movimento por sessão, exercícios guiados",
+    intermediate: "MÉDIA - pode incluir exercícios livres com supervisão, supersets simples",
+    advanced: "ALTA - exercícios complexos, unilaterais, métodos avançados permitidos",
+  };
+  return labels[level || "beginner"] || "BAIXA";
+}
+
+function getIntensificationMethods(level: string | null): string {
+  const labels: Record<string, string> = {
+    beginner: "NENHUM - focar em técnica e progressão de carga simples",
+    intermediate: "BÁSICOS - supersets, bi-sets apenas",
+    advanced: "COMPLETOS - drop set, rest-pause, cluster, excêntrica forçada permitidos",
+  };
+  return labels[level || "beginner"] || "NENHUM";
 }
