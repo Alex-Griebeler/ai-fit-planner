@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { OnboardingData } from '@/types/onboarding';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
+import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
 import { 
   Dumbbell, 
@@ -16,7 +18,8 @@ import {
   Sparkles,
   AlertTriangle,
   Info,
-  RefreshCw
+  RefreshCw,
+  Check
 } from 'lucide-react';
 
 interface WorkoutExercise {
@@ -77,11 +80,15 @@ const goalLabels: Record<string, string> = {
 
 export default function Result() {
   const navigate = useNavigate();
+  const { profile } = useProfile();
+  const { createPlan, activePlan, isCreating } = useWorkoutPlans();
+  
   const [data, setData] = useState<OnboardingData | null>(null);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   const generatePlan = async (userData: OnboardingData) => {
     setLoading(true);
@@ -98,7 +105,6 @@ export default function Result() {
       }
 
       if (responseData?.error) {
-        // Handle specific error codes
         if (responseData.error.includes('Rate limit')) {
           toast.error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.');
         } else if (responseData.error.includes('credits')) {
@@ -109,7 +115,6 @@ export default function Result() {
 
       if (responseData?.plan) {
         setPlan(responseData.plan);
-        // Clear sensitive data after successful generation
         sessionStorage.removeItem('onboardingData');
       } else {
         throw new Error('Plano não gerado');
@@ -123,24 +128,82 @@ export default function Result() {
     }
   };
 
+  const savePlanToDatabase = async () => {
+    if (!plan) return;
+
+    try {
+      await createPlan({
+        plan_name: plan.planName,
+        description: plan.description,
+        weekly_frequency: plan.weeklyFrequency,
+        session_duration: plan.sessionDuration,
+        periodization: plan.periodization,
+        plan_data: JSON.parse(JSON.stringify({
+          workouts: plan.workouts,
+          weeklyVolume: plan.weeklyVolume,
+          progressionPlan: plan.progressionPlan,
+          warnings: plan.warnings,
+          motivationalMessage: plan.motivationalMessage,
+        })),
+      });
+
+      setIsSaved(true);
+      toast.success('Plano salvo com sucesso!');
+    } catch (err) {
+      console.error('Erro ao salvar plano:', err);
+      toast.error('Erro ao salvar plano. Tente novamente.');
+    }
+  };
+
   useEffect(() => {
-    // Use sessionStorage for security (cleared on tab close)
+    // Verifica se já tem plano ativo
+    if (activePlan && !plan) {
+      const savedPlanData = activePlan.plan_data as unknown as {
+        workouts: Workout[];
+        weeklyVolume: Record<string, number>;
+        progressionPlan: string | ProgressionPlan;
+        warnings: string[];
+        motivationalMessage: string;
+      };
+
+      setPlan({
+        planName: activePlan.plan_name,
+        description: activePlan.description || '',
+        weeklyFrequency: activePlan.weekly_frequency,
+        sessionDuration: activePlan.session_duration,
+        periodization: activePlan.periodization || 'linear',
+        workouts: savedPlanData.workouts,
+        weeklyVolume: savedPlanData.weeklyVolume,
+        progressionPlan: savedPlanData.progressionPlan,
+        warnings: savedPlanData.warnings || [],
+        motivationalMessage: savedPlanData.motivationalMessage || '',
+      });
+      setIsSaved(true);
+      setLoading(false);
+      return;
+    }
+
+    // Busca dados do sessionStorage para gerar novo plano
     const savedData = sessionStorage.getItem('onboardingData');
-    if (!savedData) {
+    if (!savedData && !activePlan) {
       navigate('/onboarding');
       return;
     }
 
-    const parsedData: OnboardingData = JSON.parse(savedData);
-    setData(parsedData);
-    generatePlan(parsedData);
-  }, [navigate, retryCount]);
+    if (savedData) {
+      const parsedData: OnboardingData = JSON.parse(savedData);
+      setData(parsedData);
+      generatePlan(parsedData);
+    }
+  }, [navigate, retryCount, activePlan]);
 
   const handleRetry = () => {
     if (data) {
       setRetryCount(prev => prev + 1);
     }
   };
+
+  const userName = profile?.name || data?.name || 'Atleta';
 
   if (loading) {
     return (
@@ -209,7 +272,7 @@ export default function Result() {
     );
   }
 
-  if (!plan || !data) return null;
+  if (!plan) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -226,7 +289,7 @@ export default function Result() {
               <Trophy className="w-8 h-8 text-primary-foreground" />
             </div>
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-              Parabéns, {data.name}! 🎉
+              Parabéns, {userName}! 🎉
             </h1>
             <p className="text-muted-foreground">
               {plan.motivationalMessage || 'Seu plano de treino personalizado está pronto'}
@@ -282,7 +345,7 @@ export default function Result() {
             </div>
             <div className="text-center p-3 bg-secondary rounded-xl">
               <Target className="w-5 h-5 mx-auto mb-1 text-primary" />
-              <p className="text-lg font-bold text-foreground">{goalLabels[data.goal || 'health']?.split(' ')[0]}</p>
+              <p className="text-lg font-bold text-foreground">{goalLabels[data?.goal || 'health']?.split(' ')[0]}</p>
               <p className="text-xs text-muted-foreground">objetivo</p>
             </div>
           </div>
@@ -438,10 +501,32 @@ export default function Result() {
           transition={{ delay: 0.5 }}
           className="space-y-3"
         >
-          <Button variant="gradient" size="lg" className="w-full">
-            <Flame className="w-5 h-5 mr-2" />
-            Começar Treino
-          </Button>
+          {!isSaved ? (
+            <Button 
+              variant="gradient" 
+              size="lg" 
+              className="w-full"
+              onClick={savePlanToDatabase}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Flame className="w-5 h-5 mr-2" />
+                  Salvar e Começar Treino
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button variant="gradient" size="lg" className="w-full">
+              <Check className="w-5 h-5 mr-2" />
+              Plano Salvo - Começar Treino
+            </Button>
+          )}
           <Button
             variant="outline"
             size="lg"
