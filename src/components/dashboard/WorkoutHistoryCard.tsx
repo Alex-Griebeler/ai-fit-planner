@@ -1,0 +1,116 @@
+import { WorkoutPlan } from '@/hooks/useWorkoutPlans';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Calendar, Trash2, History } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
+interface WorkoutHistoryCardProps {
+  plans: WorkoutPlan[];
+  isLoading: boolean;
+  onDeletePlan: (planId: string) => Promise<void>;
+}
+
+export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHistoryCardProps) {
+  const inactivePlans = plans.filter(p => !p.is_active);
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-muted rounded w-1/3" />
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-muted rounded" />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-card border-border">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <History className="w-5 h-5 text-primary" />
+          <CardTitle className="text-lg">Histórico de Planos</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {inactivePlans.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <History className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Nenhum plano anterior</p>
+          </div>
+        ) : (
+          <ScrollArea className="h-[300px] pr-4">
+            <div className="space-y-3">
+              {inactivePlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground truncate">
+                      {plan.plan_name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {plan.weekly_frequency}x/sem
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {format(new Date(plan.created_at), "dd/MM/yy", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir plano?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. O plano "{plan.plan_name}" será permanentemente excluído.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onDeletePlan(plan.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

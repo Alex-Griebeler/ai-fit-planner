@@ -13,6 +13,7 @@ const Index = lazy(() => import('./pages/Index'));
 const Login = lazy(() => import('./pages/Login'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Result = lazy(() => import('./pages/Result'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
@@ -37,6 +38,14 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/onboarding" 
                 element={

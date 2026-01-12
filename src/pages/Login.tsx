@@ -19,7 +19,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   // Get the redirect destination from location state
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/onboarding';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
