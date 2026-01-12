@@ -40,8 +40,8 @@ export default function Onboarding() {
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
-      // Save data and navigate to results
-      localStorage.setItem('onboardingData', JSON.stringify(data));
+      // Save data to sessionStorage (cleared on tab close) for security
+      sessionStorage.setItem('onboardingData', JSON.stringify(data));
       navigate('/result');
     }
   };

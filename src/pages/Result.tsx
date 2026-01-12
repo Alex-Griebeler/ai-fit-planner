@@ -109,6 +109,8 @@ export default function Result() {
 
       if (responseData?.plan) {
         setPlan(responseData.plan);
+        // Clear sensitive data after successful generation
+        sessionStorage.removeItem('onboardingData');
       } else {
         throw new Error('Plano não gerado');
       }
@@ -122,7 +124,8 @@ export default function Result() {
   };
 
   useEffect(() => {
-    const savedData = localStorage.getItem('onboardingData');
+    // Use sessionStorage for security (cleared on tab close)
+    const savedData = sessionStorage.getItem('onboardingData');
     if (!savedData) {
       navigate('/onboarding');
       return;
