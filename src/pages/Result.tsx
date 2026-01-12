@@ -47,6 +47,14 @@ interface Workout {
   cardio?: WorkoutCardio | null;
 }
 
+interface ProgressionPlan {
+  week1?: string;
+  week2?: string;
+  week3?: string;
+  week4?: string;
+  deloadWeek?: string;
+}
+
 interface WorkoutPlan {
   planName: string;
   description: string;
@@ -55,7 +63,7 @@ interface WorkoutPlan {
   periodization: string;
   workouts: Workout[];
   weeklyVolume: Record<string, number>;
-  progressionPlan: string;
+  progressionPlan: string | ProgressionPlan;
   warnings: string[];
   motivationalMessage: string;
 }
@@ -277,12 +285,24 @@ export default function Result() {
           </div>
 
           {/* Periodization info */}
-          <div className="mt-4 p-3 bg-primary/5 rounded-xl flex items-center gap-3">
-            <Info className="w-5 h-5 text-primary shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              <span className="text-foreground font-medium">Periodização {plan.periodization === 'linear' ? 'Linear' : 'Ondulatória'}</span>
-              {' - '}{plan.progressionPlan}
-            </p>
+          <div className="mt-4 p-3 bg-primary/5 rounded-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <Info className="w-5 h-5 text-primary shrink-0" />
+              <span className="text-foreground font-medium text-sm">
+                Periodização {plan.periodization === 'linear' ? 'Linear' : 'Ondulatória'}
+              </span>
+            </div>
+            {typeof plan.progressionPlan === 'string' ? (
+              <p className="text-sm text-muted-foreground">{plan.progressionPlan}</p>
+            ) : (
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {plan.progressionPlan.week1 && <p><span className="text-foreground">Semana 1:</span> {plan.progressionPlan.week1}</p>}
+                {plan.progressionPlan.week2 && <p><span className="text-foreground">Semana 2:</span> {plan.progressionPlan.week2}</p>}
+                {plan.progressionPlan.week3 && <p><span className="text-foreground">Semana 3:</span> {plan.progressionPlan.week3}</p>}
+                {plan.progressionPlan.week4 && <p><span className="text-foreground">Semana 4:</span> {plan.progressionPlan.week4}</p>}
+                {plan.progressionPlan.deloadWeek && <p><span className="text-foreground">Deload:</span> {plan.progressionPlan.deloadWeek}</p>}
+              </div>
+            )}
           </div>
         </motion.div>
 
