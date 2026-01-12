@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dumbbell, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import evolveLogo from '@/assets/evolve-logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -72,13 +73,10 @@ export default function Login() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-              className="w-20 h-20 mx-auto mb-4 rounded-2xl gradient-primary flex items-center justify-center shadow-glow"
+              className="mx-auto mb-4"
             >
-              <Dumbbell className="w-10 h-10 text-primary-foreground" />
+              <img src={evolveLogo} alt="Evolve" className="h-16 mx-auto" />
             </motion.div>
-            <h1 className="text-3xl font-display font-bold text-foreground">
-              AI Trainer
-            </h1>
             <p className="text-muted-foreground mt-2">
               Treinos personalizados por IA
             </p>
