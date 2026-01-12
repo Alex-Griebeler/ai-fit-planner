@@ -56,6 +56,144 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          age: number | null
+          created_at: string
+          gender: string | null
+          height: number | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          age?: number | null
+          created_at?: string
+          gender?: string | null
+          height?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          age?: number | null
+          created_at?: string
+          gender?: string | null
+          height?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
+      user_onboarding_data: {
+        Row: {
+          body_areas: string[] | null
+          created_at: string
+          exercise_types: string[] | null
+          experience_level: string | null
+          goal: string | null
+          has_health_conditions: boolean | null
+          health_description: string | null
+          id: string
+          include_cardio: boolean | null
+          session_duration: string | null
+          sleep_hours: string | null
+          stress_level: string | null
+          timeframe: string | null
+          training_days: string[] | null
+          updated_at: string
+          user_id: string
+          variation_preference: string | null
+        }
+        Insert: {
+          body_areas?: string[] | null
+          created_at?: string
+          exercise_types?: string[] | null
+          experience_level?: string | null
+          goal?: string | null
+          has_health_conditions?: boolean | null
+          health_description?: string | null
+          id?: string
+          include_cardio?: boolean | null
+          session_duration?: string | null
+          sleep_hours?: string | null
+          stress_level?: string | null
+          timeframe?: string | null
+          training_days?: string[] | null
+          updated_at?: string
+          user_id: string
+          variation_preference?: string | null
+        }
+        Update: {
+          body_areas?: string[] | null
+          created_at?: string
+          exercise_types?: string[] | null
+          experience_level?: string | null
+          goal?: string | null
+          has_health_conditions?: boolean | null
+          health_description?: string | null
+          id?: string
+          include_cardio?: boolean | null
+          session_duration?: string | null
+          sleep_hours?: string | null
+          stress_level?: string | null
+          timeframe?: string | null
+          training_days?: string[] | null
+          updated_at?: string
+          user_id?: string
+          variation_preference?: string | null
+        }
+        Relationships: []
+      }
+      workout_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          periodization: string | null
+          plan_data: Json
+          plan_name: string
+          session_duration: string
+          user_id: string
+          weekly_frequency: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          periodization?: string | null
+          plan_data: Json
+          plan_name: string
+          session_duration: string
+          user_id: string
+          weekly_frequency: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          periodization?: string | null
+          plan_data?: Json
+          plan_name?: string
+          session_duration?: string
+          user_id?: string
+          weekly_frequency?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

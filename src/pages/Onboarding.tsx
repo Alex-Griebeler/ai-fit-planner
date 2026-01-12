@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
@@ -9,6 +9,9 @@ import { BodySelector } from '@/components/onboarding/BodySelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { useProfile } from '@/hooks/useProfile';
+import { useOnboardingData } from '@/hooks/useOnboardingData';
+import { toast } from 'sonner';
 import {
   Target,
   TrendingUp,
@@ -20,14 +23,26 @@ import {
   Shuffle,
   Moon,
   CheckCircle,
+  Loader2,
 } from 'lucide-react';
 
 const TOTAL_STEPS = 12;
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { profile, updateProfile, isUpdating: isUpdatingProfile } = useProfile();
+  const { saveOnboardingData, isSaving } = useOnboardingData();
+  
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Preenche nome do perfil se existir
+  useEffect(() => {
+    if (profile?.name && !data.name) {
+      setData(prev => ({ ...prev, name: profile.name }));
+    }
+  }, [profile]);
 
   const updateData = <K extends keyof OnboardingData>(
     key: K,
@@ -36,13 +51,40 @@ export default function Onboarding() {
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleFinish = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      // Salva perfil com dados biométricos
+      await updateProfile({
+        name: data.name,
+        gender: data.gender,
+        age: data.age,
+        height: data.height,
+        weight: data.weight,
+      });
+
+      // Salva preferências de treino
+      await saveOnboardingData(data);
+
+      // Salva no sessionStorage temporariamente para a página de resultado
+      sessionStorage.setItem('onboardingData', JSON.stringify(data));
+      
+      toast.success('Dados salvos com sucesso!');
+      navigate('/result');
+    } catch (error) {
+      console.error('Erro ao salvar dados:', error);
+      toast.error('Erro ao salvar dados. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const nextStep = () => {
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
-      // Save data to sessionStorage (cleared on tab close) for security
-      sessionStorage.setItem('onboardingData', JSON.stringify(data));
-      navigate('/result');
+      handleFinish();
     }
   };
 
@@ -75,13 +117,15 @@ export default function Onboarding() {
       case 10:
         return data.bodyAreas.length >= 1;
       case 11:
-        return true; // Health conditions is optional
+        return true;
       case 12:
         return data.sleepHours !== null && data.stressLevel !== null;
       default:
         return false;
     }
   };
+
+  const isLoading = isSubmitting || isUpdatingProfile || isSaving;
 
   const renderStep = () => {
     switch (step) {
@@ -618,9 +662,16 @@ export default function Onboarding() {
               size="lg"
               className="w-full"
               onClick={nextStep}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isLoading}
             >
-              Finalizar Questionário
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Finalizar Questionário'
+              )}
             </Button>
           </OnboardingLayout>
         );
