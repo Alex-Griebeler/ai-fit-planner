@@ -7,183 +7,298 @@ import {
   Target, 
   Clock, 
   TrendingUp,
-  ChevronRight,
-  Star
+  ArrowRight,
+  Star,
+  Zap,
+  Shield,
+  Users
 } from 'lucide-react';
 
 const features = [
   {
-    icon: <Sparkles className="w-6 h-6" />,
-    title: 'IA Personalizada',
-    description: 'Treinos criados especificamente para seus objetivos',
+    icon: Sparkles,
+    title: 'IA Avançada',
+    description: 'Treinos criados com inteligência artificial de ponta',
   },
   {
-    icon: <Target className="w-6 h-6" />,
-    title: 'Resultados Reais',
-    description: 'Progressão inteligente baseada no seu desempenho',
+    icon: Target,
+    title: 'Personalização Total',
+    description: 'Adaptado ao seu corpo, objetivos e rotina',
   },
   {
-    icon: <Clock className="w-6 h-6" />,
+    icon: Clock,
     title: 'Seu Tempo',
-    description: 'Treinos adaptados à sua disponibilidade',
+    description: 'Treinos que cabem na sua agenda',
   },
   {
-    icon: <TrendingUp className="w-6 h-6" />,
-    title: 'Evolução Contínua',
-    description: 'Acompanhamento e ajustes automáticos',
+    icon: TrendingUp,
+    title: 'Progressão Inteligente',
+    description: 'Evolução contínua com periodização científica',
   },
+];
+
+const stats = [
+  { value: '10k+', label: 'Usuários ativos' },
+  { value: '50k+', label: 'Treinos gerados' },
+  { value: '4.9', label: 'Avaliação média' },
 ];
 
 export default function Index() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Hero Section */}
-      <div className="relative">
-        {/* Background effects */}
-        <div className="absolute inset-0 gradient-glow" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/5 blur-3xl" />
-        
-        <div className="container max-w-lg mx-auto px-4 py-12 relative">
+      <section className="relative min-h-screen flex items-center justify-center">
+        {/* Background Effects */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-primary/5 blur-[120px]" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        </div>
+
+        <div className="container max-w-5xl mx-auto px-4 py-20 relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, ease: [0.25, 0.4, 0.25, 1] }}
             className="text-center"
           >
-            {/* Logo */}
+            {/* Badge */}
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-              className="w-24 h-24 mx-auto mb-6 rounded-3xl gradient-primary flex items-center justify-center shadow-glow"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/50 backdrop-blur-sm mb-8"
             >
-              <Dumbbell className="w-12 h-12 text-primary-foreground" />
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-muted-foreground">
+                Powered by AI
+              </span>
             </motion.div>
 
-            {/* Title */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-4xl md:text-5xl font-display font-bold text-foreground mb-4"
-            >
-              Seu Personal
-              <span className="text-gradient"> Trainer IA</span>
-            </motion.h1>
+            {/* Main Title */}
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight mb-6">
+              <span className="block">Seu Personal</span>
+              <span className="block text-gradient">Trainer IA</span>
+            </h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-lg text-muted-foreground mb-8 max-w-sm mx-auto"
-            >
-              Treinos 100% personalizados para você alcançar seus objetivos
-            </motion.p>
+            {/* Subtitle */}
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+              Treinos 100% personalizados criados por inteligência artificial.
+              <span className="text-foreground font-medium"> Resultados reais</span> em menos tempo.
+            </p>
 
             {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="flex flex-col gap-3"
-            >
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Button
                 variant="gradient"
                 size="lg"
-                className="w-full text-base"
+                className="w-full sm:w-auto min-w-[200px] text-base h-14"
                 onClick={() => navigate('/login')}
               >
                 Começar Agora
-                <ChevronRight className="w-5 h-5 ml-1" />
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full"
+                className="w-full sm:w-auto min-w-[200px] h-14"
                 onClick={() => navigate('/login')}
               >
                 Já tenho conta
               </Button>
+            </div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="flex items-center justify-center gap-8 sm:gap-16"
+            >
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center">
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-foreground">
+                    {stat.value}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              ))}
             </motion.div>
           </motion.div>
         </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="container max-w-lg mx-auto px-4 py-12">
+        {/* Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 1 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
-          <h2 className="text-xl font-display font-bold text-foreground mb-6 text-center">
-            Por que escolher o AI Trainer?
-          </h2>
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex justify-center pt-2"
+          >
+            <div className="w-1 h-2 rounded-full bg-muted-foreground/50" />
+          </motion.div>
+        </motion.div>
+      </section>
 
-          <div className="grid grid-cols-2 gap-4">
+      {/* Features Section */}
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-card/30 to-transparent" />
+        
+        <div className="container max-w-5xl mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold mb-4">
+              Por que escolher o <span className="text-gradient">AI Trainer</span>?
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Tecnologia de ponta para resultados extraordinários
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 + index * 0.1 }}
-                className="bg-card border border-border rounded-2xl p-4 shadow-card"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                className="group relative p-8 rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300 hover-lift"
               >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3 text-primary">
-                  {feature.icon}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <div className="relative z-10">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
+                    <feature.icon className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
 
-      {/* Testimonial Section */}
-      <div className="container max-w-lg mx-auto px-4 pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1 }}
-          className="bg-card border border-border rounded-2xl p-6 shadow-card"
-        >
-          <div className="flex gap-1 mb-3">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="w-5 h-5 fill-primary text-primary" />
-            ))}
-          </div>
-          <p className="text-foreground mb-4">
-            "Finalmente encontrei um app que entende minhas limitações e cria
-            treinos que eu consigo fazer. Já perdi 8kg em 3 meses!"
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-              M
+      {/* Social Proof Section */}
+      <section className="py-24">
+        <div className="container max-w-5xl mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative p-8 sm:p-12 rounded-3xl bg-card border border-border overflow-hidden"
+          >
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            
+            <div className="relative z-10">
+              <div className="flex gap-1 mb-6">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-6 h-6 fill-primary text-primary" />
+                ))}
+              </div>
+              
+              <blockquote className="text-xl sm:text-2xl font-display text-foreground mb-8 leading-relaxed">
+                "Finalmente encontrei um app que entende minhas limitações e cria
+                treinos que eu realmente consigo fazer. <span className="text-primary font-semibold">Perdi 12kg em 4 meses</span> sem precisar de personal!"
+              </blockquote>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold text-xl">
+                  M
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground text-lg">Marina Santos</p>
+                  <p className="text-muted-foreground">Usuária há 6 meses</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-foreground">Marina S.</p>
-              <p className="text-sm text-muted-foreground">Aluna há 4 meses</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-16 border-t border-border">
+        <div className="container max-w-5xl mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              <span className="text-sm font-medium">Dados protegidos</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              <span className="text-sm font-medium">+10.000 usuários</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Dumbbell className="w-5 h-5" />
+              <span className="text-sm font-medium">+120 exercícios</span>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
 
       {/* Bottom CTA */}
-      <div className="sticky bottom-0 bg-background/80 backdrop-blur-xl border-t border-border p-4">
-        <div className="container max-w-lg mx-auto">
-          <Button
-            variant="gradient"
-            size="lg"
-            className="w-full"
-            onClick={() => navigate('/login')}
+      <section className="py-24 relative">
+        <div className="absolute inset-0 gradient-glow" />
+        
+        <div className="container max-w-3xl mx-auto px-4 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
           >
-            Criar Meu Treino Personalizado
-          </Button>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold mb-6">
+              Pronto para <span className="text-gradient">transformar</span> seu corpo?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
+              Comece agora e receba seu primeiro treino personalizado em menos de 2 minutos.
+            </p>
+            <Button
+              variant="gradient"
+              size="lg"
+              className="min-w-[280px] h-16 text-lg"
+              onClick={() => navigate('/login')}
+            >
+              Criar Meu Treino Grátis
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </motion.div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-border">
+        <div className="container max-w-5xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                <Dumbbell className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-display font-semibold">AI Trainer</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              © 2024 AI Trainer. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
