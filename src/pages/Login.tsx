@@ -1,21 +1,58 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dumbbell, Eye, EyeOff } from 'lucide-react';
+import { Dumbbell, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get the redirect destination from location state
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/onboarding';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For MVP, just navigate to onboarding
-    navigate('/onboarding');
+    setLoading(true);
+
+    try {
+      const { error } = isLogin 
+        ? await signIn(email, password)
+        : await signUp(email, password);
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        if (!isLogin) {
+          toast.success('Conta criada com sucesso!');
+        }
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      toast.error('Erro ao processar autenticação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+    }
+    // OAuth will redirect, so we don't need to handle success here
   };
 
   return (
@@ -56,6 +93,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -67,11 +105,14 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pr-12"
                 required
+                minLength={6}
+                disabled={loading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                disabled={loading}
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -81,7 +122,16 @@ export default function Login() {
               </button>
             </div>
 
-            <Button variant="gradient" size="lg" className="w-full" type="submit">
+            <Button 
+              variant="gradient" 
+              size="lg" 
+              className="w-full" 
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              ) : null}
               {isLogin ? 'Entrar' : 'Criar conta'}
             </Button>
           </form>
@@ -98,7 +148,8 @@ export default function Login() {
             variant="outline"
             size="lg"
             className="w-full"
-            onClick={() => navigate('/onboarding')}
+            onClick={handleGoogleLogin}
+            disabled={loading}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -128,6 +179,7 @@ export default function Login() {
               type="button"
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary font-semibold hover:underline"
+              disabled={loading}
             >
               {isLogin ? 'Cadastre-se' : 'Entre'}
             </button>
