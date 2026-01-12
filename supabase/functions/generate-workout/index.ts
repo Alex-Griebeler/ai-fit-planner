@@ -1,11 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation schema
+const OnboardingSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(50, "Nome deve ter no máximo 50 caracteres"),
+  gender: z.enum(["female", "male", "other"]).nullable(),
+  age: z.number().int().min(13, "Idade mínima é 13 anos").max(120, "Idade máxima é 120 anos").nullable(),
+  height: z.number().int().min(100, "Altura mínima é 100 cm").max(250, "Altura máxima é 250 cm").nullable(),
+  weight: z.number().int().min(30, "Peso mínimo é 30 kg").max(300, "Peso máximo é 300 kg").nullable(),
+  goal: z.enum(["weight_loss", "hypertrophy", "health", "performance"]).nullable(),
+  timeframe: z.enum(["3months", "6months", "12months"]).nullable(),
+  trainingDays: z.array(z.string().max(20)).max(7),
+  sessionDuration: z.enum(["30min", "45min", "60min", "60plus"]).nullable(),
+  exerciseTypes: z.array(z.string().max(20)).max(5),
+  includeCardio: z.boolean(),
+  experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
+  variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
+  bodyAreas: z.array(z.string().max(30)).max(10),
+  hasHealthConditions: z.boolean(),
+  healthDescription: z.string().max(500, "Descrição de saúde deve ter no máximo 500 caracteres").optional().default(""),
+  sleepHours: z.string().max(10).nullable(),
+  stressLevel: z.enum(["low", "moderate", "high"]).nullable(),
+});
+
+// Sanitize text for AI prompt to prevent injection
+function sanitizeForPrompt(text: string): string {
+  if (!text) return "";
+  // Remove potential prompt injection patterns
+  return text
+    .replace(/ignore\s*(all\s*)?(previous|above|prior)\s*(instructions?)?/gi, "")
+    .replace(/system\s*:/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 500);
+}
 const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -517,24 +551,79 @@ serve(async (req) => {
   }
 
   try {
-    const { userData } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // === AUTHENTICATION CHECK ===
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - No valid authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      throw new Error("Supabase configuration is missing");
+    }
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase configuration is missing");
+    // Create client with user's auth token to verify they are authenticated
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Verify the JWT and get user claims
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth error:", claimsError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // Create Supabase client to fetch exercises
+    const userId = claimsData.claims.sub;
+    console.log("Authenticated user:", userId);
+
+    // === INPUT VALIDATION ===
+    const { userData } = await req.json();
+    
+    const validationResult = OnboardingSchema.safeParse(userData);
+    if (!validationResult.success) {
+      console.error("Validation error:", validationResult.error.issues);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid input data", 
+          details: validationResult.error.issues.map(i => i.message).join(", ")
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const validatedData = validationResult.data;
+    
+    // Sanitize health description to prevent prompt injection
+    if (validatedData.healthDescription) {
+      validatedData.healthDescription = sanitizeForPrompt(validatedData.healthDescription);
+    }
+
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase service role key is missing");
+    }
+
+    // Create Supabase client to fetch exercises (uses service role for database access)
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Fetch exercises from catalog based on user's level
-    const userLevel = userData.experienceLevel || "beginner";
+    const userLevel = validatedData.experienceLevel || "beginner";
     const allowedLevels = getAllowedLevels(userLevel);
 
     const { data: exercises, error: exercisesError } = await supabase
@@ -547,10 +636,10 @@ serve(async (req) => {
       throw new Error("Failed to fetch exercise catalog");
     }
 
-    // Build the user prompt with all onboarding data
-    const userPrompt = buildUserPrompt(userData, exercises || []);
+    // Build the user prompt with validated and sanitized data
+    const userPrompt = buildUserPrompt(validatedData, exercises || []);
 
-    console.log("Calling Lovable AI with user data:", userData.name);
+    console.log("Calling Lovable AI for user:", userId);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -609,7 +698,7 @@ serve(async (req) => {
       throw new Error("Failed to parse workout plan from AI response");
     }
 
-    console.log("Successfully generated workout plan for:", userData.name);
+    console.log("Successfully generated workout plan for user:", userId);
 
     return new Response(
       JSON.stringify({ plan: workoutPlan }),
