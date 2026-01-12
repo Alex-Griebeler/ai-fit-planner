@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,12 +33,6 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - HIPERTROFIA: 6-12 reps (65-80% 1RM)
 - RESISTÊNCIA/EMAGRECIMENTO: 12-20 reps (50-70% 1RM)
 - SAÚDE: 10-15 reps (60-75% 1RM)
-
-## Tempo Sob Tensão (TUT) por Objetivo:
-- FORÇA: 15-25 segundos por série (explosivo na concêntrica)
-- HIPERTROFIA: 40-60 segundos por série (2-0-2 ou 3-0-2 tempo)
-- EMAGRECIMENTO: 30-45 segundos por série (ritmo consistente)
-- SAÚDE: 30-45 segundos por série (controle motor priorizado)
 
 ## Intervalo entre Séries:
 - FORÇA: 90-180 segundos (até 3 minutos para compostos pesados)
@@ -135,14 +130,12 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - Cardio: 2-4x/semana integrado ou em dias alternados
 - MÉTODOS PERMITIDOS: circuitos, supersets, EMOM, giant sets
 - Periodização: linear ou ondulatória
-- TUT: moderado, ritmo consistente
 - INCLUIR: exercícios metabólicos (burpees modificados, mountain climbers em máquina)
 
 ## HIPERTROFIA:
 - Volume: 12-20 séries/grupamento/semana
 - Reps: 6-12 por série
 - Intervalo: 60-90 seg
-- TUT: 40-60 segundos por série (tempo controlado)
 - MÉTODOS PARA INTERMEDIÁRIOS/AVANÇADOS: drop set, rest-pause, bi-set
 - Progressão focada em aumento de carga progressivo
 - Falha muscular: apenas na última série de cada exercício
@@ -177,7 +170,6 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - Progressão: LINEAR obrigatória
 - INCLUIR: instruções detalhadas em cada exercício
 - Exercícios: máximo 2 padrões de movimento por sessão
-- Tempo de execução: cadenciado (3-0-2)
 
 ## INTERMEDIÁRIO (Média Experiência):
 - Máquinas + pesos livres progressivamente
@@ -197,7 +189,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - Menor necessidade de instruções detalhadas
 
 ## Autonomia Técnica (nível de detalhamento):
-- BAIXA: incluir tempo de execução, dicas posturais, ROM específico
+- BAIXA: incluir dicas posturais, ROM específico
 - MÉDIA: incluir apenas carga sugerida e observações técnicas
 - ALTA: ficha limpa, apenas séries x reps x carga
 
@@ -245,7 +237,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 
 ## Ajustes Automáticos Gerais:
 - Adaptação de AMPLITUDE: limitar ROM conforme região afetada
-- Redução de CARGA: manter estímulo com menor carga e maior TUT
+- Redução de CARGA: manter estímulo com menor carga
 - Modificação do MÉTODO: substituir saltos por movimentos de baixo impacto
 - Usar ISOMETRIA quando movimento ativo causar dor
 
@@ -369,7 +361,21 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - USO: aquecimento + intensidade, ou fadiga acumulada
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 14: FORMATO DE SAÍDA JSON
+                         SEÇÃO 14: CATÁLOGO DE EXERCÍCIOS
+═══════════════════════════════════════════════════════════════════════════════
+
+Você receberá uma lista de exercícios disponíveis no catálogo da academia. 
+VOCÊ DEVE USAR APENAS OS EXERCÍCIOS DO CATÁLOGO FORNECIDO.
+Cada exercício tem: nome, grupo muscular, padrão de movimento, nível de treino e equipamento.
+
+REGRAS DE SELEÇÃO:
+- Para INICIANTES: priorizar exercícios com training_level = "Iniciante"
+- Para INTERMEDIÁRIOS: pode usar "Iniciante" e "Intermediário"
+- Para AVANÇADOS: pode usar todos os níveis
+- RESPEITAR o equipamento disponível na academia low-cost
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 15: FORMATO DE SAÍDA JSON
 ═══════════════════════════════════════════════════════════════════════════════
 
 Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
@@ -398,13 +404,12 @@ Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
       "exercises": [
         {
           "order": 1,
-          "name": "Nome do exercício",
-          "equipment": "Tipo de equipamento (Máquina/Peso Livre/Peso Corporal)",
+          "name": "Nome do exercício DO CATÁLOGO",
+          "equipment": "Tipo de equipamento",
           "muscleGroup": "Grupamento principal",
           "sets": 3,
           "reps": "10-12",
           "rest": "60s",
-          "tempo": "2-0-2",
           "intensity": "RPE 7-8 ou % 1RM",
           "notes": "Observações técnicas detalhadas para o nível do usuário",
           "isCompound": true/false,
@@ -454,7 +459,7 @@ Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
 }
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 15: REGRAS CRÍTICAS FINAIS
+                         SEÇÃO 16: REGRAS CRÍTICAS FINAIS
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## OBRIGATÓRIO:
@@ -468,6 +473,7 @@ Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
 8. INCLUA aquecimento e finalizador em cada sessão
 9. ADAPTE a complexidade das instruções ao nível de experiência
 10. Se há dor/lesão, SEMPRE inclua alternativas nos exercícios
+11. USE APENAS EXERCÍCIOS DO CATÁLOGO FORNECIDO
 
 ## NUNCA:
 - Prescreva saltos ou impacto para quem tem dor em joelho/tornozelo
@@ -475,7 +481,8 @@ Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
 - Use métodos avançados para iniciantes
 - Ignore o tempo de sessão disponível
 - Prescreva volume acima do nível de experiência
-- Ignore sono ruim ou estresse alto`;
+- Ignore sono ruim ou estresse alto
+- Invente exercícios que não estão no catálogo`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -485,13 +492,36 @@ serve(async (req) => {
   try {
     const { userData } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase configuration is missing");
+    }
+
+    // Create Supabase client to fetch exercises
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Fetch exercises from catalog based on user's level
+    const userLevel = userData.experienceLevel || "beginner";
+    const allowedLevels = getAllowedLevels(userLevel);
+
+    const { data: exercises, error: exercisesError } = await supabase
+      .from("exercises")
+      .select("name, muscle_group, movement_pattern, training_level, equipment")
+      .in("training_level", allowedLevels);
+
+    if (exercisesError) {
+      console.error("Error fetching exercises:", exercisesError);
+      throw new Error("Failed to fetch exercise catalog");
+    }
+
     // Build the user prompt with all onboarding data
-    const userPrompt = buildUserPrompt(userData);
+    const userPrompt = buildUserPrompt(userData, exercises || []);
 
     console.log("Calling Lovable AI with user data:", userData.name);
 
@@ -540,7 +570,6 @@ serve(async (req) => {
     // Parse the JSON from the response
     let workoutPlan;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         workoutPlan = JSON.parse(jsonMatch[0]);
@@ -568,7 +597,28 @@ serve(async (req) => {
   }
 });
 
-function buildUserPrompt(userData: any): string {
+function getAllowedLevels(userLevel: string): string[] {
+  switch (userLevel) {
+    case "beginner":
+      return ["Iniciante"];
+    case "intermediate":
+      return ["Iniciante", "Intermediário"];
+    case "advanced":
+      return ["Iniciante", "Intermediário", "Avançado", "Intermediário e Avançado", "Iniciante a Avançado"];
+    default:
+      return ["Iniciante"];
+  }
+}
+
+interface Exercise {
+  name: string;
+  muscle_group: string;
+  movement_pattern: string | null;
+  training_level: string;
+  equipment: string | null;
+}
+
+function buildUserPrompt(userData: any, exercises: Exercise[]): string {
   // Calculate BMI
   const heightM = (userData.height || 170) / 100;
   const weight = userData.weight || 70;
@@ -579,6 +629,25 @@ function buildUserPrompt(userData: any): string {
   if (parseFloat(bmi) < 18.5) bmiCategory = "abaixo do peso";
   else if (parseFloat(bmi) >= 25 && parseFloat(bmi) < 30) bmiCategory = "sobrepeso";
   else if (parseFloat(bmi) >= 30) bmiCategory = "obesidade";
+
+  // Group exercises by muscle group for easier reference
+  const exercisesByMuscle: Record<string, Exercise[]> = {};
+  exercises.forEach((ex) => {
+    const group = ex.muscle_group || "Outros";
+    if (!exercisesByMuscle[group]) {
+      exercisesByMuscle[group] = [];
+    }
+    exercisesByMuscle[group].push(ex);
+  });
+
+  // Build exercise catalog string
+  let catalogStr = "\n## CATÁLOGO DE EXERCÍCIOS DISPONÍVEIS:\n";
+  Object.entries(exercisesByMuscle).forEach(([group, exList]) => {
+    catalogStr += `\n### ${group}:\n`;
+    exList.forEach((ex) => {
+      catalogStr += `- ${ex.name} | Nível: ${ex.training_level} | Equipamento: ${ex.equipment || "N/A"}\n`;
+    });
+  });
 
   return `
 ═══════════════════════════════════════════════════════════════════════════════
@@ -638,6 +707,8 @@ ${getSleepStressAdjustment(userData.sleepHours, userData.stressLevel)}
 - Complexidade permitida: ${getComplexityLevel(userData.experienceLevel)}
 - Métodos de intensificação: ${getIntensificationMethods(userData.experienceLevel)}
 
+${catalogStr}
+
 ═══════════════════════════════════════════════════════════════════════════════
                               INSTRUÇÕES FINAIS
 ═══════════════════════════════════════════════════════════════════════════════
@@ -652,11 +723,11 @@ Com base em TODAS as informações acima, gere um plano de treino completo segui
 6. Ajustes por sono/estresse conforme indicado
 7. Cardio ${userData.includeCardio ? 'INCLUÍDO conforme objetivo' : 'NÃO INCLUÍDO'}
 8. Instruções com nível de detalhamento para ${getAutonomyLevel(userData.experienceLevel)} autonomia
+9. USE APENAS EXERCÍCIOS DO CATÁLOGO FORNECIDO ACIMA
 
 O plano deve ser REALISTA, EXECUTÁVEL em academia low-cost, e PERSONALIZADO para este usuário.`;
 }
 
-// Helper functions
 function getGenderLabel(gender: string | null): string {
   const labels: Record<string, string> = {
     female: "Feminino",
@@ -669,7 +740,7 @@ function getGenderLabel(gender: string | null): string {
 function getGoalLabel(goal: string | null): string {
   const labels: Record<string, string> = {
     weight_loss: "EMAGRECIMENTO - Aplicar: densidade alta, pausas curtas (30-60s), supersets, reps 12-20, cardio 2-4x/semana",
-    hypertrophy: "HIPERTROFIA - Aplicar: volume 12-20 séries/grupo, reps 6-12, TUT 40-60s, pausas 60-90s",
+    hypertrophy: "HIPERTROFIA - Aplicar: volume 12-20 séries/grupo, reps 6-12, pausas 60-90s",
     health: "SAÚDE E BEM-ESTAR - Aplicar: volume moderado 8-14 séries/grupo, reps 10-15, exercícios funcionais",
     performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
@@ -790,7 +861,7 @@ function getSleepStressAdjustment(sleepHours: number | null, stressLevel: string
 
 function getAutonomyLevel(level: string | null): string {
   const labels: Record<string, string> = {
-    beginner: "BAIXA - incluir tempo de execução, dicas posturais, ROM específico em cada exercício",
+    beginner: "BAIXA - incluir dicas posturais, ROM específico em cada exercício",
     intermediate: "MÉDIA - incluir carga sugerida e observações técnicas principais",
     advanced: "ALTA - ficha objetiva, apenas séries x reps x carga",
   };

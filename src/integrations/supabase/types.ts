@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      exercises: {
+        Row: {
+          created_at: string
+          equipment: string | null
+          force_vector: string | null
+          id: string
+          joint_action: string | null
+          joint_type: string | null
+          kinetic_chain: string | null
+          movement_pattern: string | null
+          muscle_group: string
+          name: string
+          training_level: string
+        }
+        Insert: {
+          created_at?: string
+          equipment?: string | null
+          force_vector?: string | null
+          id?: string
+          joint_action?: string | null
+          joint_type?: string | null
+          kinetic_chain?: string | null
+          movement_pattern?: string | null
+          muscle_group: string
+          name: string
+          training_level: string
+        }
+        Update: {
+          created_at?: string
+          equipment?: string | null
+          force_vector?: string | null
+          id?: string
+          joint_action?: string | null
+          joint_type?: string | null
+          kinetic_chain?: string | null
+          movement_pattern?: string | null
+          muscle_group?: string
+          name?: string
+          training_level?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
