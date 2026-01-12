@@ -593,6 +593,60 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log("Authenticated user:", userId);
 
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase service role key is missing");
+    }
+
+    // Create Supabase client with service role for database operations
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // === RATE LIMITING CHECK ===
+    // Limit: 5 workout generations per hour per user
+    const RATE_LIMIT_MAX_REQUESTS = 5;
+    const RATE_LIMIT_WINDOW_HOURS = 1;
+
+    const { data: rateLimitResult, error: rateLimitError } = await supabase.rpc(
+      "check_rate_limit",
+      {
+        p_user_id: userId,
+        p_endpoint: "generate-workout",
+        p_max_requests: RATE_LIMIT_MAX_REQUESTS,
+        p_window_hours: RATE_LIMIT_WINDOW_HOURS,
+      }
+    );
+
+    if (rateLimitError) {
+      console.error("Rate limit check error:", rateLimitError);
+      // Don't block on rate limit errors, log and continue
+    } else if (rateLimitResult && rateLimitResult.length > 0) {
+      const { allowed, current_count, reset_at, remaining } = rateLimitResult[0];
+      
+      console.log(`Rate limit check: user=${userId}, count=${current_count}/${RATE_LIMIT_MAX_REQUESTS}, remaining=${remaining}`);
+
+      if (!allowed) {
+        const resetDate = new Date(reset_at);
+        return new Response(
+          JSON.stringify({
+            error: "Rate limit exceeded",
+            message: `Você atingiu o limite de ${RATE_LIMIT_MAX_REQUESTS} gerações de treino por hora. Tente novamente após ${resetDate.toLocaleTimeString("pt-BR")}.`,
+            reset_at: reset_at,
+            current_count: current_count,
+            max_requests: RATE_LIMIT_MAX_REQUESTS,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "X-RateLimit-Limit": RATE_LIMIT_MAX_REQUESTS.toString(),
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": reset_at,
+            },
+          }
+        );
+      }
+    }
+
     // === INPUT VALIDATION ===
     const { userData } = await req.json();
     
@@ -614,13 +668,6 @@ serve(async (req) => {
     if (validatedData.healthDescription) {
       validatedData.healthDescription = sanitizeForPrompt(validatedData.healthDescription);
     }
-
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase service role key is missing");
-    }
-
-    // Create Supabase client to fetch exercises (uses service role for database access)
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Fetch exercises from catalog based on user's level
     const userLevel = validatedData.experienceLevel || "beginner";
