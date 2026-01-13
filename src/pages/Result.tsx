@@ -508,7 +508,7 @@ export default function Result() {
                     <div className="px-4 pb-1">
                       <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
                         <span className="col-span-5">Exercício</span>
-                        <span className="col-span-3 text-center">Sets×Reps / Int</span>
+                        <span className="col-span-3 text-center">Séries×Reps / Desc</span>
                         <span className="col-span-2 text-center">Carga</span>
                         <span className="col-span-2 text-right">Método</span>
                       </div>
