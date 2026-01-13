@@ -29,6 +29,7 @@ export default function Progress() {
             size="icon"
             onClick={() => navigate('/dashboard')}
             className="mr-4"
+            aria-label="Voltar ao dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>

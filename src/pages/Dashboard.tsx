@@ -102,6 +102,7 @@ export default function Dashboard() {
               variant="ghost" 
               size="icon"
               onClick={handleSignOut}
+              aria-label="Sair da conta"
             >
               <LogOut className="w-4 h-4" />
             </Button>
