@@ -78,7 +78,8 @@ interface VolumeRanges {
   small: VolumeRange;  // biceps, triceps, calves, core
 }
 
-function getVolumeRanges(level: string): VolumeRanges {
+// Base volume ranges by experience level
+function getBaseVolumeRanges(level: string): VolumeRanges {
   switch (level) {
     case "beginner":
       return {
@@ -105,6 +106,112 @@ function getVolumeRanges(level: string): VolumeRanges {
         small: { min: 4, max: 8 },
       };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          DYNAMIC VOLUME CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface VolumeCalculationParams {
+  experienceLevel: string;
+  goal: string | null;
+  sessionDuration: string | null;
+  trainingDaysCount: number;
+  sleepHours: string | null;
+  stressLevel: string | null;
+}
+
+interface CalculatedVolumeRanges extends VolumeRanges {
+  factors: {
+    goal: number;
+    duration: number;
+    days: number;
+    recovery: number;
+    combined: number;
+  };
+}
+
+/**
+ * Calculates dynamic volume ranges based on multiple user factors:
+ * - Experience level (base ranges)
+ * - Goal (weight_loss: 0.75, health: 0.85, performance: 0.90, hypertrophy: 1.00)
+ * - Session duration (30min: 0.60, 45min: 0.80, 60min: 1.00, 60plus: 1.15)
+ * - Training days per week (2: 0.70, 3: 0.85, 4: 1.00, 5: 1.10, 6-7: 1.20)
+ * - Recovery (low sleep <6h or high stress: 0.75)
+ * 
+ * The final max is: baseMax × combinedFactor
+ * The min is preserved from base ranges (never reduced below absolute minimum)
+ */
+function calculateDynamicVolumeRanges(params: VolumeCalculationParams): CalculatedVolumeRanges {
+  // 1. BASE RANGES BY LEVEL
+  const base = getBaseVolumeRanges(params.experienceLevel);
+
+  // 2. GOAL FACTOR
+  const goalFactors: Record<string, number> = {
+    weight_loss: 0.75,   // Prioritizes density, not volume
+    health: 0.85,        // Moderate volume
+    performance: 0.90,   // Focus on intensity
+    hypertrophy: 1.00,   // Maximum volume
+  };
+  const goalFactor = goalFactors[params.goal || "health"] || 0.85;
+
+  // 3. SESSION DURATION FACTOR
+  const durationFactors: Record<string, number> = {
+    "30min": 0.60,
+    "45min": 0.80,
+    "60min": 1.00,
+    "60plus": 1.15,
+  };
+  const durationFactor = durationFactors[params.sessionDuration || "45min"] || 0.80;
+
+  // 4. TRAINING DAYS FACTOR
+  const daysFactors: Record<number, number> = {
+    1: 0.60,
+    2: 0.70,
+    3: 0.85,
+    4: 1.00,
+    5: 1.10,
+    6: 1.20,
+    7: 1.20,
+  };
+  const daysCount = Math.max(1, Math.min(params.trainingDaysCount, 7));
+  const daysFactor = daysFactors[daysCount] || 0.85;
+
+  // 5. RECOVERY FACTOR (sleep/stress)
+  const sleepNum = parseInt(params.sleepHours || "7", 10);
+  const hasLowRecovery = sleepNum < 6 || params.stressLevel === "high";
+  const recoveryFactor = hasLowRecovery ? 0.75 : 1.00;
+
+  // Calculate combined factor
+  const combinedFactor = goalFactor * durationFactor * daysFactor * recoveryFactor;
+
+  // Calculate final ranges (min stays the same, max is adjusted)
+  return {
+    large: {
+      min: base.large.min,
+      max: Math.max(base.large.min, Math.round(base.large.max * combinedFactor)),
+    },
+    medium: {
+      min: base.medium.min,
+      max: Math.max(base.medium.min, Math.round(base.medium.max * combinedFactor)),
+    },
+    small: {
+      min: base.small.min,
+      max: Math.max(base.small.min, Math.round(base.small.max * combinedFactor)),
+    },
+    factors: {
+      goal: goalFactor,
+      duration: durationFactor,
+      days: daysFactor,
+      recovery: recoveryFactor,
+      combined: combinedFactor,
+    },
+  };
+}
+
+// Legacy function for backward compatibility - redirects to base ranges
+function getVolumeRanges(level: string): VolumeRanges {
+  return getBaseVolumeRanges(level);
 }
 
 function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
@@ -193,6 +300,8 @@ function validateWorkoutPlan(
     trainingDays: string[]; 
     injuryAreas: string[];
     experienceLevel: string | null;
+    goal: string | null;
+    sessionDuration: string | null;
     sleepHours: string | null;
     stressLevel: string | null;
   }
@@ -250,15 +359,21 @@ function validateWorkoutPlan(
     }
   }
   
-  // 5. CRITICAL: Validate weekly volume per muscle group
-  const level = userData.experienceLevel || "beginner";
-  const volumeRanges = getVolumeRanges(level);
-  const weeklyVolume = plan.weeklyVolume || {};
+  // 5. CRITICAL: Validate weekly volume using DYNAMIC calculation
+  const dynamicVolumeRanges = calculateDynamicVolumeRanges({
+    experienceLevel: userData.experienceLevel || "beginner",
+    goal: userData.goal,
+    sessionDuration: userData.sessionDuration,
+    trainingDaysCount: userData.trainingDays?.length || 3,
+    sleepHours: userData.sleepHours,
+    stressLevel: userData.stressLevel,
+  });
   
-  // Check if sleep/stress reduction applies
-  const sleepHours = parseInt(userData.sleepHours || "7", 10);
-  const hasLowRecovery = sleepHours < 6 || userData.stressLevel === "high";
-  const volumeReductionFactor = hasLowRecovery ? 0.75 : 1; // 25% reduction if low recovery
+  const weeklyVolume = plan.weeklyVolume || {};
+  const level = userData.experienceLevel || "beginner";
+  
+  console.log(`Volume validation - Level: ${level}, Factors: goal=${dynamicVolumeRanges.factors.goal}, duration=${dynamicVolumeRanges.factors.duration}, days=${dynamicVolumeRanges.factors.days}, recovery=${dynamicVolumeRanges.factors.recovery}, combined=${dynamicVolumeRanges.factors.combined.toFixed(2)}`);
+  console.log(`Dynamic ranges - Large: ${dynamicVolumeRanges.large.min}-${dynamicVolumeRanges.large.max}, Medium: ${dynamicVolumeRanges.medium.min}-${dynamicVolumeRanges.medium.max}, Small: ${dynamicVolumeRanges.small.min}-${dynamicVolumeRanges.small.max}`);
   
   // Define all muscle groups to check
   const muscleGroups = {
@@ -267,23 +382,22 @@ function validateWorkoutPlan(
     small: ["biceps", "triceps", "calves", "core"],
   };
   
-  // Validate each muscle group
+  // Validate each muscle group using dynamic ranges
   Object.entries(muscleGroups).forEach(([category, muscles]) => {
-    const range = volumeRanges[category as keyof VolumeRanges];
-    const adjustedMin = Math.floor(range.min * volumeReductionFactor);
+    const range = dynamicVolumeRanges[category as keyof VolumeRanges];
     
     muscles.forEach((muscle) => {
       const volume = weeklyVolume[muscle] || 0;
       
-      if (volume < adjustedMin) {
+      if (volume < range.min) {
         errors.push(
-          `Volume INSUFICIENTE para ${muscle}: ${volume} séries (mínimo ${adjustedMin} para ${level})`
+          `Volume INSUFICIENTE para ${muscle}: ${volume} séries (mínimo ${range.min} para perfil calculado)`
         );
       }
       
       if (volume > range.max) {
         warnings.push(
-          `Volume EXCESSIVO para ${muscle}: ${volume} séries (máximo ${range.max} para ${level})`
+          `Volume EXCESSIVO para ${muscle}: ${volume} séries (máximo ${range.max} para perfil calculado)`
         );
       }
     });
@@ -342,58 +456,59 @@ function getInjuryAdaptationRules(area: string): string {
 const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 1: VOLUME SEMANAL POR GRUPAMENTO (CRÍTICO)
+                         SEÇÃO 1: VOLUME SEMANAL DINÂMICO (CRÍTICO)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## TABELA OBRIGATÓRIA DE VOLUME MÍNIMO E MÁXIMO (séries/semana):
+## SISTEMA DE CÁLCULO DINÂMICO DE VOLUME
 
-### INICIANTE:
-| Grupamento         | Mínimo | Máximo | Observação                    |
-|--------------------|--------|--------|-------------------------------|
-| Peitoral           | 8      | 12     | Grupo grande                  |
-| Costas             | 8      | 12     | Grupo grande                  |
-| Quadríceps         | 8      | 12     | Grupo grande                  |
-| Isquiotibiais      | 8      | 12     | Grupo grande                  |
-| Glúteos            | 8      | 12     | Grupo grande                  |
-| Ombros             | 6      | 10     | Grupo médio                   |
-| Bíceps             | 4      | 8      | Grupo pequeno                 |
-| Tríceps            | 4      | 8      | Grupo pequeno                 |
-| Panturrilhas       | 4      | 8      | Grupo pequeno                 |
-| Core               | 4      | 8      | Grupo pequeno                 |
+O volume máximo semanal é calculado DINAMICAMENTE para cada usuário considerando:
 
-### INTERMEDIÁRIO:
-| Grupamento         | Mínimo | Máximo | Observação                    |
-|--------------------|--------|--------|-------------------------------|
-| Peitoral           | 12     | 18     | Grupo grande                  |
-| Costas             | 12     | 18     | Grupo grande                  |
-| Quadríceps         | 12     | 18     | Grupo grande                  |
-| Isquiotibiais      | 12     | 18     | Grupo grande                  |
-| Glúteos            | 12     | 18     | Grupo grande                  |
-| Ombros             | 10     | 14     | Grupo médio                   |
-| Bíceps             | 8      | 12     | Grupo pequeno                 |
-| Tríceps            | 8      | 12     | Grupo pequeno                 |
-| Panturrilhas       | 8      | 12     | Grupo pequeno                 |
-| Core               | 8      | 12     | Grupo pequeno                 |
+### FATORES DE AJUSTE:
+1. **NÍVEL DE EXPERIÊNCIA** (base dos ranges)
+   - Iniciante: Large 8-12, Medium 6-10, Small 4-8
+   - Intermediário: Large 12-18, Medium 10-14, Small 8-12
+   - Avançado: Large 16-26, Medium 12-20, Small 10-16
 
-### AVANÇADO:
-| Grupamento         | Mínimo | Máximo | Observação                    |
-|--------------------|--------|--------|-------------------------------|
-| Peitoral           | 16     | 26     | Grupo grande                  |
-| Costas             | 16     | 26     | Grupo grande                  |
-| Quadríceps         | 16     | 26     | Grupo grande                  |
-| Isquiotibiais      | 16     | 26     | Grupo grande                  |
-| Glúteos            | 16     | 26     | Grupo grande                  |
-| Ombros             | 12     | 20     | Grupo médio                   |
-| Bíceps             | 10     | 16     | Grupo pequeno                 |
-| Tríceps            | 10     | 16     | Grupo pequeno                 |
-| Panturrilhas       | 10     | 16     | Grupo pequeno                 |
-| Core               | 10     | 16     | Grupo pequeno                 |
+2. **OBJETIVO** (multiplicador sobre máximo)
+   - Emagrecimento: ×0.75 (prioriza densidade, não volume)
+   - Saúde: ×0.85 (volume moderado)
+   - Performance: ×0.90 (foco em intensidade)
+   - Hipertrofia: ×1.00 (volume máximo)
 
-## REGRA DE OURO DO VOLUME:
-- NUNCA prescrever volume abaixo do MÍNIMO para o nível
-- Se há redução por sono/estresse (-25%), aplicar sobre o valor MÉDIO, não abaixo do mínimo absoluto
-- Se há foco em um grupamento, aumentar 20-30% o volume DAQUELE grupamento, não reduzir os demais
-- TODOS os grupamentos devem estar dentro da faixa, sem exceção
+3. **TEMPO DE SESSÃO** (multiplicador sobre máximo)
+   - 30 min: ×0.60
+   - 45 min: ×0.80
+   - 60 min: ×1.00
+   - +60 min: ×1.15
+
+4. **DIAS POR SEMANA** (multiplicador sobre máximo)
+   - 2 dias: ×0.70
+   - 3 dias: ×0.85
+   - 4 dias: ×1.00
+   - 5 dias: ×1.10
+   - 6-7 dias: ×1.20
+
+5. **RECUPERAÇÃO** (multiplicador sobre máximo)
+   - Sono <6h OU Estresse alto: ×0.75
+   - Normal: ×1.00
+
+### FÓRMULA:
+Volume Máximo Final = Volume Máximo Base × (Objetivo × Duração × Dias × Recuperação)
+Volume Mínimo = Mantém o mínimo absoluto do nível (NUNCA reduz)
+
+### EXEMPLO DE CÁLCULO:
+Usuário Avançado, Hipertrofia, 45min, 3 dias/semana, sono normal:
+- Base Large Max: 26 séries
+- Fator combinado: 1.00 × 0.80 × 0.85 × 1.00 = 0.68
+- Max Final: 26 × 0.68 = 18 séries
+- Faixa final: 16-18 séries (não 16-26!)
+
+## REGRA CRÍTICA:
+- O prompt do usuário contém uma TABELA COM OS VALORES EXATOS calculados para aquele perfil
+- SIGA ESSES VALORES À RISCA - eles já consideram todos os fatores
+- NUNCA prescreva abaixo do MÍNIMO absoluto do nível
+- NUNCA prescreva acima do MÁXIMO calculado
+- TODOS os grupamentos devem estar DENTRO da faixa específica
 
 ## Volume por Frequência Semanal (distribuição):
 - 2-3 treinos/semana: distribuir volume em todas as sessões (Full Body ou A/B)
@@ -1086,6 +1201,8 @@ serve(async (req) => {
         trainingDays: validatedData.trainingDays || [],
         injuryAreas: validatedData.injuryAreas || [],
         experienceLevel: validatedData.experienceLevel,
+        goal: validatedData.goal,
+        sessionDuration: validatedData.sessionDuration,
         sleepHours: validatedData.sleepHours,
         stressLevel: validatedData.stressLevel,
       }
@@ -1147,13 +1264,16 @@ function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[]): st
   else if (parseFloat(bmi) >= 25 && parseFloat(bmi) < 30) bmiCategory = "sobrepeso";
   else if (parseFloat(bmi) >= 30) bmiCategory = "obesidade";
 
-  // Get volume ranges for user's level
+  // Calculate DYNAMIC volume ranges for this specific user
   const level = userData.experienceLevel || "beginner";
-  const volumeRanges = getVolumeRanges(level);
-  
-  // Calculate if sleep/stress reduction applies
-  const sleepHours = parseInt(userData.sleepHours || "7", 10);
-  const hasLowRecovery = sleepHours < 6 || userData.stressLevel === "high";
+  const dynamicRanges = calculateDynamicVolumeRanges({
+    experienceLevel: level,
+    goal: userData.goal,
+    sessionDuration: userData.sessionDuration,
+    trainingDaysCount: userData.trainingDays?.length || 3,
+    sleepHours: userData.sleepHours,
+    stressLevel: userData.stressLevel,
+  });
 
   // Group exercises by muscle group for easier reference
   const exercisesByMuscle: Record<string, Exercise[]> = {};
@@ -1205,29 +1325,37 @@ ${userData.healthDescription ? `
 - Sem restrições por dor/lesão`;
   }
 
-  // Build volume requirements section
+  // Build DYNAMIC volume requirements section with calculated values
+  const goalLabel = getGoalLabelShort(userData.goal);
+  const durationLabel = userData.sessionDuration || "45min";
+  const daysCount = userData.trainingDays?.length || 3;
+  
   const volumeSection = `
-## VOLUME OBRIGATÓRIO PARA ESTE USUÁRIO (NÍVEL: ${getExperienceLevelSimple(userData.experienceLevel)})
-${hasLowRecovery ? `⚠️ ATENÇÃO: Sono insuficiente/Estresse alto detectado. Aplicar redução de 20-25% sobre o MÉDIO da faixa, mas NUNCA abaixo do mínimo.\n` : ''}
+## 🎯 VOLUME CALCULADO DINAMICAMENTE PARA ESTE USUÁRIO
+**Perfil**: ${getExperienceLevelSimple(userData.experienceLevel)} | ${goalLabel} | ${durationLabel} | ${daysCount} dias/sem
+**Fatores aplicados**: Objetivo ×${dynamicRanges.factors.goal} | Duração ×${dynamicRanges.factors.duration} | Dias ×${dynamicRanges.factors.days} | Recuperação ×${dynamicRanges.factors.recovery}
+**Multiplicador final**: ×${dynamicRanges.factors.combined.toFixed(2)}
 
-### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
+### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS (CALCULADAS):
 | Grupamento    | Mínimo | Alvo  | Máximo |
 |---------------|--------|-------|--------|
-| Peitoral      | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
-| Costas        | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
-| Quadríceps    | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
-| Isquiotibiais | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
-| Glúteos       | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
-| Ombros        | ${volumeRanges.medium.min} | ${Math.round((volumeRanges.medium.min + volumeRanges.medium.max) / 2)} | ${volumeRanges.medium.max} |
-| Bíceps        | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
-| Tríceps       | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
-| Panturrilhas  | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
-| Core          | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
+| Peitoral      | ${dynamicRanges.large.min} | ${Math.round((dynamicRanges.large.min + dynamicRanges.large.max) / 2)} | ${dynamicRanges.large.max} |
+| Costas        | ${dynamicRanges.large.min} | ${Math.round((dynamicRanges.large.min + dynamicRanges.large.max) / 2)} | ${dynamicRanges.large.max} |
+| Quadríceps    | ${dynamicRanges.large.min} | ${Math.round((dynamicRanges.large.min + dynamicRanges.large.max) / 2)} | ${dynamicRanges.large.max} |
+| Isquiotibiais | ${dynamicRanges.large.min} | ${Math.round((dynamicRanges.large.min + dynamicRanges.large.max) / 2)} | ${dynamicRanges.large.max} |
+| Glúteos       | ${dynamicRanges.large.min} | ${Math.round((dynamicRanges.large.min + dynamicRanges.large.max) / 2)} | ${dynamicRanges.large.max} |
+| Ombros        | ${dynamicRanges.medium.min} | ${Math.round((dynamicRanges.medium.min + dynamicRanges.medium.max) / 2)} | ${dynamicRanges.medium.max} |
+| Bíceps        | ${dynamicRanges.small.min} | ${Math.round((dynamicRanges.small.min + dynamicRanges.small.max) / 2)} | ${dynamicRanges.small.max} |
+| Tríceps       | ${dynamicRanges.small.min} | ${Math.round((dynamicRanges.small.min + dynamicRanges.small.max) / 2)} | ${dynamicRanges.small.max} |
+| Panturrilhas  | ${dynamicRanges.small.min} | ${Math.round((dynamicRanges.small.min + dynamicRanges.small.max) / 2)} | ${dynamicRanges.small.max} |
+| Core          | ${dynamicRanges.small.min} | ${Math.round((dynamicRanges.small.min + dynamicRanges.small.max) / 2)} | ${dynamicRanges.small.max} |
 
-### REGRA CRÍTICA:
-- TODOS os grupamentos devem ter volume DENTRO da faixa acima
-- Se há área prioritária, aumentar 20-30% o volume DAQUELA área
-- NÃO reduzir o volume das outras áreas - manter no mínimo`;
+### ⚠️ REGRAS CRÍTICAS DE VOLUME:
+- TODOS os grupamentos DEVEM estar DENTRO das faixas acima
+- Estes valores JÁ CONSIDERAM: objetivo, tempo disponível, dias de treino e recuperação
+- Se há área prioritária: aumentar volume apenas DAQUELA área em 20-30%
+- NUNCA reduzir volume de outras áreas abaixo do mínimo
+- O plano será VALIDADO contra estes limites específicos`;
 
   return `
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1323,6 +1451,16 @@ function getGoalLabel(goal: string | null): string {
     performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
   return labels[goal || "health"] || "SAÚDE E BEM-ESTAR";
+}
+
+function getGoalLabelShort(goal: string | null): string {
+  const labels: Record<string, string> = {
+    weight_loss: "Emagrecimento",
+    hypertrophy: "Hipertrofia",
+    health: "Saúde",
+    performance: "Performance",
+  };
+  return labels[goal || "health"] || "Saúde";
 }
 
 function getTimeframeLabel(timeframe: string | null): string {
