@@ -1852,7 +1852,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
       "day": "Dia da semana",
       "name": "Nome do treino",
       "focus": "Foco principal",
-      "muscleGroups": ["grupo1", "grupo2"],
+      "muscleGroups": ["Peitoral", "Ombros", "Tríceps"],
       "estimatedDuration": "XX min",
       "warmup": {
         "description": "Aquecimento",
@@ -1912,6 +1912,12 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
                          SEÇÃO 11: REGRAS CRÍTICAS FINAIS
 ═══════════════════════════════════════════════════════════════════════════════
 
+## IDIOMA OBRIGATÓRIO (PT-BR):
+- Todos os campos de texto (planName, description, notes, muscleGroups) DEVEM ser em PORTUGUÊS BRASILEIRO
+- muscleGroups DEVE usar EXATAMENTE estes nomes em português:
+  - Peitoral, Costas, Ombros, Bíceps, Tríceps, Quadríceps, Posteriores, Glúteos, Panturrilhas, Core, Cintura Escapular
+- NUNCA use nomes em inglês (chest, back, shoulders, etc.) no campo muscleGroups
+
 ## OBRIGATÓRIO:
 1. Retorne APENAS o JSON, sem texto adicional
 2. Use APENAS exercícios do CATÁLOGO fornecido
@@ -1934,7 +1940,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 - Prescreva acima do MÁXIMO
 - Invente exercícios fora do catálogo
 - Negligencie a Cintura Escapular
-- Gere treinos que excedam o tempo disponível`;
+- Gere treinos que excedam o tempo disponível
+- Use muscleGroups em inglês`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //                          MAIN SERVER HANDLER

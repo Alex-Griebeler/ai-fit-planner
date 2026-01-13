@@ -386,22 +386,40 @@ export default function Result() {
   if (!plan) return null;
 
   const muscleLabels: Record<string, string> = {
-    chest: 'Peito',
+    // English keys
+    chest: 'Peitoral',
     back: 'Costas',
     shoulders: 'Ombros',
     biceps: 'Bíceps',
     triceps: 'Tríceps',
     quadriceps: 'Quadríceps',
-    hamstrings: 'Posterior',
+    hamstrings: 'Posteriores',
     glutes: 'Glúteos',
-    calves: 'Panturrilha',
-    core: 'Core'
+    calves: 'Panturrilhas',
+    core: 'Core',
+    scapular_belt: 'Cintura Escapular',
+    // Portuguese keys (caso IA já retorne PT)
+    'Peitoral': 'Peitoral',
+    'Costas': 'Costas',
+    'Ombros': 'Ombros',
+    'Bíceps': 'Bíceps',
+    'Tríceps': 'Tríceps',
+    'Quadríceps': 'Quadríceps',
+    'Posteriores': 'Posteriores',
+    'Glúteos': 'Glúteos',
+    'Panturrilhas': 'Panturrilhas',
+    'Core': 'Core',
+    'Cintura Escapular': 'Cintura Escapular',
+  };
+
+  const translateMuscleGroup = (group: string): string => {
+    return muscleLabels[group] || muscleLabels[group.toLowerCase()] || group;
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Hero - Ultra minimal */}
-      <div className="container max-w-lg mx-auto px-6 pt-12 pb-8">
+      <div className="container max-w-xl mx-auto px-6 pt-12 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -416,7 +434,7 @@ export default function Result() {
         </motion.div>
       </div>
 
-      <div className="container max-w-lg mx-auto px-6 pb-12">
+      <div className="container max-w-xl mx-auto px-6 pb-12">
         {/* Warnings - Minimal */}
         {plan.warnings && plan.warnings.length > 0 && (
           <motion.div
@@ -482,7 +500,7 @@ export default function Result() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{workout.day}</p>
-                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.join(' · ')}</p>
+                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.map(g => translateMuscleGroup(g)).join(' · ')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -525,9 +543,26 @@ export default function Result() {
                           >
                             {/* Exercise Name + Intensity Badge */}
                             <div className="col-span-5">
-                              <span className="text-sm text-foreground block truncate">
-                                {exercise.name}
-                              </span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="text-left w-full">
+                                    <span className="text-sm text-foreground block truncate">
+                                      {exercise.name}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" align="start" className="w-64 p-3">
+                                  <p className="font-medium text-sm text-foreground">{exercise.name}</p>
+                                  {exercise.equipment && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Equipamento: {exercise.equipment}
+                                    </p>
+                                  )}
+                                  {exercise.notes && (
+                                    <p className="text-xs text-muted-foreground mt-2 italic">{exercise.notes}</p>
+                                  )}
+                                </PopoverContent>
+                              </Popover>
                               {exercise.intensity && (
                                 <Popover>
                                   <PopoverTrigger asChild>
