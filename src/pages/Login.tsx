@@ -17,6 +17,7 @@ export default function Login() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -232,12 +233,47 @@ export default function Login() {
               />
             </div>
 
+            {/* Confirm password field - only for registration */}
+            {!isLogin && (
+              <div>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Confirmar senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pr-12"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <p className="text-xs text-destructive mt-1">As senhas não coincidem</p>
+                )}
+                {confirmPassword.length > 0 && password === confirmPassword && (
+                  <p className="text-xs text-green-500 mt-1">✓ Senhas coincidem</p>
+                )}
+              </div>
+            )}
+
             <Button 
               variant="gradient" 
               size="lg" 
               className="w-full" 
               type="submit"
-              disabled={loading || (!isLogin && !passwordValidation.isValid)}
+              disabled={loading || (!isLogin && (!passwordValidation.isValid || password !== confirmPassword))}
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
