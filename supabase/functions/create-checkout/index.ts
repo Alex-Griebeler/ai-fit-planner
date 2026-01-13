@@ -7,8 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// TODO: Criar produto e preço no Stripe Dashboard e atualizar este ID
-const PREMIUM_PRICE_ID = "price_premium_monthly"; // Substituir pelo price_id real
+const PREMIUM_PRICE_ID = "price_1SpBXMLtHQX7R8uhaSvARvLA";
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';

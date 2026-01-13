@@ -8,8 +8,10 @@ import {
   ProfileCard, 
   ActivePlanCard, 
   WorkoutHistoryCard, 
-  StatsCard 
+  StatsCard,
+  SessionHistoryCard 
 } from '@/components/dashboard';
+import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { 
   Plus, 
   LogOut, 
@@ -41,6 +43,7 @@ export default function Dashboard() {
     isLoading: plansLoading, 
     deletePlan 
   } = useWorkoutPlans();
+  const { sessions, isLoading: sessionsLoading } = useWorkoutSessions();
 
   const handleSignOut = async () => {
     await signOut();
@@ -155,11 +158,23 @@ export default function Dashboard() {
           <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
         </motion.div>
 
-        {/* Workout History */}
+        {/* Session History */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <SessionHistoryCard 
+            sessions={sessions || []} 
+            isLoading={sessionsLoading} 
+          />
+        </motion.div>
+
+        {/* Workout Plans History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
         >
           <WorkoutHistoryCard 
             plans={plans} 

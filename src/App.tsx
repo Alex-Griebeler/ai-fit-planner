@@ -19,6 +19,8 @@ const Result = lazy(() => import('./pages/Result'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const WorkoutExecution = lazy(() => import('./pages/WorkoutExecution'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const Progress = lazy(() => import('./pages/Progress'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
@@ -108,6 +110,15 @@ const App = () => (
                     element={
                       <ProtectedRoute>
                         <WorkoutExecution />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route 
+                    path="/progress" 
+                    element={
+                      <ProtectedRoute>
+                        <Progress />
                       </ProtectedRoute>
                     } 
                   />

@@ -5,6 +5,7 @@ import { ArrowLeft, Timer, Check, X, ChevronUp, ChevronDown } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { useExerciseLoads } from '@/hooks/useExerciseLoads';
+import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { RestTimer } from '@/components/workout/RestTimer';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
@@ -49,6 +50,13 @@ export default function WorkoutExecution() {
 
   const { activePlan, isLoading } = useWorkoutPlans();
   const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
+  const { 
+    currentSession,
+    startSession, 
+    updateSession, 
+    completeSession, 
+    abandonSession 
+  } = useWorkoutSessions();
 
   // State
   const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
@@ -82,6 +90,19 @@ export default function WorkoutExecution() {
     }
   }, [loads, workout]);
 
+  // Start session when workout loads
+  useEffect(() => {
+    if (workout && activePlan && !currentSession) {
+      const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+      startSession({
+        workoutPlanId: activePlan.id,
+        workoutDay: workout.day,
+        workoutName: workout.name,
+        totalSets,
+      }).catch(console.error);
+    }
+  }, [workout, activePlan, currentSession, startSession]);
+
   // Parse rest time from string like "60s" or "2min"
   const parseRestTime = useCallback((rest: string): number => {
     const match = rest.match(/(\d+)/);
@@ -114,10 +135,11 @@ export default function WorkoutExecution() {
 
   // Handle set completion
   const handleSetComplete = useCallback((exerciseIndex: number, setNumber: number) => {
-    setCompletedSets(prev => ({
-      ...prev,
-      [exerciseIndex]: (prev[exerciseIndex] || 0) + 1,
-    }));
+    const newCompletedSets = {
+      ...completedSets,
+      [exerciseIndex]: (completedSets[exerciseIndex] || 0) + 1,
+    };
+    setCompletedSets(newCompletedSets);
 
     const exercise = workout?.exercises[exerciseIndex];
     if (exercise) {
@@ -129,8 +151,24 @@ export default function WorkoutExecution() {
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
+
+      // Update session in database
+      if (currentSession) {
+        const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
+        const exercisesData = workout?.exercises.map((ex, idx) => ({
+          name: ex.name,
+          completedSets: newCompletedSets[idx] || 0,
+          totalSets: ex.sets,
+          load: localLoads[ex.name] || null,
+        }));
+        
+        updateSession(currentSession.id, {
+          completedSets: totalCompleted,
+          exercisesData,
+        }).catch(console.error);
+      }
     }
-  }, [workout, parseRestTime]);
+  }, [workout, parseRestTime, completedSets, currentSession, localLoads, updateSession]);
 
   // Handle set undo
   const handleSetUndo = useCallback((exerciseIndex: number, setNumber: number) => {
@@ -163,11 +201,21 @@ export default function WorkoutExecution() {
   }, [progressStats.completedSets, isWorkoutComplete, navigate]);
 
   // Handle workout completion
-  const handleFinishWorkout = useCallback(() => {
-    const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
-    toast.success(`Treino concluído em ${duration} minutos! 💪`);
-    navigate('/dashboard');
-  }, [workoutStartTime, navigate]);
+  const handleFinishWorkout = useCallback(async () => {
+    if (currentSession) {
+      try {
+        await completeSession(currentSession.id);
+        const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
+        toast.success(`Treino concluído em ${duration} minutos! 💪`);
+        navigate('/dashboard');
+      } catch (error) {
+        console.error('Error completing session:', error);
+        navigate('/dashboard');
+      }
+    } else {
+      navigate('/dashboard');
+    }
+  }, [currentSession, completeSession, workoutStartTime, navigate]);
 
   // Navigate between exercises
   const goToNextExercise = useCallback(() => {
@@ -335,7 +383,12 @@ export default function WorkoutExecution() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continuar treino</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate('/dashboard')}>
+            <AlertDialogAction onClick={async () => {
+              if (currentSession) {
+                await abandonSession(currentSession.id).catch(console.error);
+              }
+              navigate('/dashboard');
+            }}>
               Sair mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
