@@ -15,13 +15,14 @@ import {
   StepSessionDuration,
   StepExerciseTypes,
   StepExperience,
+  StepSplitPreference,
   StepVariation,
   StepBodyAreas,
   StepHealth,
   StepSleepStress,
 } from '@/components/onboarding/steps';
 
-const TOTAL_STEPS = 12;
+const TOTAL_STEPS = 13;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -132,12 +133,24 @@ export default function Onboarding() {
       case 8:
         return <StepExperience {...stepProps} />;
       case 9:
-        return <StepVariation {...stepProps} />;
+        // Show split preference ONLY for intermediate/advanced with exactly 3 training days
+        const shouldShowSplitStep = 
+          data.experienceLevel !== 'beginner' && 
+          data.trainingDays.length === 3;
+        
+        if (!shouldShowSplitStep) {
+          // Skip this step - handled in nextStep logic
+          nextStep();
+          return null;
+        }
+        return <StepSplitPreference {...stepProps} />;
       case 10:
-        return <StepBodyAreas {...stepProps} />;
+        return <StepVariation {...stepProps} />;
       case 11:
-        return <StepHealth {...stepProps} />;
+        return <StepBodyAreas {...stepProps} />;
       case 12:
+        return <StepHealth {...stepProps} />;
+      case 13:
         return <StepSleepStress {...stepProps} onFinish={handleFinish} isLoading={isLoading} />;
       default:
         return null;

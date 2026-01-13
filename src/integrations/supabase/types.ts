@@ -136,6 +136,7 @@ export type Database = {
           injury_areas: string[] | null
           session_duration: string | null
           sleep_hours: string | null
+          split_preference: string | null
           stress_level: string | null
           timeframe: string | null
           training_days: string[] | null
@@ -156,6 +157,7 @@ export type Database = {
           injury_areas?: string[] | null
           session_duration?: string | null
           sleep_hours?: string | null
+          split_preference?: string | null
           stress_level?: string | null
           timeframe?: string | null
           training_days?: string[] | null
@@ -176,6 +178,7 @@ export type Database = {
           injury_areas?: string[] | null
           session_duration?: string | null
           sleep_hours?: string | null
+          split_preference?: string | null
           stress_level?: string | null
           timeframe?: string | null
           training_days?: string[] | null
