@@ -3,3 +3,15 @@ project_id = "drudjgrbludyqdogwvqc"
 [functions.generate-workout]
 enabled = true
 verify_jwt = false
+
+[functions.create-checkout]
+enabled = true
+verify_jwt = false
+
+[functions.check-subscription]
+enabled = true
+verify_jwt = false
+
+[functions.customer-portal]
+enabled = true
+verify_jwt = false
