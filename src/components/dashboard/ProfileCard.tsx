@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { Profile } from '@/hooks/useProfile';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, Ruler, Scale } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Ruler, Scale, Settings } from 'lucide-react';
 
 interface ProfileCardProps {
   profile: Profile | null;
@@ -9,6 +11,8 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
+  const navigate = useNavigate();
+
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
@@ -68,6 +72,15 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
               )}
             </div>
           </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/settings')}
+            className="shrink-0"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
         </div>
 
         {(profile.height || profile.weight) && (

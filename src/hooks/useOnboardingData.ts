@@ -107,11 +107,51 @@ export function useOnboardingData() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (partialData: Partial<OnboardingData>) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+
+      // Build update object with only provided fields
+      const updateFields: Record<string, unknown> = {};
+      
+      if (partialData.goal !== undefined) updateFields.goal = partialData.goal;
+      if (partialData.timeframe !== undefined) updateFields.timeframe = partialData.timeframe;
+      if (partialData.trainingDays !== undefined) updateFields.training_days = partialData.trainingDays;
+      if (partialData.sessionDuration !== undefined) updateFields.session_duration = partialData.sessionDuration;
+      if (partialData.exerciseTypes !== undefined) updateFields.exercise_types = partialData.exerciseTypes;
+      if (partialData.includeCardio !== undefined) updateFields.include_cardio = partialData.includeCardio;
+      if (partialData.experienceLevel !== undefined) updateFields.experience_level = partialData.experienceLevel;
+      if (partialData.variationPreference !== undefined) updateFields.variation_preference = partialData.variationPreference;
+      if (partialData.bodyAreas !== undefined) updateFields.body_areas = partialData.bodyAreas;
+      if (partialData.hasHealthConditions !== undefined) updateFields.has_health_conditions = partialData.hasHealthConditions;
+      if (partialData.injuryAreas !== undefined) updateFields.injury_areas = partialData.injuryAreas;
+      if (partialData.healthDescription !== undefined) updateFields.health_description = partialData.healthDescription;
+      if (partialData.sleepHours !== undefined) updateFields.sleep_hours = partialData.sleepHours;
+      if (partialData.stressLevel !== undefined) updateFields.stress_level = partialData.stressLevel;
+
+      const { data, error } = await supabase
+        .from("user_onboarding_data")
+        .upsert(
+          { user_id: user.id, ...updateFields },
+          { onConflict: "user_id" }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as UserOnboardingData;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["onboarding-data", user?.id], dbToAppFormat(data));
+    },
+  });
+
   return {
     onboardingData: query.data,
     isLoading: query.isLoading,
     error: query.error,
     saveOnboardingData: saveMutation.mutateAsync,
-    isSaving: saveMutation.isPending,
+    updateOnboardingData: updateMutation.mutateAsync,
+    isSaving: saveMutation.isPending || updateMutation.isPending,
   };
 }
