@@ -20,7 +20,7 @@ import {
   Timer,
   Sparkles
 } from 'lucide-react';
-import evolveLogo from '@/assets/evolve-logo.png';
+
 
 interface WorkoutExercise {
   order: number;
@@ -301,13 +301,6 @@ export default function Result() {
           animate={{ opacity: 1 }}
           className="text-center px-6"
         >
-          <motion.img
-            src={evolveLogo}
-            alt="Evolve"
-            className="h-12 mx-auto mb-8 object-contain"
-            animate={{ scale: [1, 1.02, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          />
           <motion.div
             className="w-8 h-8 mx-auto mb-6 border-2 border-primary border-t-transparent rounded-full"
             animate={{ rotate: 360 }}
@@ -330,11 +323,6 @@ export default function Result() {
           animate={{ opacity: 1 }}
           className="text-center px-6 max-w-sm"
         >
-          <img
-            src={evolveLogo}
-            alt="Evolve"
-            className="h-10 mx-auto mb-8 object-contain opacity-50"
-          />
           
           {isRateLimited ? (
             <>
@@ -411,11 +399,6 @@ export default function Result() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <img
-            src={evolveLogo}
-            alt="Evolve"
-            className="h-10 mx-auto mb-6 object-contain"
-          />
           <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
             Plano Pronto
           </h1>
@@ -674,14 +657,6 @@ export default function Result() {
           </Button>
         </motion.div>
 
-        {/* Footer logo */}
-        <div className="mt-12 text-center">
-          <img
-            src={evolveLogo}
-            alt="Evolve"
-            className="h-6 mx-auto opacity-20"
-          />
-        </div>
       </div>
     </div>
   );
