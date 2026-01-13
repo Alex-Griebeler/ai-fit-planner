@@ -224,6 +224,63 @@ function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          EQUIPMENT FILTERING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Map user preferences to equipment names from catalog
+const EQUIPMENT_MAPPING: Record<string, string[]> = {
+  machines: [
+    "Máquina", "Máquina Assistida", "Máquina Scott", "Máquina/Anilha", "Máquina/Placas",
+    "Cabos", "Puxador Alto", "Puxador Baixo", "Leg Press", "Leg Press Horizontal",
+    "Leg Press Inclinado", "Leg Press Sentado", "Hack Machine", "Smith",
+    "Esteira", "Bicicleta", "Elíptico", "Transport", "Remo"
+  ],
+  free_weights: [
+    "Halter", "Barra", "Barra Fixa", "Barra H", "Banco", "Banco Inclinado",
+    "Tornozeleira", "Fitball", "Calço"
+  ],
+  bodyweight: [
+    "Peso Corporal", "Barra Fixa" // Pull-up bars included for bodyweight
+  ],
+};
+
+interface ExerciseWithEquipment {
+  name: string;
+  muscle_group: string;
+  movement_pattern: string | null;
+  training_level: string;
+  equipment: string | null;
+}
+
+function filterExercisesByEquipment(
+  exercises: ExerciseWithEquipment[],
+  userPreferences: string[]
+): ExerciseWithEquipment[] {
+  // If no preferences or all preferences selected, return all exercises
+  if (!userPreferences || userPreferences.length === 0 || userPreferences.length === 3) {
+    return exercises;
+  }
+
+  // Build set of allowed equipment based on user preferences
+  const allowedEquipment = new Set<string>();
+  for (const pref of userPreferences) {
+    const equipmentList = EQUIPMENT_MAPPING[pref];
+    if (equipmentList) {
+      equipmentList.forEach(eq => allowedEquipment.add(eq));
+    }
+  }
+
+  // Filter exercises
+  return exercises.filter(exercise => {
+    // If no equipment specified, include it (e.g., bodyweight exercises)
+    if (!exercise.equipment) {
+      return userPreferences.includes("bodyweight");
+    }
+    return allowedEquipment.has(exercise.equipment);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          VALIDATION SCHEMAS FOR AI RESPONSE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1121,7 +1178,7 @@ serve(async (req) => {
     const userLevel = validatedData.experienceLevel || "beginner";
     const allowedLevels = getAllowedLevels(userLevel);
 
-    const { data: exercises, error: exercisesError } = await supabase
+    const { data: allExercises, error: exercisesError } = await supabase
       .from("exercises")
       .select("name, muscle_group, movement_pattern, training_level, equipment")
       .in("training_level", allowedLevels);
@@ -1131,8 +1188,14 @@ serve(async (req) => {
       throw new Error("Failed to fetch exercise catalog");
     }
 
+    // Filter exercises by user's equipment preferences
+    const userEquipmentPrefs = validatedData.exerciseTypes || [];
+    const exercises = filterExercisesByEquipment(allExercises || [], userEquipmentPrefs);
+    
+    console.log(`Exercise filtering: ${allExercises?.length || 0} total -> ${exercises.length} after equipment filter (prefs: ${userEquipmentPrefs.join(", ")})`);
+
     // Build the user prompt with validated and sanitized data
-    const userPrompt = buildUserPrompt(validatedData, exercises || []);
+    const userPrompt = buildUserPrompt(validatedData, exercises);
 
     console.log("Calling Lovable AI for user:", userId);
 
