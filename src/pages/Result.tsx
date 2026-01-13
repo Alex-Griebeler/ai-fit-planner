@@ -104,6 +104,7 @@ export default function Result() {
   
   // Collapsible states
   const [expandedWorkouts, setExpandedWorkouts] = useState<Record<number, boolean>>({});
+  const [showWarnings, setShowWarnings] = useState(false);
   const [showVolume, setShowVolume] = useState(false);
   const [showProgression, setShowProgression] = useState(false);
 
@@ -440,23 +441,6 @@ export default function Result() {
       </div>
 
       <div className="container max-w-xl mx-auto px-6 pb-12">
-        {/* Warnings - Minimal */}
-        {plan.warnings && plan.warnings.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-8 p-4 rounded-2xl bg-muted/50"
-          >
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div className="text-xs text-muted-foreground space-y-1">
-                {plan.warnings.map((warning, i) => (
-                  <p key={i}>{warning}</p>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         {/* Plan Stats - 3 columns minimal */}
         <motion.div
@@ -640,12 +624,57 @@ export default function Result() {
           ))}
         </motion.div>
 
+        {/* Warnings - Collapsible */}
+        {plan.warnings && plan.warnings.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mb-4"
+          >
+            <button
+              onClick={() => setShowWarnings(!showWarnings)}
+              className="w-full flex items-center justify-between py-3 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Atenção</span>
+                <span className="text-xs text-muted-foreground">({plan.warnings.length})</span>
+              </div>
+              <ChevronDown 
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  showWarnings ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            <AnimatePresence>
+              {showWarnings && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-2 pb-4">
+                    {plan.warnings.map((warning, i) => (
+                      <p key={i} className="text-xs text-muted-foreground pl-6">
+                        {warning}
+                      </p>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
         {/* Volume - Collapsible */}
         {plan.weeklyVolume && Object.values(plan.weeklyVolume).some(v => v > 0) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.35 }}
             className="mb-4"
           >
             <button
@@ -691,7 +720,7 @@ export default function Result() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
+            transition={{ delay: 0.4 }}
             className="mb-8"
           >
             <button
