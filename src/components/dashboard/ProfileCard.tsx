@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { User, Ruler, Scale, Settings, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 
@@ -20,12 +21,13 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
     return (
       <Card className="bg-card border-border">
         <CardContent className="p-6">
-          <div className="animate-pulse flex items-center gap-4">
-            <div className="w-16 h-16 bg-muted rounded-full" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-16 h-16 rounded-full" />
             <div className="space-y-2 flex-1">
-              <div className="h-5 bg-muted rounded w-1/3" />
-              <div className="h-4 bg-muted rounded w-1/2" />
+              <Skeleton className="h-5 w-1/3" />
+              <Skeleton className="h-4 w-1/2" />
             </div>
+            <Skeleton className="w-9 h-9 rounded-md" />
           </div>
         </CardContent>
       </Card>
@@ -33,7 +35,23 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
   }
 
   if (!profile) {
-    return null;
+    return (
+      <Card className="bg-card border-border">
+        <CardContent className="p-6 text-center">
+          <User className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+          <h3 className="font-semibold text-foreground mb-1">
+            Perfil incompleto
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Complete seu perfil para uma experiência personalizada
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
+            <Settings className="w-4 h-4 mr-2" />
+            Completar Perfil
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   const initials = profile.name

@@ -9,7 +9,8 @@ import {
   ActivePlanCard, 
   WorkoutHistoryCard, 
   StatsCard,
-  SessionHistoryCard 
+  SessionHistoryCard,
+  ProgressPreviewCard 
 } from '@/components/dashboard';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { 
@@ -169,6 +170,15 @@ export default function Dashboard() {
             sessions={sessions || []} 
             isLoading={sessionsLoading} 
           />
+        </motion.div>
+
+        {/* Progress Preview CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.35 }}
+        >
+          <ProgressPreviewCard />
         </motion.div>
 
         {/* Workout Plans History */}
