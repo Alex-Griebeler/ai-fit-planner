@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { OnboardingData } from "@/types/onboarding";
+import { OnboardingData, InjuryArea } from "@/types/onboarding";
 
 export interface UserOnboardingData {
   id: string;
@@ -16,6 +16,7 @@ export interface UserOnboardingData {
   variation_preference: OnboardingData["variationPreference"];
   body_areas: string[];
   has_health_conditions: boolean;
+  injury_areas: string[];
   health_description: string;
   sleep_hours: string | null;
   stress_level: OnboardingData["stressLevel"];
@@ -23,7 +24,6 @@ export interface UserOnboardingData {
   updated_at: string;
 }
 
-// Converte do formato do banco para o formato da aplicação
 function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
   return {
     goal: data.goal,
@@ -36,13 +36,13 @@ function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
     variationPreference: data.variation_preference,
     bodyAreas: data.body_areas,
     hasHealthConditions: data.has_health_conditions,
+    injuryAreas: (data.injury_areas || []) as InjuryArea[],
     healthDescription: data.health_description,
     sleepHours: data.sleep_hours,
     stressLevel: data.stress_level,
   };
 }
 
-// Converte do formato da aplicação para o formato do banco
 function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "user_id" | "created_at" | "updated_at"> {
   return {
     goal: data.goal,
@@ -55,6 +55,7 @@ function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "u
     variation_preference: data.variationPreference,
     body_areas: data.bodyAreas,
     has_health_conditions: data.hasHealthConditions,
+    injury_areas: data.injuryAreas,
     health_description: data.healthDescription,
     sleep_hours: data.sleepHours,
     stress_level: data.stressLevel,
@@ -89,7 +90,6 @@ export function useOnboardingData() {
 
       const dbData = appToDbFormat(onboardingData);
 
-      // Upsert: insere ou atualiza se já existir
       const { data, error } = await supabase
         .from("user_onboarding_data")
         .upsert(

@@ -24,7 +24,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-// Input validation schema
+// Input validation schema with injury areas
 const OnboardingSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(50, "Nome deve ter no máximo 50 caracteres"),
   gender: z.enum(["female", "male", "other"]).nullable(),
@@ -41,15 +41,20 @@ const OnboardingSchema = z.object({
   variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
+  injuryAreas: z.array(z.enum([
+    "shoulder", "lower_back", "cervical", 
+    "knee", "hip", "ankle_foot"
+  ])).max(6).default([]),
   healthDescription: z.string().max(500, "Descrição de saúde deve ter no máximo 500 caracteres").optional().default(""),
   sleepHours: z.string().max(10).nullable(),
   stressLevel: z.enum(["low", "moderate", "high"]).nullable(),
 });
 
+type ValidatedUserData = z.infer<typeof OnboardingSchema>;
+
 // Sanitize text for AI prompt to prevent injection
 function sanitizeForPrompt(text: string): string {
   if (!text) return "";
-  // Remove potential prompt injection patterns
   return text
     .replace(/ignore\s*(all\s*)?(previous|above|prior)\s*(instructions?)?/gi, "")
     .replace(/system\s*:/gi, "")
@@ -57,6 +62,156 @@ function sanitizeForPrompt(text: string): string {
     .trim()
     .slice(0, 500);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          VALIDATION SCHEMAS FOR AI RESPONSE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const WorkoutExerciseSchema = z.object({
+  order: z.number(),
+  name: z.string(),
+  equipment: z.string(),
+  muscleGroup: z.string(),
+  sets: z.number().min(1).max(10),
+  reps: z.string(),
+  rest: z.string(),
+  intensity: z.string(),
+  notes: z.string(),
+  isCompound: z.boolean(),
+  alternatives: z.array(z.string()).optional(),
+});
+
+const WorkoutDaySchema = z.object({
+  day: z.string(),
+  name: z.string(),
+  focus: z.string(),
+  muscleGroups: z.array(z.string()),
+  estimatedDuration: z.string(),
+  warmup: z.object({
+    description: z.string(),
+    duration: z.string(),
+    exercises: z.array(z.string()),
+  }).optional(),
+  exercises: z.array(WorkoutExerciseSchema),
+  finisher: z.any().nullable().optional(),
+  cardio: z.any().nullable().optional(),
+});
+
+const WorkoutPlanSchema = z.object({
+  planName: z.string(),
+  description: z.string(),
+  weeklyFrequency: z.number(),
+  sessionDuration: z.string(),
+  periodization: z.string(),
+  experienceLevel: z.string().optional(),
+  mainGoal: z.string().optional(),
+  weeklyVolumeStrategy: z.string().optional(),
+  workouts: z.array(WorkoutDaySchema),
+  weeklyVolume: z.record(z.number()).optional(),
+  progressionPlan: z.any().optional(),
+  adaptations: z.any().optional(),
+  warnings: z.array(z.string()).optional(),
+  motivationalMessage: z.string().optional(),
+  coachNotes: z.string().optional(),
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          POST-AI VALIDATION FUNCTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface ValidationResult {
+  success: boolean;
+  warnings: string[];
+}
+
+interface Exercise {
+  name: string;
+  muscle_group: string;
+  movement_pattern: string | null;
+  training_level: string;
+  equipment: string | null;
+}
+
+function validateWorkoutPlan(
+  rawPlan: unknown,
+  catalogExercises: Exercise[],
+  userData: { trainingDays: string[]; injuryAreas: string[] }
+): ValidationResult {
+  const warnings: string[] = [];
+  
+  // 1. Validate structure with Zod (soft - log only)
+  const structureResult = WorkoutPlanSchema.safeParse(rawPlan);
+  if (!structureResult.success) {
+    console.warn("Structure validation issues:", structureResult.error.issues);
+  }
+  
+  const plan = rawPlan as any;
+  const catalogNames = new Set(
+    catalogExercises.map(e => e.name.toLowerCase().trim())
+  );
+  
+  // 2. Check exercises against catalog
+  for (const workout of plan.workouts || []) {
+    for (const exercise of workout.exercises || []) {
+      if (!catalogNames.has(exercise.name?.toLowerCase().trim())) {
+        warnings.push(`Exercício não encontrado no catálogo: "${exercise.name}"`);
+      }
+    }
+  }
+  
+  // 3. Verify number of training days
+  const expectedDays = userData.trainingDays?.length || 3;
+  const actualDays = plan.workouts?.length || 0;
+  if (actualDays !== expectedDays) {
+    warnings.push(`Número de treinos (${actualDays}) diferente dos dias selecionados (${expectedDays})`);
+  }
+  
+  // 4. Check for alternatives when user has injuries
+  if (userData.injuryAreas && userData.injuryAreas.length > 0) {
+    let exercisesWithoutAlternatives = 0;
+    for (const workout of plan.workouts || []) {
+      for (const exercise of workout.exercises || []) {
+        if (!exercise.alternatives || exercise.alternatives.length === 0) {
+          exercisesWithoutAlternatives++;
+        }
+      }
+    }
+    if (exercisesWithoutAlternatives > 0) {
+      warnings.push(`${exercisesWithoutAlternatives} exercícios sem alternativas para usuário com lesão`);
+    }
+  }
+  
+  return { success: true, warnings };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          INJURY AREA LABELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function getInjuryLabel(area: string): string {
+  const labels: Record<string, string> = {
+    shoulder: "Ombro",
+    lower_back: "Lombar",
+    cervical: "Cervical",
+    knee: "Joelho",
+    hip: "Quadril",
+    ankle_foot: "Tornozelo/Pé",
+  };
+  return labels[area] || area;
+}
+
+function getInjuryAdaptationRules(area: string): string {
+  const rules: Record<string, string> = {
+    shoulder: "EVITAR overhead pesado, supino aberto >90°, mergulho. PRIORIZAR rotadores externos, estabilizadores escapulares.",
+    lower_back: "EVITAR agachamento livre pesado, stiff com carga alta, deadlift convencional. PRIORIZAR core anti-rotacional, máquinas sentado.",
+    cervical: "EVITAR exercícios com carga sobre ombros/trapézio. PREFERIR máquinas com apoio, cabos.",
+    knee: "EVITAR agachamento profundo, saltos, lunges profundos. PRIORIZAR isométricos, amplitude controlada.",
+    hip: "EVITAR agachamento profundo, abdução pesada, rotações. PRIORIZAR mobilidade de quadril, ativação glútea.",
+    ankle_foot: "EVITAR exercícios de impacto, saltos, corrida. SUBSTITUIR por bike, elíptico, remo.",
+  };
+  return rules[area] || "";
+}
+
 const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -621,7 +776,6 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // === RATE LIMITING CHECK ===
-    // Limit: 5 workout generations per hour per user
     const RATE_LIMIT_MAX_REQUESTS = 5;
     const RATE_LIMIT_WINDOW_HOURS = 1;
 
@@ -637,7 +791,6 @@ serve(async (req) => {
 
     if (rateLimitError) {
       console.error("Rate limit check error:", rateLimitError);
-      // Don't block on rate limit errors, log and continue
     } else if (rateLimitResult && rateLimitResult.length > 0) {
       const { allowed, current_count, reset_at, remaining } = rateLimitResult[0];
       
@@ -765,10 +918,29 @@ serve(async (req) => {
       throw new Error("Failed to parse workout plan from AI response");
     }
 
+    // === POST-AI VALIDATION ===
+    const validationWarnings = validateWorkoutPlan(
+      workoutPlan,
+      exercises || [],
+      {
+        trainingDays: validatedData.trainingDays || [],
+        injuryAreas: validatedData.injuryAreas || [],
+      }
+    );
+
+    if (validationWarnings.warnings.length > 0) {
+      console.warn("Workout plan validation warnings:", validationWarnings.warnings);
+    }
+
     console.log("Successfully generated workout plan for user:", userId);
 
     return new Response(
-      JSON.stringify({ plan: workoutPlan }),
+      JSON.stringify({ 
+        plan: workoutPlan,
+        validationWarnings: validationWarnings.warnings.length > 0 
+          ? validationWarnings.warnings 
+          : undefined
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -793,15 +965,7 @@ function getAllowedLevels(userLevel: string): string[] {
   }
 }
 
-interface Exercise {
-  name: string;
-  muscle_group: string;
-  movement_pattern: string | null;
-  training_level: string;
-  equipment: string | null;
-}
-
-function buildUserPrompt(userData: any, exercises: Exercise[]): string {
+function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[]): string {
   // Calculate BMI
   const heightM = (userData.height || 170) / 100;
   const weight = userData.weight || 70;
@@ -831,6 +995,37 @@ function buildUserPrompt(userData: any, exercises: Exercise[]): string {
       catalogStr += `- ${ex.name} | Nível: ${ex.training_level} | Equipamento: ${ex.equipment || "N/A"}\n`;
     });
   });
+
+  // Build structured injury section
+  let healthSection = "";
+  if (userData.hasHealthConditions) {
+    if (userData.injuryAreas && userData.injuryAreas.length > 0) {
+      healthSection = `
+## CONDIÇÕES DE SAÚDE E DOR
+- Possui condições/lesões: SIM
+- REGIÕES AFETADAS: ${userData.injuryAreas.map(getInjuryLabel).join(', ')}
+${userData.injuryAreas.map(area => `
+### ${getInjuryLabel(area).toUpperCase()}:
+- AÇÃO OBRIGATÓRIA: Aplicar regras da Seção 8
+- ${getInjuryAdaptationRules(area)}
+- INCLUIR ALTERNATIVAS: Obrigatório para cada exercício que possa afetar esta região`).join('\n')}
+${userData.healthDescription ? `
+- Descrição adicional do usuário: ${sanitizeForPrompt(userData.healthDescription)}` : ''}
+- INCLUIR BLOCOS PREVENTIVOS: ativação, mobilidade, estabilidade conforme regiões afetadas`;
+    } else if (userData.healthDescription) {
+      healthSection = `
+## CONDIÇÕES DE SAÚDE E DOR
+- Possui condições/lesões: SIM
+- Descrição: ${sanitizeForPrompt(userData.healthDescription)}
+- AÇÃO OBRIGATÓRIA: Analisar descrição e aplicar adaptações da Seção 8
+- Incluir alternativas em exercícios que possam ser afetados`;
+    }
+  } else {
+    healthSection = `
+## CONDIÇÕES DE SAÚDE E DOR
+- Possui condições/lesões: NÃO
+- Sem restrições por dor/lesão`;
+  }
 
   return `
 ═══════════════════════════════════════════════════════════════════════════════
@@ -867,14 +1062,7 @@ ${userData.bodyAreas?.length > 0
   ? `- Áreas para priorizar: ${userData.bodyAreas.join(', ')}\n- AÇÃO: Aumentar volume 20-30% nestas áreas, inserir primeiro no bloco` 
   : '- Distribuição equilibrada entre todos os grupamentos'}
 
-## CONDIÇÕES DE SAÚDE E DOR
-- Possui condições/lesões: ${userData.hasHealthConditions ? 'SIM' : 'NÃO'}
-${userData.hasHealthConditions && userData.healthDescription ? `
-- Descrição detalhada: ${userData.healthDescription}
-- AÇÃO OBRIGATÓRIA: Aplicar TODAS as regras de adaptação da Seção 8 para a região afetada
-- Incluir alternativas em cada exercício que possa afetar a região
-- Incluir blocos preventivos (ativação, mobilidade, estabilidade)
-` : '- Sem restrições por dor/lesão'}
+${healthSection}
 
 ## ESTILO DE VIDA E RECUPERAÇÃO
 - Horas de sono por noite: ${userData.sleepHours || 7} horas
@@ -907,6 +1095,7 @@ Com base em TODAS as informações acima, gere um plano de treino completo segui
 7. Cardio ${userData.includeCardio ? 'INCLUÍDO conforme objetivo' : 'NÃO INCLUÍDO'}
 8. Instruções com nível de detalhamento para ${getAutonomyLevel(userData.experienceLevel)} autonomia
 9. USE APENAS EXERCÍCIOS DO CATÁLOGO FORNECIDO ACIMA
+10. INCLUA ALTERNATIVAS em todos os exercícios quando houver lesão declarada
 
 O plano deve ser REALISTA, EXECUTÁVEL em academia low-cost, e PERSONALIZADO para este usuário.`;
 }
@@ -1009,15 +1198,15 @@ function getStressLabel(stress: string | null): string {
   return labels[stress || "moderate"] || "MODERADO";
 }
 
-function getSleepQuality(hours: number | null): string {
-  const h = hours || 7;
+function getSleepQuality(hours: string | null): string {
+  const h = parseInt(hours || "7", 10);
   if (h < 6) return "INSUFICIENTE - Aplicar reduções";
   if (h >= 7 && h <= 9) return "ADEQUADO";
   return "BOM";
 }
 
-function getRecoveryCapacity(sleepHours: number | null, stressLevel: string | null): string {
-  const sleep = sleepHours || 7;
+function getRecoveryCapacity(sleepHours: string | null, stressLevel: string | null): string {
+  const sleep = parseInt(sleepHours || "7", 10);
   const stress = stressLevel || "moderate";
   
   if (sleep < 6 || stress === "high") return "BAIXA - reduzir volume e intensidade";
@@ -1025,8 +1214,8 @@ function getRecoveryCapacity(sleepHours: number | null, stressLevel: string | nu
   return "MODERADA - manter prescrição padrão";
 }
 
-function getSleepStressAdjustment(sleepHours: number | null, stressLevel: string | null): string {
-  const sleep = sleepHours || 7;
+function getSleepStressAdjustment(sleepHours: string | null, stressLevel: string | null): string {
+  const sleep = parseInt(sleepHours || "7", 10);
   const stress = stressLevel || "moderate";
   
   if (sleep < 6 || stress === "high") {

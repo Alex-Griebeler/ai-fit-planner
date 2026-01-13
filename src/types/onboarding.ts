@@ -1,3 +1,15 @@
+// Injury area options for structured health data collection
+export const INJURY_AREA_OPTIONS = [
+  { key: 'shoulder', label: 'Ombro', description: 'Dor, instabilidade ou limitação' },
+  { key: 'lower_back', label: 'Lombar', description: 'Dor, hérnia ou desconforto' },
+  { key: 'cervical', label: 'Cervical', description: 'Dor ou tensão' },
+  { key: 'knee', label: 'Joelho', description: 'Dor, instabilidade ou crepitação' },
+  { key: 'hip', label: 'Quadril', description: 'Dor ou limitação de movimento' },
+  { key: 'ankle_foot', label: 'Tornozelo/Pé', description: 'Dor, entorse ou lesão' },
+] as const;
+
+export type InjuryArea = typeof INJURY_AREA_OPTIONS[number]['key'];
+
 export interface OnboardingData {
   // Step 1 - Name
   name: string;
@@ -35,6 +47,7 @@ export interface OnboardingData {
   
   // Step 11 - Health
   hasHealthConditions: boolean;
+  injuryAreas: InjuryArea[];
   healthDescription: string;
   
   // Step 12 - Sleep & Stress
@@ -58,6 +71,7 @@ export const initialOnboardingData: OnboardingData = {
   variationPreference: null,
   bodyAreas: [],
   hasHealthConditions: false,
+  injuryAreas: [],
   healthDescription: '',
   sleepHours: null,
   stressLevel: null,
