@@ -35,6 +35,7 @@ export default function Settings() {
             variant="ghost" 
             size="icon"
             onClick={() => navigate('/dashboard')}
+            aria-label="Voltar ao dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
