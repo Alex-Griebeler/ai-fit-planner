@@ -18,8 +18,15 @@ import {
   RefreshCw,
   Check,
   Timer,
-  Sparkles
+  Sparkles,
+  Info
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 
 interface WorkoutExercise {
@@ -523,9 +530,20 @@ export default function Result() {
                                 {exercise.name}
                               </span>
                               {exercise.intensity && (
-                                <span className="text-[9px] text-muted-foreground/70 font-medium">
-                                  {exercise.intensity}
-                                </span>
+                                <TooltipProvider delayDuration={200}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-[9px] text-muted-foreground/70 font-medium inline-flex items-center gap-0.5 cursor-help">
+                                        {exercise.intensity}
+                                        <Info className="w-2.5 h-2.5" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[200px] text-xs">
+                                      <p className="font-medium">RR = Repetições de Reserva</p>
+                                      <p className="text-muted-foreground">Quantas reps você ainda conseguiria fazer antes de falhar</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                             

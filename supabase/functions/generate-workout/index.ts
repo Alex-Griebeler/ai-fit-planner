@@ -1305,33 +1305,48 @@ SIGA ESSES VALORES À RISCA - eles já consideram todos os fatores.
                          SEÇÃO 2: REPETIÇÕES E INTENSIDADE
 ═══════════════════════════════════════════════════════════════════════════════
 
+## FORMATO DE INTENSIDADE: RR (Repetições de Reserva)
+
+IMPORTANTE: O campo "intensity" DEVE usar o formato "X-Y RR" (Repetições de Reserva).
+RR = quantas repetições você PODERIA fazer além das prescritas antes de falhar.
+
+Exemplos:
+- "1-2 RR" = parar 1-2 reps antes da falha (alta intensidade)
+- "2-3 RR" = parar 2-3 reps antes da falha (moderado-alta)
+- "3-4 RR" = parar 3-4 reps antes da falha (moderado)
+
+NUNCA use RPE ou porcentagem de 1RM no campo intensity. USE APENAS formato RR.
+
 ## Faixas de Repetições por Objetivo:
 
 ### HIPERTROFIA (documento técnico):
-| Faixa        | Reps     | Intensidade | Descanso    | Quando Usar |
-|--------------|----------|-------------|-------------|-------------|
-| Força-Hipert | 6-8      | 75-85% 1RM  | 2-3 min     | Compostos principais, avançados |
-| Hipertrofia  | 8-12     | 65-80% 1RM  | 90-120s     | Compostos e isoladores primários |
-| Metabólico   | 12-15    | 60-70% 1RM  | 60-90s      | Isoladores, acabamento |
-| Alto Rep     | 15-20    | 50-65% 1RM  | 45-60s      | Panturrilhas, finalizadores |
+| Faixa        | Reps     | RR        | Descanso    | Quando Usar |
+|--------------|----------|-----------|-------------|-------------|
+| Força-Hipert | 6-8      | 1-2 RR    | 2-3 min     | Compostos principais, avançados |
+| Hipertrofia  | 8-12     | 2-3 RR    | 90-120s     | Compostos e isoladores primários |
+| Metabólico   | 12-15    | 2-4 RR    | 60-90s      | Isoladores, acabamento |
+| Alto Rep     | 15-20    | 3-4 RR    | 45-60s      | Panturrilhas, finalizadores |
 
 ### FORÇA (avançados - apenas se objetivo = performance):
-| Faixa        | Reps     | Intensidade | Descanso    |
-|--------------|----------|-------------|-------------|
-| Força Máxima | 2-4      | 85-95% 1RM  | 3-5 min     |
-| Força-Hipert | 4-6      | 80-90% 1RM  | 2-4 min     |
+| Faixa        | Reps     | RR        | Descanso    |
+|--------------|----------|-----------|-------------|
+| Força Máxima | 2-4      | 1-2 RR    | 3-5 min     |
+| Força-Hipert | 4-6      | 1-2 RR    | 2-4 min     |
 
 ### EMAGRECIMENTO:
-| Faixa        | Reps     | Intensidade | Descanso    |
-|--------------|----------|-------------|-------------|
-| Circuito     | 12-15    | 50-65% 1RM  | 30-45s      |
-| Metabólico   | 15-20    | 40-60% 1RM  | 30-60s      |
+| Faixa        | Reps     | RR        | Descanso    |
+|--------------|----------|-----------|-------------|
+| Circuito     | 12-15    | 3-4 RR    | 30-45s      |
+| Metabólico   | 15-20    | 3-5 RR    | 30-60s      |
 
 ### SAÚDE:
-| Faixa        | Reps     | Intensidade | Descanso    |
-|--------------|----------|-------------|-------------|
-| Geral        | 10-15    | 60-75% 1RM  | 45-75s      |
-| RIR: 2-4 (não treinar até falha)
+| Faixa        | Reps     | RR        | Descanso    |
+|--------------|----------|-----------|-------------|
+| Geral        | 10-15    | 3-4 RR    | 45-75s      |
+
+### INICIANTES:
+- SEMPRE usar 3-4 RR (nunca treinar até falha)
+- Foco em técnica, não em intensidade máxima
 
 ## Intervalos Dinâmicos por Faixa de Repetições:
 | Repetições | Descanso Mínimo | Descanso Máximo | Aplicação |
@@ -1853,7 +1868,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
           "sets": 3,
           "reps": "10-12",
           "rest": "60s",
-          "intensity": "RPE 7-8",
+          "intensity": "2-3 RR",
           "notes": "Observações técnicas",
           "isCompound": true,
           "alternatives": ["alternativa se lesão"]
