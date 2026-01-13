@@ -115,21 +115,26 @@ const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
   "60plus": { min: 28, max: 36 },
 };
 
-// Splits recomendados por frequência
+// Splits recomendados por frequência (consolidado)
 const RECOMMENDED_SPLITS: Record<string, string> = {
-  "1-2": "Full Body",
-  "3":   "Full Body ou A/B",
-  "4":   "Upper/Lower x2 ou A/B/C/A",
-  "5":   "Push/Pull/Legs + Upper/Lower ou A/B/C/A/B",
-  "6-7": "Push/Pull/Legs x2 ou A/B/C x2",
+  "1":   "Full Body Único",
+  "1-2": "Full Body A/B",
+  "3":   "Full Body 3x (iniciantes) ou FB + A/B (intermediários+)",
+  "4":   "Upper/Lower A/B",
+  "5":   "Híbrido (Sup-Inf-Puxar-Empurrar-Inf)",
+  "6":   "Push/Pull/Legs 2x",
+  "6-7": "PPL 2x + Especialização",
+  "7":   "PPL 2x + Especialização",
 };
 
 function getFrequencyKey(days: number): string {
-  if (days <= 2) return "1-2";
+  if (days === 1) return "1";
+  if (days === 2) return "1-2";
   if (days === 3) return "3";
   if (days === 4) return "4";
   if (days === 5) return "5";
-  return "6-7";
+  if (days === 6) return "6";
+  return "7";
 }
 
 function hasLowRecovery(sleepHours: string | null, stressLevel: string | null): boolean {
@@ -774,19 +779,151 @@ SIGA ESSES VALORES À RISCA - eles já consideram todos os fatores.
 - SAÚDE: 45-75 segundos
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 3: DIVISÕES DE TREINO
+                         SEÇÃO 3: DIVISÕES DE TREINO (CONSOLIDADO)
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## REGRA FUNDAMENTAL:
 Estimular cada grupo 2-3x/semana é SUPERIOR a 1x/semana.
 Distribua o volume semanal em múltiplas sessões.
 
-## Por Frequência:
-- **2 dias**: Full Body (cada grupo 2x/semana)
-- **3 dias**: Full Body ou A/B alternado
-- **4 dias**: Upper/Lower x2 (cada grupo 2x/semana)
-- **5 dias**: Push/Pull/Legs + Upper/Lower
-- **6+ dias**: PPL x2 ou divisão avançada
+## REGRA DE RECUPERAÇÃO (Soft Rule):
+EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
+- Se inevitável, REDUZIR volume no segundo dia em 20-30%
+- Priorizar 48-72h entre estímulos do mesmo grupo
+
+═══════════════════════════════════════════════════════════════════════════════
+### 1x/SEMANA - Full Body Único
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Full Body | Todos (1 exercício por grupo) |
+
+- Estímulos: 1x/semana por grupo (subótimo, usar apenas se necessário)
+- Volume: Concentrar 100% em 1 sessão
+- Regra: Priorizar multiarticulares, 1-2 isoladores
+
+═══════════════════════════════════════════════════════════════════════════════
+### 2x/SEMANA - Full Body A/B
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Full Body A | Todos (ênfase em compostos) |
+| 2 | Full Body B | Todos (ênfase em isoladores) |
+
+- Estímulos: 2x/semana por grupo ✅
+- Conflitos: NENHUM (dias alternados obrigatório)
+- Sugestão: Seg/Qui ou Ter/Sex
+
+═══════════════════════════════════════════════════════════════════════════════
+### 3x/SEMANA
+═══════════════════════════════════════════════════════════════════════════════
+
+**OPÇÃO A - Full Body 3x (INICIANTES):**
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Full Body | Todos |
+| 2 | Full Body | Todos |
+| 3 | Full Body | Todos |
+
+- Estímulos: 3x/semana por grupo ✅
+- ⚠️ CONFLITO: Se dias consecutivos, há repetição
+- OBRIGATÓRIO: Treinar em dias ALTERNADOS (Seg/Qua/Sex ou Ter/Qui/Sáb)
+
+**OPÇÃO B - Full Body + A/B (INTERMEDIÁRIOS/AVANÇADOS):**
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Full Body | Todos (volume reduzido) |
+| 2 | Upper (A) | Peitoral, Costas, Ombros, Bíceps, Tríceps |
+| 3 | Lower (B) | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+
+- Estímulos: 2x/semana por grupo ✅
+- ⚠️ CONFLITO: FB → A (membros superiores consecutivos)
+- RECOMENDADO: Dias alternados (Seg/Qua/Sex)
+
+═══════════════════════════════════════════════════════════════════════════════
+### 4x/SEMANA - Upper/Lower A/B
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Upper A | Peitoral, Costas, Ombros, Bíceps, Tríceps |
+| 2 | Lower A | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 3 | Upper B | Peitoral, Costas, Ombros, Bíceps, Tríceps |
+| 4 | Lower B | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+
+- Estímulos: 2x/semana por grupo ✅
+- Conflitos: NENHUM (alternância natural upper/lower)
+- Ideal para: Todos os níveis
+
+═══════════════════════════════════════════════════════════════════════════════
+### 5x/SEMANA - Híbrido (Sup + Inf + Puxar + Empurrar + Inf)
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Membros Superiores + Tronco | Peitoral, Costas, Ombros, Bíceps, Tríceps |
+| 2 | Membros Inferiores | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 3 | Puxar | Costas, Bíceps (SEM Posteriores) |
+| 4 | Empurrar | Peitoral, Ombros, Tríceps |
+| 5 | Membros Inferiores | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+
+- Estímulos: 2x/semana por grupo ✅
+- Conflitos: NENHUM
+- Core/Abdômen: Encaixar no Dia 3 (Puxar) ou Dia 4 (Empurrar)
+
+═══════════════════════════════════════════════════════════════════════════════
+### 6x/SEMANA - Push/Pull/Legs 2x
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Push | Peitoral, Ombros, Tríceps |
+| 2 | Pull | Costas, Bíceps |
+| 3 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 4 | Push | Peitoral, Ombros, Tríceps |
+| 5 | Pull | Costas, Bíceps |
+| 6 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+
+- Estímulos: 2x/semana por grupo ✅
+- Conflitos: NENHUM (sequência natural)
+- Alternativa: Arnold Split (Peito/Costas, Ombros/Braços, Pernas) 2x
+
+═══════════════════════════════════════════════════════════════════════════════
+### 7x/SEMANA - PPL 2x + Especialização
+═══════════════════════════════════════════════════════════════════════════════
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Push | Peitoral, Ombros, Tríceps |
+| 2 | Pull | Costas, Bíceps |
+| 3 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 4 | Push | Peitoral, Ombros, Tríceps |
+| 5 | Pull | Costas, Bíceps |
+| 6 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 7 | Especialização | Grupo PRIORITÁRIO do usuário |
+
+- Estímulos: 2-3x/semana por grupo ✅
+- ⚠️ REGRA CRÍTICA: O grupo do Dia 7 NÃO pode ser o mesmo do Dia 6 nem do Dia 1
+- Se Dia 6 = Legs → Dia 7 ≠ pernas
+- Se Dia 1 = Push → Dia 7 ≠ peitoral/ombros/tríceps
+
+═══════════════════════════════════════════════════════════════════════════════
+### REGRAS DE SELEÇÃO AUTOMÁTICA
+═══════════════════════════════════════════════════════════════════════════════
+
+| Frequência | Iniciante | Intermediário | Avançado |
+|------------|-----------|---------------|----------|
+| 1-2 dias | Full Body | Full Body | Full Body |
+| 3 dias | Full Body 3x | FB + A/B | FB + A/B |
+| 4 dias | Upper/Lower | Upper/Lower | Upper/Lower |
+| 5 dias | Híbrido 5x | Híbrido 5x | Híbrido 5x |
+| 6 dias | PPL 2x | PPL 2x | Arnold 2x |
+| 7 dias | NÃO RECOMENDADO | PPL + Espec. | PPL + Espec. |
+
+## SPLITS QUE REQUEREM DIAS ALTERNADOS (obrigatório):
+- Full Body 3x (iniciantes)
+- Full Body 2x
+
+## SPLITS AUTO-OTIMIZADOS (sem conflitos naturais):
+- Upper/Lower 4x
+- Híbrido 5x
+- PPL 6x
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 4: ESTRUTURA DO TREINO
