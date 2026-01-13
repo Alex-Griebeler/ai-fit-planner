@@ -13,7 +13,7 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => 
-    origin === allowed || origin.endsWith(".lovable.dev") || origin.endsWith(".lovable.app")
+    origin === allowed || origin.endsWith(".lovable.dev") || origin.endsWith(".lovable.app") || origin.endsWith(".lovableproject.com")
   ) ? origin : ALLOWED_ORIGINS[0] || "";
   
   return {
@@ -61,6 +61,59 @@ function sanitizeForPrompt(text: string): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim()
     .slice(0, 500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          VOLUME RANGES BY LEVEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface VolumeRange {
+  min: number;
+  max: number;
+}
+
+interface VolumeRanges {
+  large: VolumeRange;  // chest, back, quadriceps, hamstrings, glutes
+  medium: VolumeRange; // shoulders
+  small: VolumeRange;  // biceps, triceps, calves, core
+}
+
+function getVolumeRanges(level: string): VolumeRanges {
+  switch (level) {
+    case "beginner":
+      return {
+        large: { min: 8, max: 12 },
+        medium: { min: 6, max: 10 },
+        small: { min: 4, max: 8 },
+      };
+    case "intermediate":
+      return {
+        large: { min: 12, max: 18 },
+        medium: { min: 10, max: 14 },
+        small: { min: 8, max: 12 },
+      };
+    case "advanced":
+      return {
+        large: { min: 16, max: 26 },
+        medium: { min: 12, max: 20 },
+        small: { min: 10, max: 16 },
+      };
+    default:
+      return {
+        large: { min: 8, max: 12 },
+        medium: { min: 6, max: 10 },
+        small: { min: 4, max: 8 },
+      };
+  }
+}
+
+function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
+  const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes"];
+  const mediumGroups = ["shoulders"];
+  
+  if (largeGroups.includes(muscle.toLowerCase())) return "large";
+  if (mediumGroups.includes(muscle.toLowerCase())) return "medium";
+  return "small";
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -116,12 +169,13 @@ const WorkoutPlanSchema = z.object({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//                          POST-AI VALIDATION FUNCTION
+//                          POST-AI VALIDATION FUNCTION (ENHANCED)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface ValidationResult {
   success: boolean;
   warnings: string[];
+  errors: string[];
 }
 
 interface Exercise {
@@ -135,14 +189,22 @@ interface Exercise {
 function validateWorkoutPlan(
   rawPlan: unknown,
   catalogExercises: Exercise[],
-  userData: { trainingDays: string[]; injuryAreas: string[] }
+  userData: { 
+    trainingDays: string[]; 
+    injuryAreas: string[];
+    experienceLevel: string | null;
+    sleepHours: string | null;
+    stressLevel: string | null;
+  }
 ): ValidationResult {
   const warnings: string[] = [];
+  const errors: string[] = [];
   
-  // 1. Validate structure with Zod (soft - log only)
+  // 1. Validate structure with Zod
   const structureResult = WorkoutPlanSchema.safeParse(rawPlan);
   if (!structureResult.success) {
     console.warn("Structure validation issues:", structureResult.error.issues);
+    errors.push("Estrutura do plano inválida: " + structureResult.error.issues.map(i => i.message).join(", "));
   }
   
   const plan = rawPlan as any;
@@ -151,19 +213,26 @@ function validateWorkoutPlan(
   );
   
   // 2. Check exercises against catalog
+  let unknownExercises = 0;
   for (const workout of plan.workouts || []) {
     for (const exercise of workout.exercises || []) {
       if (!catalogNames.has(exercise.name?.toLowerCase().trim())) {
-        warnings.push(`Exercício não encontrado no catálogo: "${exercise.name}"`);
+        unknownExercises++;
+        if (unknownExercises <= 5) { // Limit warnings
+          warnings.push(`Exercício não encontrado no catálogo: "${exercise.name}"`);
+        }
       }
     }
+  }
+  if (unknownExercises > 5) {
+    warnings.push(`...e mais ${unknownExercises - 5} exercícios não encontrados no catálogo`);
   }
   
   // 3. Verify number of training days
   const expectedDays = userData.trainingDays?.length || 3;
   const actualDays = plan.workouts?.length || 0;
   if (actualDays !== expectedDays) {
-    warnings.push(`Número de treinos (${actualDays}) diferente dos dias selecionados (${expectedDays})`);
+    errors.push(`Número de treinos (${actualDays}) diferente dos dias selecionados (${expectedDays})`);
   }
   
   // 4. Check for alternatives when user has injuries
@@ -181,7 +250,65 @@ function validateWorkoutPlan(
     }
   }
   
-  return { success: true, warnings };
+  // 5. CRITICAL: Validate weekly volume per muscle group
+  const level = userData.experienceLevel || "beginner";
+  const volumeRanges = getVolumeRanges(level);
+  const weeklyVolume = plan.weeklyVolume || {};
+  
+  // Check if sleep/stress reduction applies
+  const sleepHours = parseInt(userData.sleepHours || "7", 10);
+  const hasLowRecovery = sleepHours < 6 || userData.stressLevel === "high";
+  const volumeReductionFactor = hasLowRecovery ? 0.75 : 1; // 25% reduction if low recovery
+  
+  // Define all muscle groups to check
+  const muscleGroups = {
+    large: ["chest", "back", "quadriceps", "hamstrings", "glutes"],
+    medium: ["shoulders"],
+    small: ["biceps", "triceps", "calves", "core"],
+  };
+  
+  // Validate each muscle group
+  Object.entries(muscleGroups).forEach(([category, muscles]) => {
+    const range = volumeRanges[category as keyof VolumeRanges];
+    const adjustedMin = Math.floor(range.min * volumeReductionFactor);
+    
+    muscles.forEach((muscle) => {
+      const volume = weeklyVolume[muscle] || 0;
+      
+      if (volume < adjustedMin) {
+        errors.push(
+          `Volume INSUFICIENTE para ${muscle}: ${volume} séries (mínimo ${adjustedMin} para ${level})`
+        );
+      }
+      
+      if (volume > range.max) {
+        warnings.push(
+          `Volume EXCESSIVO para ${muscle}: ${volume} séries (máximo ${range.max} para ${level})`
+        );
+      }
+    });
+  });
+  
+  // 6. Validate exercise count per session based on duration
+  const sessionDuration = plan.sessionDuration || "45 min";
+  const minExercises = sessionDuration.includes("30") ? 4 : sessionDuration.includes("45") ? 5 : 6;
+  const maxExercises = sessionDuration.includes("30") ? 5 : sessionDuration.includes("45") ? 7 : 10;
+  
+  for (const workout of plan.workouts || []) {
+    const exerciseCount = workout.exercises?.length || 0;
+    if (exerciseCount < minExercises) {
+      warnings.push(`Treino "${workout.name}" tem apenas ${exerciseCount} exercícios (mínimo ${minExercises} para ${sessionDuration})`);
+    }
+    if (exerciseCount > maxExercises) {
+      warnings.push(`Treino "${workout.name}" tem ${exerciseCount} exercícios (máximo ${maxExercises} para ${sessionDuration})`);
+    }
+  }
+  
+  return { 
+    success: errors.length === 0, 
+    warnings,
+    errors 
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -215,20 +342,63 @@ function getInjuryAdaptationRules(area: string): string {
 const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 1: VOLUME SEMANAL POR GRUPAMENTO
+                         SEÇÃO 1: VOLUME SEMANAL POR GRUPAMENTO (CRÍTICO)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Faixas de Volume (séries/grupamento/semana):
-- RANGE GERAL: 8-30 séries/semana por grupamento muscular
-- INICIANTE: 8-12 séries/grupamento/semana
-- INTERMEDIÁRIO: 12-18 séries/grupamento/semana
-- AVANÇADO: 18-30 séries/grupamento/semana
+## TABELA OBRIGATÓRIA DE VOLUME MÍNIMO E MÁXIMO (séries/semana):
 
-## Volume por Frequência Semanal:
-- 2-3 treinos/semana: 9-15 séries/grupamento/semana
-- 4 treinos/semana: 12-18 séries/grupamento/semana
-- 5 treinos/semana: 14-20 séries/grupamento/semana
-- 6-7 treinos/semana: manter volume mas distribuir para recuperação
+### INICIANTE:
+| Grupamento         | Mínimo | Máximo | Observação                    |
+|--------------------|--------|--------|-------------------------------|
+| Peitoral           | 8      | 12     | Grupo grande                  |
+| Costas             | 8      | 12     | Grupo grande                  |
+| Quadríceps         | 8      | 12     | Grupo grande                  |
+| Isquiotibiais      | 8      | 12     | Grupo grande                  |
+| Glúteos            | 8      | 12     | Grupo grande                  |
+| Ombros             | 6      | 10     | Grupo médio                   |
+| Bíceps             | 4      | 8      | Grupo pequeno                 |
+| Tríceps            | 4      | 8      | Grupo pequeno                 |
+| Panturrilhas       | 4      | 8      | Grupo pequeno                 |
+| Core               | 4      | 8      | Grupo pequeno                 |
+
+### INTERMEDIÁRIO:
+| Grupamento         | Mínimo | Máximo | Observação                    |
+|--------------------|--------|--------|-------------------------------|
+| Peitoral           | 12     | 18     | Grupo grande                  |
+| Costas             | 12     | 18     | Grupo grande                  |
+| Quadríceps         | 12     | 18     | Grupo grande                  |
+| Isquiotibiais      | 12     | 18     | Grupo grande                  |
+| Glúteos            | 12     | 18     | Grupo grande                  |
+| Ombros             | 10     | 14     | Grupo médio                   |
+| Bíceps             | 8      | 12     | Grupo pequeno                 |
+| Tríceps            | 8      | 12     | Grupo pequeno                 |
+| Panturrilhas       | 8      | 12     | Grupo pequeno                 |
+| Core               | 8      | 12     | Grupo pequeno                 |
+
+### AVANÇADO:
+| Grupamento         | Mínimo | Máximo | Observação                    |
+|--------------------|--------|--------|-------------------------------|
+| Peitoral           | 16     | 26     | Grupo grande                  |
+| Costas             | 16     | 26     | Grupo grande                  |
+| Quadríceps         | 16     | 26     | Grupo grande                  |
+| Isquiotibiais      | 16     | 26     | Grupo grande                  |
+| Glúteos            | 16     | 26     | Grupo grande                  |
+| Ombros             | 12     | 20     | Grupo médio                   |
+| Bíceps             | 10     | 16     | Grupo pequeno                 |
+| Tríceps            | 10     | 16     | Grupo pequeno                 |
+| Panturrilhas       | 10     | 16     | Grupo pequeno                 |
+| Core               | 10     | 16     | Grupo pequeno                 |
+
+## REGRA DE OURO DO VOLUME:
+- NUNCA prescrever volume abaixo do MÍNIMO para o nível
+- Se há redução por sono/estresse (-25%), aplicar sobre o valor MÉDIO, não abaixo do mínimo absoluto
+- Se há foco em um grupamento, aumentar 20-30% o volume DAQUELE grupamento, não reduzir os demais
+- TODOS os grupamentos devem estar dentro da faixa, sem exceção
+
+## Volume por Frequência Semanal (distribuição):
+- 2-3 treinos/semana: distribuir volume em todas as sessões (Full Body ou A/B)
+- 4 treinos/semana: dividir volume entre Upper/Lower (2x cada)
+- 5-6 treinos/semana: PPL ou divisão similar (cada grupo 2x/semana)
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 2: REPETIÇÕES E INTENSIDADE POR OBJETIVO
@@ -242,7 +412,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 
 ## Intervalo entre Séries:
 - FORÇA: 90-180 segundos (até 3 minutos para compostos pesados)
-- HIPERTROFIA: 60-90 segundos
+- HIPERTROFIA: 60-90 segundos (USAR VARIAÇÃO: 60s, 75s, 90s - não apenas 90s)
 - EMAGRECIMENTO: 30-60 segundos (alta densidade)
 - SAÚDE: 45-75 segundos
 
@@ -252,8 +422,8 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 
 ## Configuração por Duração:
 - ATÉ 30 MIN: 4-5 exercícios, usar supersets obrigatório para densidade
-- 30-45 MIN: 5-6 exercícios, pausas moderadas
-- 45-60 MIN: 6-8 exercícios, pausas adequadas
+- 30-45 MIN: 5-6 exercícios (MÍNIMO 5), pausas moderadas
+- 45-60 MIN: 6-8 exercícios (MÍNIMO 6), pausas adequadas
 - +60 MIN: 8-10 exercícios, treino completo
 
 ## Regras de Tempo:
@@ -274,7 +444,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 ## 2 treinos/semana:
 - OBRIGATÓRIO: Full Body em ambos os dias
 - Cada grupo muscular será estimulado 2x/semana
-- Volume moderado por sessão para permitir recuperação (4-6 exercícios)
+- Volume moderado por sessão para permitir recuperação (5-7 exercícios)
 - Priorizar exercícios multiarticulares
 
 ## 3 treinos/semana:
@@ -284,7 +454,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - Variar ênfase entre os dias para evitar sobrecarga
 
 ## 4 treinos/semana:
-- RECOMENDADO: A/B x2 (Superiores 2x, Inferiores 2x) - cada grupo 2x/semana
+- RECOMENDADO: A/B x2 (Upper 2x, Lower 2x) - cada grupo 2x/semana
 - ALTERNATIVA: Upper/Lower alternado
 - EVITAR: Split tradicional que treine cada grupo apenas 1x/semana
 - Ideal para recomposição corporal
@@ -366,17 +536,17 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - INCLUIR: exercícios metabólicos (burpees modificados, mountain climbers em máquina)
 
 ## HIPERTROFIA:
-- Volume: 12-20 séries/grupamento/semana
+- Volume: usar faixas da SEÇÃO 1 conforme nível
 - Reps: 6-12 por série
-- Intervalo: 60-90 seg
+- Intervalo: 60-90 seg (VARIAR entre 60s, 75s, 90s)
 - MÉTODOS PARA INTERMEDIÁRIOS/AVANÇADOS: drop set, rest-pause, bi-set
 - Progressão focada em aumento de carga progressivo
 - Falha muscular: apenas na última série de cada exercício
 
 ## SAÚDE E BEM-ESTAR:
-- Volume moderado: 8-14 séries/grupamento/semana
+- Volume: usar faixas da SEÇÃO 1 conforme nível
 - Reps: 10-15 por série
-- Intervalo: 45-75 seg
+- Intervalo: 45-75 segundos
 - Foco em equilíbrio muscular e postura
 - PRIORIZAR: exercícios funcionais e multiarticulares
 - Cardio moderado opcional
@@ -397,7 +567,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - PRIORIZAR: MÁQUINAS e exercícios de autocarga
 - Foco em aprendizado técnico e controle motor
 - EVITAR: métodos avançados (drop set, cluster, rest-pause)
-- Volume: 8-12 séries/grupamento/semana
+- Volume: conforme SEÇÃO 1 - faixa INICIANTE
 - Sessões com menor complexidade
 - Multiarticulares GUIADOS (Smith, máquinas)
 - Progressão: LINEAR obrigatória
@@ -407,7 +577,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 ## INTERMEDIÁRIO (Média Experiência):
 - Máquinas + pesos livres progressivamente
 - PODE usar: supersets simples, bi-sets
-- Volume: 12-18 séries/grupamento/semana
+- Volume: conforme SEÇÃO 1 - faixa INTERMEDIÁRIO
 - Progressão de carga estruturada
 - Introduzir variações simples de intensidade
 - Instruções visuais moderadas
@@ -415,7 +585,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 ## AVANÇADO (Alta Experiência):
 - Exercícios complexos (multiarticulares pesados, unilaterais)
 - MÉTODOS AVANÇADOS PERMITIDOS: drop set, cluster, rest-pause, excêntrica forçada
-- Volume: 18-30 séries/grupamento/semana
+- Volume: conforme SEÇÃO 1 - faixa AVANÇADO
 - Progressão: ONDULATÓRIA
 - Maior intensidade permitida
 - Pode trabalhar próximo à falha muscular
@@ -488,6 +658,7 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 - INSERIR: grupamento no INÍCIO do bloco (posição de maior energia)
 - DISTRIBUIR: estímulos ao longo da semana (não concentrar em um dia)
 - ESCOLHER: exercícios que maximizem ativação do alvo
+- IMPORTANTE: NÃO REDUZIR volume dos demais grupos - manter dentro da faixa mínima
 
 ## Exemplos de Priorização:
 - FOCO GLÚTEOS: hip thrust ou ponte unilateral PRIMEIRO, aumentar séries em stiff/agachamento/afundo
@@ -541,12 +712,17 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## Sono < 6h OU Estresse Alto:
-- REDUZIR: volume em 20-30%
+- REDUZIR: volume em 20-25% (mas NUNCA abaixo do mínimo absoluto para o nível)
 - PRIORIZAR: exercícios de baixa complexidade (máquinas)
-- PAUSAS: mais longas (+30 segundos)
+- PAUSAS: mais longas (+15-30 segundos)
 - EVITAR: falha muscular
 - EVITAR: métodos avançados (drop set, etc.)
 - CARDIO: se incluído, apenas LISS leve
+
+## IMPORTANTE SOBRE REDUÇÃO POR SONO/ESTRESSE:
+- Aplicar redução sobre o valor MÉDIO da faixa
+- Se faixa é 16-26, e redução é 25%, usar ~15-18 séries (não abaixo de 12)
+- JAMAIS prescrever abaixo do mínimo absoluto mesmo com baixa recuperação
 
 ## Sono Adequado (7-9h) E Estresse Baixo/Moderado:
 - Seguir prescrição normal
@@ -702,20 +878,23 @@ Você DEVE retornar um JSON válido com a seguinte estrutura EXATA:
 4. O plano DEVE ser realista e executável em academia low-cost
 5. PRIORIZE máquinas para iniciantes (70%+ do treino)
 6. RESPEITE todas as variáveis do onboarding sem exceção
-7. CALCULE o volume semanal por grupamento e garanta que está dentro da faixa do nível
+7. CALCULE o volume semanal por grupamento e GARANTA que está DENTRO DA FAIXA DO NÍVEL (Seção 1)
 8. INCLUA aquecimento e finalizador em cada sessão
 9. ADAPTE a complexidade das instruções ao nível de experiência
 10. Se há dor/lesão, SEMPRE inclua alternativas nos exercícios
 11. USE APENAS EXERCÍCIOS DO CATÁLOGO FORNECIDO
+12. VARIE os intervalos de descanso (não use apenas 90s para todos)
 
 ## NUNCA:
 - Prescreva saltos ou impacto para quem tem dor em joelho/tornozelo
 - Prescreva overhead pesado para quem tem dor em ombro
 - Use métodos avançados para iniciantes
 - Ignore o tempo de sessão disponível
-- Prescreva volume acima do nível de experiência
+- Prescreva volume ABAIXO do mínimo para o nível (CRÍTICO)
+- Prescreva volume ACIMA do máximo para o nível
 - Ignore sono ruim ou estresse alto
-- Invente exercícios que não estão no catálogo`;
+- Invente exercícios que não estão no catálogo
+- Use o mesmo intervalo de descanso para todos os exercícios`;
 
 serve(async (req) => {
   const origin = req.headers.get("Origin");
@@ -736,66 +915,47 @@ serve(async (req) => {
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-      throw new Error("Supabase configuration is missing");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !LOVABLE_API_KEY) {
+      throw new Error("Missing environment variables");
     }
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Create client with user's auth token to verify they are authenticated
-    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    // Verify the JWT and get user claims
+    // Verify the JWT and get user
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-
-    if (claimsError || !claimsData?.claims) {
-      console.error("Auth error:", claimsError);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized - Invalid or expired token" }),
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
     console.log("Authenticated user:", userId);
 
-    if (!SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase service role key is missing");
-    }
-
-    // Create Supabase client with service role for database operations
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // === RATE LIMITING CHECK ===
+    // === RATE LIMITING ===
     const RATE_LIMIT_MAX_REQUESTS = 5;
     const RATE_LIMIT_WINDOW_HOURS = 1;
 
-    const { data: rateLimitResult, error: rateLimitError } = await supabase.rpc(
-      "check_rate_limit",
-      {
+    const { data: rateLimitData, error: rateLimitError } = await supabase
+      .rpc("check_rate_limit", {
         p_user_id: userId,
         p_endpoint: "generate-workout",
         p_max_requests: RATE_LIMIT_MAX_REQUESTS,
         p_window_hours: RATE_LIMIT_WINDOW_HOURS,
-      }
-    );
+      });
 
     if (rateLimitError) {
       console.error("Rate limit check error:", rateLimitError);
-    } else if (rateLimitResult && rateLimitResult.length > 0) {
-      const { allowed, current_count, reset_at, remaining } = rateLimitResult[0];
-      
+    } else if (rateLimitData && rateLimitData[0]) {
+      const { allowed, current_count, remaining, reset_at } = rateLimitData[0];
       console.log(`Rate limit check: user=${userId}, count=${current_count}/${RATE_LIMIT_MAX_REQUESTS}, remaining=${remaining}`);
-
+      
       if (!allowed) {
         const resetDate = new Date(reset_at);
         return new Response(
@@ -873,7 +1033,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.6,
+        temperature: 0.5, // Reduced for more consistent output
         max_tokens: 12000,
       }),
     });
@@ -925,9 +1085,16 @@ serve(async (req) => {
       {
         trainingDays: validatedData.trainingDays || [],
         injuryAreas: validatedData.injuryAreas || [],
+        experienceLevel: validatedData.experienceLevel,
+        sleepHours: validatedData.sleepHours,
+        stressLevel: validatedData.stressLevel,
       }
     );
 
+    if (validationWarnings.errors.length > 0) {
+      console.error("Workout plan validation ERRORS:", validationWarnings.errors);
+    }
+    
     if (validationWarnings.warnings.length > 0) {
       console.warn("Workout plan validation warnings:", validationWarnings.warnings);
     }
@@ -937,6 +1104,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         plan: workoutPlan,
+        validationErrors: validationWarnings.errors.length > 0 
+          ? validationWarnings.errors 
+          : undefined,
         validationWarnings: validationWarnings.warnings.length > 0 
           ? validationWarnings.warnings 
           : undefined
@@ -976,6 +1146,14 @@ function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[]): st
   if (parseFloat(bmi) < 18.5) bmiCategory = "abaixo do peso";
   else if (parseFloat(bmi) >= 25 && parseFloat(bmi) < 30) bmiCategory = "sobrepeso";
   else if (parseFloat(bmi) >= 30) bmiCategory = "obesidade";
+
+  // Get volume ranges for user's level
+  const level = userData.experienceLevel || "beginner";
+  const volumeRanges = getVolumeRanges(level);
+  
+  // Calculate if sleep/stress reduction applies
+  const sleepHours = parseInt(userData.sleepHours || "7", 10);
+  const hasLowRecovery = sleepHours < 6 || userData.stressLevel === "high";
 
   // Group exercises by muscle group for easier reference
   const exercisesByMuscle: Record<string, Exercise[]> = {};
@@ -1027,6 +1205,30 @@ ${userData.healthDescription ? `
 - Sem restrições por dor/lesão`;
   }
 
+  // Build volume requirements section
+  const volumeSection = `
+## VOLUME OBRIGATÓRIO PARA ESTE USUÁRIO (NÍVEL: ${getExperienceLevelSimple(userData.experienceLevel)})
+${hasLowRecovery ? `⚠️ ATENÇÃO: Sono insuficiente/Estresse alto detectado. Aplicar redução de 20-25% sobre o MÉDIO da faixa, mas NUNCA abaixo do mínimo.\n` : ''}
+
+### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
+| Grupamento    | Mínimo | Alvo  | Máximo |
+|---------------|--------|-------|--------|
+| Peitoral      | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
+| Costas        | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
+| Quadríceps    | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
+| Isquiotibiais | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
+| Glúteos       | ${volumeRanges.large.min} | ${Math.round((volumeRanges.large.min + volumeRanges.large.max) / 2)} | ${volumeRanges.large.max} |
+| Ombros        | ${volumeRanges.medium.min} | ${Math.round((volumeRanges.medium.min + volumeRanges.medium.max) / 2)} | ${volumeRanges.medium.max} |
+| Bíceps        | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
+| Tríceps       | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
+| Panturrilhas  | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
+| Core          | ${volumeRanges.small.min} | ${Math.round((volumeRanges.small.min + volumeRanges.small.max) / 2)} | ${volumeRanges.small.max} |
+
+### REGRA CRÍTICA:
+- TODOS os grupamentos devem ter volume DENTRO da faixa acima
+- Se há área prioritária, aumentar 20-30% o volume DAQUELA área
+- NÃO reduzir o volume das outras áreas - manter no mínimo`;
+
   return `
 ═══════════════════════════════════════════════════════════════════════════════
                     DADOS COMPLETOS DO USUÁRIO PARA PRESCRIÇÃO
@@ -1059,7 +1261,7 @@ ${userData.healthDescription ? `
 
 ## ÁREAS CORPORAIS PRIORITÁRIAS
 ${userData.bodyAreas?.length > 0 
-  ? `- Áreas para priorizar: ${userData.bodyAreas.join(', ')}\n- AÇÃO: Aumentar volume 20-30% nestas áreas, inserir primeiro no bloco` 
+  ? `- Áreas para priorizar: ${userData.bodyAreas.join(', ')}\n- AÇÃO: Aumentar volume 20-30% APENAS nestas áreas, posicioná-las primeiro no bloco\n- IMPORTANTE: NÃO reduzir volume dos demais grupos - manter todos no mínimo da faixa` 
   : '- Distribuição equilibrada entre todos os grupamentos'}
 
 ${healthSection}
@@ -1071,6 +1273,8 @@ ${healthSection}
 - Capacidade de recuperação estimada: ${getRecoveryCapacity(userData.sleepHours, userData.stressLevel)}
 
 ${getSleepStressAdjustment(userData.sleepHours, userData.stressLevel)}
+
+${volumeSection}
 
 ## VARIÁVEIS DERIVADAS (IMPLÍCITAS)
 - Autonomia técnica: ${getAutonomyLevel(userData.experienceLevel)}
@@ -1086,16 +1290,18 @@ ${catalogStr}
 
 Com base em TODAS as informações acima, gere um plano de treino completo seguindo RIGOROSAMENTE:
 
-1. As regras de volume para o nível ${getExperienceLevelSimple(userData.experienceLevel)}
+1. As regras de volume para o nível ${getExperienceLevelSimple(userData.experienceLevel)} (CONSULTAR TABELA ACIMA)
 2. A divisão de treino adequada para ${userData.trainingDays?.length || 3} dias/semana
 3. O tempo máximo de ${getSessionMinutes(userData.sessionDuration)} minutos por sessão
 4. TODAS as adaptações necessárias para condições de saúde reportadas
-5. Priorização das áreas corporais solicitadas (se houver)
-6. Ajustes por sono/estresse conforme indicado
+5. Priorização das áreas corporais solicitadas (se houver) SEM REDUZIR as demais
+6. Ajustes por sono/estresse conforme indicado (mas NUNCA abaixo do mínimo)
 7. Cardio ${userData.includeCardio ? 'INCLUÍDO conforme objetivo' : 'NÃO INCLUÍDO'}
 8. Instruções com nível de detalhamento para ${getAutonomyLevel(userData.experienceLevel)} autonomia
 9. USE APENAS EXERCÍCIOS DO CATÁLOGO FORNECIDO ACIMA
 10. INCLUA ALTERNATIVAS em todos os exercícios quando houver lesão declarada
+11. VARIE os intervalos de descanso (60s, 75s, 90s) - não use apenas 90s
+12. GARANTA que weeklyVolume tenha TODOS os grupos dentro da faixa obrigatória
 
 O plano deve ser REALISTA, EXECUTÁVEL em academia low-cost, e PERSONALIZADO para este usuário.`;
 }
@@ -1112,8 +1318,8 @@ function getGenderLabel(gender: string | null): string {
 function getGoalLabel(goal: string | null): string {
   const labels: Record<string, string> = {
     weight_loss: "EMAGRECIMENTO - Aplicar: densidade alta, pausas curtas (30-60s), supersets, reps 12-20, cardio 2-4x/semana",
-    hypertrophy: "HIPERTROFIA - Aplicar: volume 12-20 séries/grupo, reps 6-12, pausas 60-90s",
-    health: "SAÚDE E BEM-ESTAR - Aplicar: volume moderado 8-14 séries/grupo, reps 10-15, exercícios funcionais",
+    hypertrophy: "HIPERTROFIA - Aplicar: volume conforme Seção 1, reps 6-12, pausas 60-90s (VARIAR)",
+    health: "SAÚDE E BEM-ESTAR - Aplicar: volume conforme Seção 1, reps 10-15, exercícios funcionais",
     performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
   return labels[goal || "health"] || "SAÚDE E BEM-ESTAR";
@@ -1145,8 +1351,8 @@ function getDayLabel(day: string): string {
 function getSessionDurationLabel(duration: string | null): string {
   const labels: Record<string, string> = {
     "30min": "30 minutos - Aplicar: 4-5 exercícios, supersets OBRIGATÓRIOS, pausas curtas",
-    "45min": "45 minutos - Aplicar: 5-6 exercícios, pausas moderadas, cardio curto opcional",
-    "60min": "60 minutos - Aplicar: 6-8 exercícios, pausas adequadas, pode incluir cardio",
+    "45min": "45 minutos - Aplicar: 5-6 exercícios (MÍNIMO 5), pausas 60-75s",
+    "60min": "60 minutos - Aplicar: 6-8 exercícios (MÍNIMO 6), pausas adequadas, pode incluir cardio",
     "60plus": "+60 minutos - Aplicar: 8-10 exercícios, treino completo com aquecimento e cardio",
   };
   return labels[duration || "45min"] || "45 minutos";
@@ -1164,9 +1370,9 @@ function getSessionMinutes(duration: string | null): number {
 
 function getExperienceLabel(level: string | null): string {
   const labels: Record<string, string> = {
-    beginner: "INICIANTE - Aplicar: 70%+ máquinas, evitar métodos avançados, progressão linear, 8-12 séries/grupo, instruções detalhadas",
-    intermediate: "INTERMEDIÁRIO - Aplicar: 50% máquinas + 50% pesos livres, supersets permitidos, 12-18 séries/grupo",
-    advanced: "AVANÇADO - Aplicar: pesos livres como base, métodos avançados permitidos, 18-30 séries/grupo, progressão ondulatória",
+    beginner: "INICIANTE - Aplicar: 70%+ máquinas, evitar métodos avançados, progressão linear, volume da faixa INICIANTE, instruções detalhadas",
+    intermediate: "INTERMEDIÁRIO - Aplicar: 50% máquinas + 50% pesos livres, supersets permitidos, volume da faixa INTERMEDIÁRIO",
+    advanced: "AVANÇADO - Aplicar: pesos livres como base, métodos avançados permitidos, volume da faixa AVANÇADO, progressão ondulatória",
   };
   return labels[level || "beginner"] || "INICIANTE";
 }
@@ -1193,14 +1399,14 @@ function getStressLabel(stress: string | null): string {
   const labels: Record<string, string> = {
     low: "BAIXO - Pode seguir prescrição normal, progressão permitida",
     moderate: "MODERADO - Monitorar fadiga, manter prescrição padrão",
-    high: "ALTO - OBRIGATÓRIO: reduzir volume 20-30%, priorizar exercícios simples, evitar falha muscular",
+    high: "ALTO - OBRIGATÓRIO: reduzir volume 20-25% (mas nunca abaixo do mínimo), priorizar exercícios simples, evitar falha muscular",
   };
   return labels[stress || "moderate"] || "MODERADO";
 }
 
 function getSleepQuality(hours: string | null): string {
   const h = parseInt(hours || "7", 10);
-  if (h < 6) return "INSUFICIENTE - Aplicar reduções";
+  if (h < 6) return "INSUFICIENTE - Aplicar reduções (mas manter mínimos)";
   if (h >= 7 && h <= 9) return "ADEQUADO";
   return "BOM";
 }
@@ -1209,7 +1415,7 @@ function getRecoveryCapacity(sleepHours: string | null, stressLevel: string | nu
   const sleep = parseInt(sleepHours || "7", 10);
   const stress = stressLevel || "moderate";
   
-  if (sleep < 6 || stress === "high") return "BAIXA - reduzir volume e intensidade";
+  if (sleep < 6 || stress === "high") return "BAIXA - reduzir volume 20-25% sobre o MÉDIO (nunca abaixo do mínimo absoluto)";
   if (sleep >= 7 && stress === "low") return "ALTA - pode progredir normalmente";
   return "MODERADA - manter prescrição padrão";
 }
@@ -1221,9 +1427,10 @@ function getSleepStressAdjustment(sleepHours: string | null, stressLevel: string
   if (sleep < 6 || stress === "high") {
     return `
 ## ⚠️ AJUSTES OBRIGATÓRIOS POR SONO/ESTRESSE:
-- REDUZIR volume em 20-30%
+- REDUZIR volume em 20-25% SOBRE O VALOR MÉDIO da faixa
+- IMPORTANTE: Jamais prescrever abaixo do MÍNIMO absoluto para o nível
 - PRIORIZAR exercícios de baixa complexidade (máquinas)
-- AUMENTAR pausas em +30 segundos
+- AUMENTAR pausas em +15-30 segundos
 - EVITAR falha muscular em todas as séries
 - Se incluir cardio: apenas LISS leve
 - EVITAR métodos avançados (drop set, cluster, etc.)`;
