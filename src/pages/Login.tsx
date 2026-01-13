@@ -8,15 +8,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import evolveLogo from '@/assets/evolve-logo.png';
 
+type ViewMode = 'login' | 'register' | 'forgot';
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<ViewMode>('login');
   const [loading, setLoading] = useState(false);
 
   // Get the redirect destination from location state
@@ -27,20 +29,30 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password);
-
-      if (error) {
-        toast.error(error.message);
-      } else {
-        if (!isLogin) {
-          toast.success('Conta criada com sucesso!');
+      if (mode === 'forgot') {
+        const { error } = await resetPassword(email);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Email enviado! Verifique sua caixa de entrada.');
+          setMode('login');
         }
-        navigate(from, { replace: true });
+      } else {
+        const { error } = mode === 'login'
+          ? await signIn(email, password)
+          : await signUp(email, password);
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          if (mode === 'register') {
+            toast.success('Conta criada com sucesso!');
+          }
+          navigate(from, { replace: true });
+        }
       }
-    } catch (err) {
-      toast.error('Erro ao processar autenticação');
+    } catch {
+      toast.error('Erro ao processar solicitação');
     } finally {
       setLoading(false);
     }
@@ -86,30 +98,45 @@ export default function Login() {
               />
             </div>
 
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pr-12"
-                required
-                minLength={6}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={loading}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+            {mode !== 'forgot' && (
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-12"
+                  required
+                  minLength={6}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {mode === 'login' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setMode('forgot')}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  disabled={loading}
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
 
             <Button 
               variant="gradient" 
@@ -121,22 +148,51 @@ export default function Login() {
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
               ) : null}
-              {isLogin ? 'Entrar' : 'Criar conta'}
+              {mode === 'login' && 'Entrar'}
+              {mode === 'register' && 'Criar conta'}
+              {mode === 'forgot' && 'Enviar email de recuperação'}
             </Button>
           </form>
 
 
           {/* Toggle Login/Register */}
           <p className="text-center mt-6 text-muted-foreground">
-            {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}{' '}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary font-semibold hover:underline"
-              disabled={loading}
-            >
-              {isLogin ? 'Cadastre-se' : 'Entre'}
-            </button>
+            {mode === 'login' && (
+              <>
+                Não tem uma conta?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('register')}
+                  className="text-primary font-semibold hover:underline"
+                  disabled={loading}
+                >
+                  Cadastre-se
+                </button>
+              </>
+            )}
+            {mode === 'register' && (
+              <>
+                Já tem uma conta?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('login')}
+                  className="text-primary font-semibold hover:underline"
+                  disabled={loading}
+                >
+                  Entre
+                </button>
+              </>
+            )}
+            {mode === 'forgot' && (
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="text-primary font-semibold hover:underline"
+                disabled={loading}
+              >
+                Voltar para o login
+              </button>
+            )}
           </p>
         </motion.div>
       </div>
