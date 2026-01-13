@@ -322,8 +322,105 @@ const TIME_PER_SET_BY_GOAL: Record<string, number> = {
   "performance":  170,  // 50s execução + 120s descanso
 };
 
-const WARMUP_MINUTES = 5;
 const SESSION_TIME_TOLERANCE = 0.15; // 15% de tolerância
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          AQUECIMENTO POR DURAÇÃO DE SESSÃO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface WarmupStrategy {
+  type: "specific" | "general_plus_specific";
+  sets: number;
+  intensity: string;
+  timeMinutes: number;
+  description: string;
+}
+
+const WARMUP_STRATEGY: Record<string, WarmupStrategy> = {
+  "30min": {
+    type: "specific",
+    sets: 1,
+    intensity: "60-70% da carga do primeiro exercício",
+    timeMinutes: 2,
+    description: "1 série leve do primeiro exercício (60-70% carga)"
+  },
+  "45min": {
+    type: "specific", 
+    sets: 2,
+    intensity: "60-70% da carga",
+    timeMinutes: 3,
+    description: "1-2 séries leves do primeiro exercício"
+  },
+  "60min": {
+    type: "general_plus_specific",
+    sets: 2,
+    intensity: "progressivo 50-70%",
+    timeMinutes: 5,
+    description: "Aquecimento geral (3min) + específico (2min)"
+  },
+  "60plus": {
+    type: "general_plus_specific",
+    sets: 2,
+    intensity: "progressivo 50-70%",
+    timeMinutes: 5,
+    description: "Aquecimento geral + específico completo"
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          ESTRATÉGIA DE DENSIDADE (TEMPO LIMITADO)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface DensityStrategy {
+  enabled: boolean;
+  reducedRestForIsolation: boolean;
+  allowIsolation: boolean;
+  prioritizeLargeGroups: boolean;
+  warmupStrategy: WarmupStrategy;
+  targetSetsPerSession: { min: number; max: number };
+}
+
+function calculateDensityStrategy(params: {
+  sessionDuration: string;
+  goal: string | null;
+  experienceLevel: string;
+  focusAreas: string[];
+}): DensityStrategy {
+  const { sessionDuration, goal, experienceLevel, focusAreas } = params;
+  const isShortSession = sessionDuration === "30min";
+  const isMediumSession = sessionDuration === "45min";
+  const isVolumeIntensive = goal === "hypertrophy" || goal === "weight_loss";
+  
+  const needsHighDensity = (isShortSession || isMediumSession) && isVolumeIntensive;
+  
+  // REGRA CHAVE: Isolados em 30min só se usuário pediu áreas específicas
+  const userWantsIsolation = focusAreas.some(area => 
+    ["arms", "biceps", "triceps", "braços", "bíceps", "tríceps", "shoulders", "ombros"].includes(area.toLowerCase())
+  );
+  
+  // Para 30min: isolados APENAS se explicitamente pedido
+  // Para 45min+: mais flexível
+  const allowIsolation = isShortSession ? userWantsIsolation : true;
+  
+  // Capacidade realista por sessão com descanso reduzido
+  const sessionCapacity: Record<string, { min: number; max: number }> = {
+    "30min": { min: 12, max: 14 },
+    "45min": { min: 18, max: 22 },
+    "60min": { min: 24, max: 28 },
+    "60plus": { min: 28, max: 34 }
+  };
+  
+  const warmupStrategy = WARMUP_STRATEGY[sessionDuration] || WARMUP_STRATEGY["45min"];
+  
+  return {
+    enabled: needsHighDensity,
+    reducedRestForIsolation: needsHighDensity,
+    allowIsolation,
+    prioritizeLargeGroups: needsHighDensity && !userWantsIsolation,
+    warmupStrategy,
+    targetSetsPerSession: sessionCapacity[sessionDuration] || sessionCapacity["45min"]
+  };
+}
 
 function getDurationMinutes(duration: string): number {
   if (duration.includes("30")) return 30;
@@ -1010,7 +1107,8 @@ function validateWorkoutPlan(
   // 7. VALIDATE SESSION TIME - Verificar se séries cabem no tempo disponível
   const sessionDurationKey = userData.sessionDuration || "45min";
   const maxMinutes = getDurationMinutes(sessionDurationKey);
-  const availableMinutes = maxMinutes - WARMUP_MINUTES;
+  const warmupMinutes = WARMUP_STRATEGY[sessionDurationKey]?.timeMinutes || 5;
+  const availableMinutes = maxMinutes - warmupMinutes;
   const timePerSet = TIME_PER_SET_BY_GOAL[userData.goal || "health"];
   const expectedSetsRange = SESSION_SETS_PER_WORKOUT[sessionDurationKey];
 
@@ -1020,7 +1118,7 @@ function validateWorkoutPlan(
     ) || 0;
     
     const estimatedMinutes = Math.round((totalSets * timePerSet) / 60);
-    const totalSessionMinutes = estimatedMinutes + WARMUP_MINUTES;
+    const totalSessionMinutes = estimatedMinutes + warmupMinutes;
     
     // Log detalhado para debug
     console.log(`Session time validation "${workout.name}": ${totalSets} sets, ~${totalSessionMinutes}min (limit: ${maxMinutes}min)`);
@@ -1360,36 +1458,99 @@ Porém, PREFERIR espaçar estímulos quando possível para otimizar recuperaçã
 - ⚠️ EVITAR: Seg=Peito → Ter=Ombro (tríceps usado em ambos como sinergista)
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 3.1: VERIFICAÇÃO DE TEMPO POR SESSÃO
+                         SEÇÃO 3.1: ESTRATÉGIAS PARA TEMPO LIMITADO (30-45min)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## TEMPO MÉDIO POR SÉRIE (incluindo descanso):
-| Objetivo      | Tempo/Série | Justificativa |
-|---------------|-------------|---------------|
-| Emagrecimento | ~1.5 min    | Execução rápida + descanso curto (45s) |
-| Hipertrofia   | ~2.25 min   | Execução controlada + descanso médio (90s) |
-| Saúde         | ~1.75 min   | Execução leve + descanso moderado (60s) |
-| Performance   | ~2.8 min    | Execução intensa + descanso longo (120s) |
+## AQUECIMENTO ESPECÍFICO (sessões curtas)
+Para sessões de 30-45min, o aquecimento deve ser ESPECÍFICO:
+- 1-2 séries do PRIMEIRO EXERCÍCIO com 60-70% da carga
+- NÃO incluir aquecimento geral de 5 minutos
+- Tempo total: 2-3 minutos máximo
 
-## CAPACIDADE POR SESSÃO (tempo útil = tempo total - 5min aquecimento):
-| Duração | Tempo Útil | Séries Máx (Hipertrofia) | Séries Máx (Emagrec.) |
-|---------|------------|--------------------------|------------------------|
-| 30 min  | 25 min     | ~11 séries               | ~16 séries             |
-| 45 min  | 40 min     | ~18 séries               | ~26 séries             |
-| 60 min  | 55 min     | ~24 séries               | ~36 séries             |
-| 60+ min | 70 min     | ~31 séries               | ~46 séries             |
+## REGRA CRÍTICA: ISOLADOS EM 30 MINUTOS
+Para sessões de 30 minutos, exercícios isolados SÓ são permitidos quando:
+- O usuário selecionou "Braços" como área de foco no onboarding
+- O usuário selecionou "Ombros" como área de foco no onboarding
+
+Se o usuário NÃO selecionou essas áreas → APENAS COMPOSTOS
+O trabalho indireto de compostos é SUFICIENTE para grupos pequenos.
+
+## ESTRATÉGIA: DESCANSO ESCALONADO
+| Tipo de Exercício      | Descanso Padrão | Tempo Limitado |
+|------------------------|-----------------|----------------|
+| Composto principal     | 90-120s         | 90s (manter)   |
+| Composto secundário    | 90s             | 60-75s         |
+| Isolador (se permitido)| 60-90s          | 45-60s         |
+
+## PRIORIZAÇÃO DE GRANDES GRUPOS (sem preferência específica)
+Quando tempo é limitado e usuário NÃO selecionou áreas de foco:
+
+**PRIORIDADE MÁXIMA (manter 11+ séries/semana):**
+- Peito, Costas, Quadríceps, Glúteos
+
+**PRIORIDADE MÉDIA (8-10 séries/semana):**
+- Ombros, Isquiotibiais, Core
+
+**SEM ISOLADOS (trabalho indireto):**
+- Bíceps: coberto por remadas e puxadas
+- Tríceps: coberto por supino e desenvolvimento
+- Panturrilha: coberto por agachamentos e leg press
+
+## CAPACIDADE REALISTA POR SESSÃO:
+| Duração | Aquecimento   | Séries/Sessão | Com Descanso Reduzido |
+|---------|---------------|---------------|----------------------|
+| 30min   | 2min (espec.) | 10-12         | 12-14                |
+| 45min   | 3min (espec.) | 16-18         | 18-22                |
+| 60min   | 5min (geral)  | 22-24         | 24-28                |
+| 60+min  | 5min (geral)  | 28-32         | 30-36                |
+
+## EXEMPLO TREINO 30min SEM ISOLADOS (Hipertrofia, 3x/semana):
+Aquecimento: 1 série leve de Supino (60-70% carga) [2min]
+
+**TREINO A (Push):**
+1. Supino Reto: 4x10 (90s)
+2. Desenvolvimento: 3x10 (75s)
+3. Crucifixo Inclinado: 3x12 (60s)
+= 10 séries, ~25min
+
+**TREINO B (Pull):**
+1. Remada Curvada: 4x10 (90s)
+2. Puxada Frontal: 3x10 (75s)
+3. Face Pull: 3x15 (60s)
+= 10 séries, ~25min
+
+**TREINO C (Legs):**
+1. Agachamento: 4x10 (90s)
+2. Leg Press: 3x12 (75s)
+3. Stiff: 3x10 (60s)
+= 10 séries, ~25min
+
+## EXEMPLO TREINO 30min COM ISOLADOS (usuário pediu "Braços"):
+Aquecimento: 1 série leve de Supino (60-70% carga) [2min]
+
+**TREINO A (Push + Tríceps):**
+1. Supino Reto: 3x10 (90s)
+2. Desenvolvimento: 3x10 (75s)
+3. Tríceps Pulley: 3x12 (45s)
+= 9 séries, ~23min
+
+**TREINO B (Pull + Bíceps):**
+1. Remada Curvada: 3x10 (90s)
+2. Puxada Frontal: 3x10 (75s)
+3. Rosca Direta: 3x12 (45s)
+= 9 séries, ~23min
 
 ## VERIFICAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR CADA TREINO:
 1. Somar TODAS as séries do treino
 2. Multiplicar pelo tempo/série do objetivo
-3. Adicionar 5 min de aquecimento
+3. Adicionar tempo de aquecimento (2-5min conforme duração)
 4. Verificar se ≤ tempo disponível
 
 ## SE ULTRAPASSAR O TEMPO:
 1. PRIMEIRO: Reduzir séries dos isoladores (de 4→3, de 3→2)
 2. DEPOIS: Remover exercícios isoladores menos importantes
-3. NUNCA: Reduzir compostos principais abaixo de 3 séries
-4. NUNCA: Remover aquecimento
+3. Se 30min SEM preferência por braços: REMOVER isolados completamente
+4. NUNCA: Reduzir compostos principais abaixo de 3 séries
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 3.2: PERIODIZAÇÃO DINÂMICA
@@ -1923,6 +2084,17 @@ function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[]): st
     stressLevel: userData.stressLevel,
   });
 
+  // Calculate density strategy for time-limited sessions
+  const densityStrategy = calculateDensityStrategy({
+    sessionDuration: userData.sessionDuration || "45min",
+    goal: userData.goal,
+    experienceLevel: level,
+    focusAreas: userData.bodyAreas || []
+  });
+
+  // Determine if user has focus preference for isolation exercises
+  const hasUserPreference = userData.bodyAreas && userData.bodyAreas.length > 0;
+
   // Group exercises by muscle group
   const exercisesByMuscle: Record<string, Exercise[]> = {};
   exercises.forEach((ex) => {
@@ -2004,13 +2176,52 @@ ${dayPattern.consecutiveGroups.length > 0
 4. O VOLUME SEMANAL TOTAL é o que determina hipertrofia, não a distribuição exata
 ` : '';
 
+  // Build density section for time-limited sessions
+  const densitySection = densityStrategy.enabled ? `
+## ⚡ MODO TEMPO LIMITADO ATIVADO
+
+O usuário tem APENAS ${userData.sessionDuration} disponíveis para objetivo de ${getGoalShort(userData.goal)}.
+
+### AQUECIMENTO OBRIGATÓRIO:
+- ${densityStrategy.warmupStrategy.description}
+- Tempo: ${densityStrategy.warmupStrategy.timeMinutes} minutos
+- NÃO incluir aquecimento geral separado
+
+### REGRA DE ISOLADOS:
+${densityStrategy.allowIsolation 
+  ? `✅ ISOLADOS PERMITIDOS - usuário solicitou foco em: ${userData.bodyAreas?.filter(a => 
+      ['arms', 'biceps', 'triceps', 'braços', 'bíceps', 'tríceps', 'shoulders', 'ombros'].includes(a.toLowerCase())
+    ).join(', ') || 'áreas específicas'}`
+  : `❌ SEM ISOLADOS - usar apenas COMPOSTOS. Braços/Tríceps trabalham indiretamente em compostos.`
+}
+
+### INSTRUÇÕES DE DENSIDADE:
+1. DESCANSO REDUZIDO: 60-75s em compostos secundários${densityStrategy.allowIsolation ? ', 45-60s em isoladores' : ''}
+2. MANTER descanso normal (90s) apenas no composto PRINCIPAL de cada treino
+3. META: ${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max} séries por sessão
+
+### PRIORIZAÇÃO DE GRUPOS:
+${hasUserPreference 
+  ? `FOCO DO USUÁRIO: ${userData.bodyAreas?.join(', ')} → manter volume máximo`
+  : `SEM PREFERÊNCIA → Priorizar: Peito, Costas, Quadríceps, Glúteos (11+ séries/semana)`
+}
+${!densityStrategy.allowIsolation ? `
+### GRUPOS COM TRABALHO INDIRETO APENAS:
+- Bíceps: coberto por remadas e puxadas
+- Tríceps: coberto por supino e desenvolvimento
+- Panturrilha: coberto por agachamentos e leg press` : ''}
+
+❌ PROIBIDO: Supersets entre equipamentos diferentes (problema de logística)
+` : '';
+
   // Build volume section with CALCULATED values
   const volumeSection = `
 ## 🎯 VOLUME CALCULADO PARA ESTE USUÁRIO
 
 **Perfil**: ${getLevelLabel(userData.experienceLevel)} | ${getGoalShort(userData.goal)} | ${userData.sessionDuration || "45min"} | ${userData.trainingDays?.length || 3} dias/sem
 **Split recomendado**: ${splitRule?.split || volumeRanges.recommendedSplit}
-**Séries por treino**: ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}
+**Séries por treino**: ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`}
+**Aquecimento**: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.type === 'specific' ? 'específico' : 'geral + específico'})
 
 ### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
 | Grupamento       | Mínimo | Máximo |
@@ -2022,8 +2233,8 @@ ${dayPattern.consecutiveGroups.length > 0
 | Isquiotibiais    | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
 | Glúteos          | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
 | Ombros           | ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
-| Bíceps           | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
-| Tríceps          | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+| Bíceps           | ${densityStrategy.allowIsolation ? volumeRanges.small.min : 0} | ${volumeRanges.small.max} |
+| Tríceps          | ${densityStrategy.allowIsolation ? volumeRanges.small.min : 0} | ${volumeRanges.small.max} |
 | Panturrilhas     | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
 | Core             | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
 
@@ -2034,6 +2245,7 @@ ${dayPattern.consecutiveGroups.length > 0
 - Se há área prioritária: pode aumentar até +30% apenas naquela área
 - NUNCA reduzir outros grupos abaixo do mínimo
 - Core INCLUI exercícios de lombar (Hiperextensão, Good Morning contam como core)
+${!densityStrategy.allowIsolation ? '- Bíceps/Tríceps: ZERO séries diretas OK (trabalho indireto suficiente)' : ''}
 - O plano será VALIDADO contra estes limites`;
 
   // Build periodization section
@@ -2094,6 +2306,8 @@ ${healthSection}
 
 ${dayPatternSection}
 
+${densitySection}
+
 ${volumeSection}
 
 ${periodizationSection}
@@ -2108,7 +2322,7 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 
 1. O SPLIT OBRIGATÓRIO: "${splitRule?.split || volumeRanges.recommendedSplit}" (definido acima)
 2. Os RANGES DE VOLUME calculados acima
-3. ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max} séries por treino
+3. ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`} séries por treino
 4. A periodização "${periodizationConfig.type}" definida acima
 5. TODAS as adaptações para condições de saúde
 6. Priorização das áreas solicitadas (se houver)
@@ -2117,9 +2331,10 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 9. VARIE os intervalos de descanso CONFORME a faixa de repetições
 10. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa (core inclui lombar)
 11. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
-12. Se tempo exceder, REDUZA isoladores primeiro
+12. Aquecimento: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.description})
 13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"
-14. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos`;
+14. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos
+${!densityStrategy.allowIsolation ? `15. ❌ SEM ISOLADOS: Use APENAS exercícios compostos. Bíceps/Tríceps = trabalho indireto` : ''}`;
 }
 
 function getGenderLabel(gender: string | null): string {
