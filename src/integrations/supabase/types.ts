@@ -163,6 +163,45 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_type: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_onboarding_data: {
         Row: {
           body_areas: string[] | null
@@ -270,6 +309,62 @@ export type Database = {
           weekly_frequency?: number
         }
         Relationships: []
+      }
+      workout_sessions: {
+        Row: {
+          completed_at: string | null
+          completed_sets: number
+          created_at: string
+          duration_minutes: number | null
+          exercises_data: Json | null
+          id: string
+          started_at: string
+          status: string
+          total_sets: number
+          user_id: string
+          workout_day: string
+          workout_name: string
+          workout_plan_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_sets?: number
+          created_at?: string
+          duration_minutes?: number | null
+          exercises_data?: Json | null
+          id?: string
+          started_at?: string
+          status?: string
+          total_sets?: number
+          user_id: string
+          workout_day: string
+          workout_name: string
+          workout_plan_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_sets?: number
+          created_at?: string
+          duration_minutes?: number | null
+          exercises_data?: Json | null
+          id?: string
+          started_at?: string
+          status?: string
+          total_sets?: number
+          user_id?: string
+          workout_day?: string
+          workout_name?: string
+          workout_plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_workout_plan_id_fkey"
+            columns: ["workout_plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
