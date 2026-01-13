@@ -5,6 +5,7 @@ import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 import {
   StepName,
   StepPersonalData,
@@ -24,19 +25,34 @@ const TOTAL_STEPS = 12;
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { profile, updateProfile, isUpdating: isUpdatingProfile } = useProfile();
-  const { saveOnboardingData, isSaving } = useOnboardingData();
+  const { profile, updateProfile, isUpdating: isUpdatingProfile, isLoading: isLoadingProfile } = useProfile();
+  const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding, saveOnboardingData, isSaving } = useOnboardingData();
   
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Preenche nome do perfil se existir
+  // Preenche dados do perfil e onboarding salvos
   useEffect(() => {
-    if (profile?.name && !data.name) {
-      setData(prev => ({ ...prev, name: profile.name }));
-    }
-  }, [profile]);
+    if (isLoadingProfile || isLoadingOnboarding || hasInitialized) return;
+
+    // Mescla dados salvos com valores iniciais
+    const mergedData: OnboardingData = {
+      ...initialOnboardingData,
+      // Dados do onboarding salvos
+      ...(savedOnboardingData || {}),
+      // Dados do perfil (sobrescrevem)
+      name: profile?.name || savedOnboardingData?.name || '',
+      gender: profile?.gender as OnboardingData['gender'] || null,
+      age: profile?.age || null,
+      height: profile?.height || null,
+      weight: profile?.weight || null,
+    };
+
+    setData(mergedData);
+    setHasInitialized(true);
+  }, [profile, savedOnboardingData, isLoadingProfile, isLoadingOnboarding, hasInitialized]);
 
   const updateData = <K extends keyof OnboardingData>(
     key: K,
@@ -126,6 +142,18 @@ export default function Onboarding() {
         return null;
     }
   };
+
+  // Estado de loading inicial enquanto busca dados do banco
+  if (isLoadingProfile || isLoadingOnboarding) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando seus dados...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">

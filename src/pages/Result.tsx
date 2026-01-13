@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { OnboardingData } from '@/types/onboarding';
+import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { useProfile } from '@/hooks/useProfile';
+import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { toast } from 'sonner';
 import { 
   Dumbbell, 
@@ -81,8 +82,9 @@ const goalLabels: Record<string, string> = {
 
 export default function Result() {
   const navigate = useNavigate();
-  const { profile } = useProfile();
-  const { createPlan, activePlan, isCreating } = useWorkoutPlans();
+  const { profile, isLoading: isLoadingProfile } = useProfile();
+  const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
+  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans } = useWorkoutPlans();
   
   const [data, setData] = useState<OnboardingData | null>(null);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
@@ -90,6 +92,7 @@ export default function Result() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  const hasStartedGeneration = useRef(false);
 
   const [rateLimitResetAt, setRateLimitResetAt] = useState<Date | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
@@ -204,6 +207,11 @@ export default function Result() {
   };
 
   useEffect(() => {
+    // Aguarda carregamento inicial
+    if (isLoadingProfile || isLoadingOnboarding || isLoadingPlans) {
+      return;
+    }
+
     // Verifica se já tem plano ativo
     if (activePlan && !plan) {
       const savedPlanData = activePlan.plan_data as unknown as {
@@ -231,19 +239,58 @@ export default function Result() {
       return;
     }
 
-    // Busca dados do sessionStorage para gerar novo plano
-    const savedData = sessionStorage.getItem('onboardingData');
-    if (!savedData && !activePlan) {
-      navigate('/onboarding');
+    // Evita múltiplas gerações
+    if (hasStartedGeneration.current && retryCount === 0) {
       return;
     }
 
-    if (savedData) {
-      const parsedData: OnboardingData = JSON.parse(savedData);
+    // Busca dados do sessionStorage primeiro (recém completou onboarding)
+    const savedSessionData = sessionStorage.getItem('onboardingData');
+    if (savedSessionData) {
+      hasStartedGeneration.current = true;
+      const parsedData: OnboardingData = JSON.parse(savedSessionData);
       setData(parsedData);
       generatePlan(parsedData);
+      return;
     }
-  }, [navigate, retryCount, activePlan]);
+
+    // Busca do banco de dados se não há sessionStorage
+    if (savedOnboardingData && profile) {
+      hasStartedGeneration.current = true;
+      const fullData: OnboardingData = {
+        ...initialOnboardingData,
+        // Dados do onboarding salvos
+        goal: savedOnboardingData.goal || null,
+        timeframe: savedOnboardingData.timeframe || null,
+        trainingDays: savedOnboardingData.trainingDays || [],
+        sessionDuration: savedOnboardingData.sessionDuration || null,
+        exerciseTypes: savedOnboardingData.exerciseTypes || [],
+        includeCardio: savedOnboardingData.includeCardio || false,
+        experienceLevel: savedOnboardingData.experienceLevel || null,
+        variationPreference: savedOnboardingData.variationPreference || null,
+        bodyAreas: savedOnboardingData.bodyAreas || [],
+        hasHealthConditions: savedOnboardingData.hasHealthConditions || false,
+        injuryAreas: savedOnboardingData.injuryAreas || [],
+        healthDescription: savedOnboardingData.healthDescription || '',
+        sleepHours: savedOnboardingData.sleepHours || null,
+        stressLevel: savedOnboardingData.stressLevel || null,
+        // Dados do perfil
+        name: profile.name || '',
+        gender: profile.gender as OnboardingData['gender'] || null,
+        age: profile.age || null,
+        height: profile.height || null,
+        weight: profile.weight || null,
+      };
+      setData(fullData);
+      generatePlan(fullData);
+      return;
+    }
+
+    // Só redireciona se não há dados em nenhum lugar E não tem plano ativo
+    if (!savedOnboardingData && !activePlan) {
+      navigate('/onboarding');
+    }
+  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan]);
 
   const handleRetry = () => {
     if (data) {
