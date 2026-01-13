@@ -38,6 +38,7 @@ const OnboardingSchema = z.object({
   exerciseTypes: z.array(z.string().max(20)).max(5),
   includeCardio: z.boolean(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
+  splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid"]).nullable().optional(),
   variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
@@ -2226,8 +2227,32 @@ ${userData.healthDescription ? `
   // Analyze day pattern for split selection
   const dayPattern = analyzeDayPattern(userData.trainingDays || []);
   const freqKey = (userData.trainingDays?.length || 3).toString();
-  const splitRule = SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
-    || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
+  
+  // Check if user has a split preference (only for 3x/week intermediate/advanced)
+  let splitRule: SplitRule;
+  const hasSplitPreference = userData.splitPreference && 
+    (userData.trainingDays?.length || 0) === 3 && 
+    level !== 'beginner';
+  
+  if (hasSplitPreference) {
+    // Map user preference to split rules
+    const splitPreferenceMap: Record<string, SplitRule> = {
+      'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
+      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
+      'hybrid': {
+        split: "Full Body + Push/Pull Híbrido",
+        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
+      }
+    };
+    splitRule = splitPreferenceMap[userData.splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
+    console.log(`Using user's split preference: ${userData.splitPreference}`);
+  } else {
+    // Automatic detection based on day pattern
+    splitRule = SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
+      || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
+    console.log(`Auto-detected split based on pattern: ${dayPattern.pattern}`);
+  }
 
   // Build day pattern section
   const dayPatternSection = splitRule ? `
