@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Dumbbell, Heart, Moon, CreditCard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { User, Dumbbell, Heart, Moon, CreditCard, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection } from '@/components/settings';
-import { Loader2 } from 'lucide-react';
 
 export default function Settings() {
-  const navigate = useNavigate();
   const { profile, isLoading: profileLoading, updateProfile, isUpdating } = useProfile();
   const { onboardingData, isLoading: onboardingLoading, updateOnboardingData, isSaving } = useOnboardingData();
   const [activeTab, setActiveTab] = useState('profile');
@@ -30,21 +26,13 @@ export default function Settings() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/dashboard')}
-            aria-label="Voltar ao dashboard"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+        <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-center">
           <h1 className="text-xl font-bold text-foreground">Configurações</h1>
         </div>
       </header>
 
       {/* Content */}
-      <main className="container max-w-4xl mx-auto px-4 py-6">
+      <main className="container max-w-4xl mx-auto px-4 py-6 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
