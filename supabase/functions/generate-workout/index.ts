@@ -53,14 +53,37 @@ const OnboardingSchema = z.object({
 type ValidatedUserData = z.infer<typeof OnboardingSchema>;
 
 // Sanitize text for AI prompt to prevent injection
-function sanitizeForPrompt(text: string): string {
+function sanitizeForPrompt(text: string, maxLength: number = 500): string {
   if (!text) return "";
   return text
     .replace(/ignore\s*(all\s*)?(previous|above|prior)\s*(instructions?)?/gi, "")
     .replace(/system\s*:/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
-    .slice(0, 500);
+    .slice(0, maxLength);
+}
+
+// Sanitize name for prompt - stricter validation for names
+function sanitizeName(text: string): string {
+  if (!text) return "";
+  // Remove common prompt injection patterns
+  let sanitized = text
+    .replace(/ignore\s*(all\s*)?(previous|above|prior)\s*(instructions?)?/gi, "")
+    .replace(/system\s*:/gi, "")
+    .replace(/assistant\s*:/gi, "")
+    .replace(/user\s*:/gi, "")
+    .replace(/\[.*?\]/g, "") // Remove bracketed instructions
+    .replace(/\{.*?\}/g, "") // Remove JSON-like patterns
+    .replace(/\n/g, " ") // Remove newlines
+    .trim()
+    .slice(0, 50);
+  
+  // If the result looks suspicious (too short after sanitization), use generic
+  if (sanitized.length < 2) {
+    return "Usuário";
+  }
+  
+  return sanitized;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1851,7 +1874,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## IDENTIFICAÇÃO
-- Nome: ${userData.name || "Usuário"}
+- Nome: ${sanitizeName(userData.name) || "Usuário"}
 - Gênero: ${getGenderLabel(userData.gender)}
 - Idade: ${userData.age || 30} anos
 - Altura: ${userData.height || 170} cm

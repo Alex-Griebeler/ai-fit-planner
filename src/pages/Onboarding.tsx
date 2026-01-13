@@ -83,7 +83,8 @@ export default function Onboarding() {
       toast.success('Dados salvos com sucesso!');
       navigate('/result');
     } catch (error) {
-      console.error('Erro ao salvar dados:', error);
+      // Log error without sensitive details
+      console.error('Error saving onboarding data');
       toast.error('Erro ao salvar dados. Tente novamente.');
     } finally {
       setIsSubmitting(false);

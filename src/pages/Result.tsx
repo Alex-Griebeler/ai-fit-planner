@@ -166,7 +166,8 @@ export default function Result() {
         throw new Error('Plano não gerado');
       }
     } catch (err) {
-      console.error('Error generating workout:', err);
+      // Log error without sensitive details
+      console.error('Error generating workout');
       const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar plano';
       setError(errorMessage);
       
@@ -201,7 +202,8 @@ export default function Result() {
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
     } catch (err) {
-      console.error('Erro ao salvar plano:', err);
+      // Log error without sensitive details
+      console.error('Error saving workout plan');
       toast.error('Erro ao salvar plano. Tente novamente.');
     }
   };
