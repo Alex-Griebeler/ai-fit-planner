@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,17 +12,15 @@ import {
   Dumbbell, 
   Calendar, 
   Clock, 
-  Target, 
-  ChevronRight,
+  ChevronDown,
   Flame,
-  Trophy,
-  Sparkles,
   AlertTriangle,
-  Info,
   RefreshCw,
   Check,
-  Timer
+  Timer,
+  Sparkles
 } from 'lucide-react';
+import evolveLogo from '@/assets/evolve-logo.png';
 
 interface WorkoutExercise {
   order: number;
@@ -73,13 +71,6 @@ interface WorkoutPlan {
   motivationalMessage: string;
 }
 
-const goalLabels: Record<string, string> = {
-  weight_loss: 'Emagrecimento',
-  hypertrophy: 'Hipertrofia',
-  health: 'Saúde e Bem-estar',
-  performance: 'Performance',
-};
-
 export default function Result() {
   const navigate = useNavigate();
   const { profile, isLoading: isLoadingProfile } = useProfile();
@@ -97,6 +88,11 @@ export default function Result() {
   const [rateLimitResetAt, setRateLimitResetAt] = useState<Date | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
+  
+  // Collapsible states
+  const [expandedWorkouts, setExpandedWorkouts] = useState<Record<number, boolean>>({});
+  const [showVolume, setShowVolume] = useState(false);
+  const [showProgression, setShowProgression] = useState(false);
 
   const formatTimeRemaining = (resetAt: Date): string => {
     const now = new Date();
@@ -112,7 +108,6 @@ export default function Result() {
     return `${seconds}s`;
   };
 
-  // Update timer every second for rate limit errors
   useEffect(() => {
     if (!isRateLimited || !rateLimitResetAt) return;
     
@@ -138,7 +133,6 @@ export default function Result() {
         { body: { userData } }
       );
 
-      // Check if this is a rate limit response (HTTP 429 comes as data, not error)
       if (responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
         const resetAt = new Date(responseData.reset_at);
         setRateLimitResetAt(resetAt);
@@ -166,12 +160,10 @@ export default function Result() {
         throw new Error('Plano não gerado');
       }
     } catch (err) {
-      // Log error without sensitive details
       console.error('Error generating workout');
       const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar plano';
       setError(errorMessage);
       
-      // Only show toast for non-rate-limit errors (rate limit shows in the UI)
       if (!isRateLimited) {
         toast.error('Erro ao gerar plano de treino. Tente novamente.');
       }
@@ -202,19 +194,16 @@ export default function Result() {
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
     } catch (err) {
-      // Log error without sensitive details
       console.error('Error saving workout plan');
       toast.error('Erro ao salvar plano. Tente novamente.');
     }
   };
 
   useEffect(() => {
-    // Aguarda carregamento inicial
     if (isLoadingProfile || isLoadingOnboarding || isLoadingPlans) {
       return;
     }
 
-    // Verifica se já tem plano ativo
     if (activePlan && !plan) {
       const savedPlanData = activePlan.plan_data as unknown as {
         workouts: Workout[];
@@ -241,12 +230,10 @@ export default function Result() {
       return;
     }
 
-    // Evita múltiplas gerações
     if (hasStartedGeneration.current && retryCount === 0) {
       return;
     }
 
-    // Busca dados do sessionStorage primeiro (recém completou onboarding)
     const savedSessionData = sessionStorage.getItem('onboardingData');
     if (savedSessionData) {
       hasStartedGeneration.current = true;
@@ -256,12 +243,10 @@ export default function Result() {
       return;
     }
 
-    // Busca do banco de dados se não há sessionStorage
     if (savedOnboardingData && profile) {
       hasStartedGeneration.current = true;
       const fullData: OnboardingData = {
         ...initialOnboardingData,
-        // Dados do onboarding salvos
         goal: savedOnboardingData.goal || null,
         timeframe: savedOnboardingData.timeframe || null,
         trainingDays: savedOnboardingData.trainingDays || [],
@@ -276,7 +261,6 @@ export default function Result() {
         healthDescription: savedOnboardingData.healthDescription || '',
         sleepHours: savedOnboardingData.sleepHours || null,
         stressLevel: savedOnboardingData.stressLevel || null,
-        // Dados do perfil
         name: profile.name || '',
         gender: profile.gender as OnboardingData['gender'] || null,
         age: profile.age || null,
@@ -288,7 +272,6 @@ export default function Result() {
       return;
     }
 
-    // Só redireciona se não há dados em nenhum lugar E não tem plano ativo
     if (!savedOnboardingData && !activePlan) {
       navigate('/onboarding');
     }
@@ -300,108 +283,101 @@ export default function Result() {
     }
   };
 
+  const toggleWorkout = (index: number) => {
+    setExpandedWorkouts(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
   const userName = profile?.name || data?.name || 'Atleta';
 
+  // Loading State - Apple minimal
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           className="text-center px-6"
         >
+          <motion.img
+            src={evolveLogo}
+            alt="Evolve"
+            className="w-16 h-16 mx-auto mb-8 object-contain"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          />
           <motion.div
+            className="w-8 h-8 mx-auto mb-6 border-2 border-primary border-t-transparent rounded-full"
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-20 h-20 mx-auto mb-6 rounded-full gradient-primary flex items-center justify-center"
-          >
-            <Sparkles className="w-10 h-10 text-primary-foreground" />
-          </motion.div>
-          <h2 className="text-2xl font-display font-bold text-foreground mb-2">
-            Gerando seu plano personalizado...
-          </h2>
-          <p className="text-muted-foreground mb-4">
-            Nossa IA está analisando suas informações
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          />
+          <p className="text-muted-foreground text-sm tracking-wide">
+            Gerando plano personalizado
           </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-              className="w-2 h-2 rounded-full bg-primary"
-            />
-            <span>Aplicando diretrizes técnicas de prescrição</span>
-          </div>
         </motion.div>
       </div>
     );
   }
 
+  // Error State
   if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center px-6 max-w-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center px-6 max-w-sm"
         >
+          <img
+            src={evolveLogo}
+            alt="Evolve"
+            className="w-12 h-12 mx-auto mb-8 object-contain opacity-50"
+          />
+          
           {isRateLimited ? (
-            // Rate limit specific UI
             <>
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                <Timer className="w-8 h-8 text-yellow-500" />
-              </div>
-              <h2 className="text-xl font-display font-bold text-foreground mb-2">
-                Limite de gerações atingido
+              <Timer className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+              <h2 className="text-lg font-medium text-foreground mb-2">
+                Limite atingido
               </h2>
-              <p className="text-muted-foreground mb-4">
-                Você pode gerar até 5 planos por hora. Este limite ajuda a manter o serviço rápido para todos.
+              <p className="text-sm text-muted-foreground mb-6">
+                Aguarde para gerar novo plano
               </p>
               
               {timeRemaining && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-yellow-500 mb-1">Tempo restante:</p>
-                  <p className="text-2xl font-bold text-yellow-500">{timeRemaining}</p>
-                </div>
+                <p className="text-2xl font-light text-foreground mb-8 tracking-wider">
+                  {timeRemaining}
+                </p>
               )}
               
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/dashboard')}
+              >
+                Voltar
+              </Button>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+              <h2 className="text-lg font-medium text-foreground mb-2">
+                Erro ao gerar
+              </h2>
+              <p className="text-sm text-muted-foreground mb-6">{error}</p>
               <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => navigate('/dashboard')}
-                >
-                  Ir para Dashboard
+                <Button onClick={handleRetry} className="w-full">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Tentar novamente
                 </Button>
                 <Button
                   variant="ghost"
                   className="w-full text-muted-foreground"
                   onClick={() => navigate('/onboarding')}
                 >
-                  Ajustar preferências
-                </Button>
-              </div>
-            </>
-          ) : (
-            // Generic error UI
-            <>
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-destructive" />
-              </div>
-              <h2 className="text-xl font-display font-bold text-foreground mb-2">
-                Erro ao gerar plano
-              </h2>
-              <p className="text-muted-foreground mb-6">{error}</p>
-              <div className="space-y-3">
-                <Button onClick={handleRetry} variant="gradient" className="w-full">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Tentar Novamente
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => navigate('/onboarding')}
-                >
-                  Refazer Questionário
+                  Refazer questionário
                 </Button>
               </div>
             </>
@@ -413,268 +389,299 @@ export default function Result() {
 
   if (!plan) return null;
 
+  const muscleLabels: Record<string, string> = {
+    chest: 'Peito',
+    back: 'Costas',
+    shoulders: 'Ombros',
+    biceps: 'Bíceps',
+    triceps: 'Tríceps',
+    quadriceps: 'Quadríceps',
+    hamstrings: 'Posterior',
+    glutes: 'Glúteos',
+    calves: 'Panturrilha',
+    core: 'Core'
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 gradient-glow" />
-        <div className="container max-w-lg mx-auto px-4 py-8 relative">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl gradient-primary flex items-center justify-center shadow-glow">
-              <Trophy className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-              Parabéns, {userName}! 🎉
-            </h1>
-            <p className="text-muted-foreground">
-              {plan.motivationalMessage || 'Seu plano de treino personalizado está pronto'}
-            </p>
-          </motion.div>
-        </div>
+      {/* Hero - Ultra minimal */}
+      <div className="container max-w-lg mx-auto px-6 pt-12 pb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <img
+            src={evolveLogo}
+            alt="Evolve"
+            className="w-10 h-10 mx-auto mb-6 object-contain"
+          />
+          <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
+            Plano Pronto
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            {userName}
+          </p>
+        </motion.div>
       </div>
 
-      <div className="container max-w-lg mx-auto px-4 pb-8">
-        {/* Warnings if any */}
+      <div className="container max-w-lg mx-auto px-6 pb-12">
+        {/* Warnings - Minimal */}
         {plan.warnings && plan.warnings.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mb-8 p-4 rounded-2xl bg-muted/50"
           >
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-yellow-500 mb-1">Atenção</p>
-                <ul className="text-sm text-yellow-500/80 space-y-1">
-                  {plan.warnings.map((warning, i) => (
-                    <li key={i}>• {warning}</li>
-                  ))}
-                </ul>
+              <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="text-xs text-muted-foreground space-y-1">
+                {plan.warnings.map((warning, i) => (
+                  <p key={i}>{warning}</p>
+                ))}
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Plan Overview Card */}
+        {/* Plan Stats - 3 columns minimal */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-2xl p-6 mb-6 shadow-card"
+          className="grid grid-cols-3 gap-4 mb-8"
         >
-          <h2 className="text-xl font-display font-bold text-foreground mb-1">
-            {plan.planName}
-          </h2>
-          <p className="text-muted-foreground text-sm mb-4">{plan.description}</p>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-secondary rounded-xl">
-              <Calendar className="w-5 h-5 mx-auto mb-1 text-primary" />
-              <p className="text-lg font-bold text-foreground">{plan.weeklyFrequency}x</p>
-              <p className="text-xs text-muted-foreground">por semana</p>
-            </div>
-            <div className="text-center p-3 bg-secondary rounded-xl">
-              <Clock className="w-5 h-5 mx-auto mb-1 text-primary" />
-              <p className="text-lg font-bold text-foreground">{plan.sessionDuration}</p>
-              <p className="text-xs text-muted-foreground">por treino</p>
-            </div>
-            <div className="text-center p-3 bg-secondary rounded-xl">
-              <Target className="w-5 h-5 mx-auto mb-1 text-primary" />
-              <p className="text-lg font-bold text-foreground">{goalLabels[data?.goal || 'health']?.split(' ')[0]}</p>
-              <p className="text-xs text-muted-foreground">objetivo</p>
-            </div>
+          <div className="text-center">
+            <Calendar className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-xl font-semibold text-foreground">{plan.weeklyFrequency}x</p>
+            <p className="text-xs text-muted-foreground">semana</p>
           </div>
-
-          {/* Periodization info */}
-          <div className="mt-4 p-3 bg-primary/5 rounded-xl">
-            <div className="flex items-center gap-3 mb-2">
-              <Info className="w-5 h-5 text-primary shrink-0" />
-              <span className="text-foreground font-medium text-sm">
-                Periodização {plan.periodization === 'linear' ? 'Linear' : 'Ondulatória'}
-              </span>
-            </div>
-            {typeof plan.progressionPlan === 'string' ? (
-              <p className="text-sm text-muted-foreground">{plan.progressionPlan}</p>
-            ) : (
-              <div className="space-y-1 text-sm text-muted-foreground">
-                {plan.progressionPlan.week1 && <p><span className="text-foreground">Semana 1:</span> {plan.progressionPlan.week1}</p>}
-                {plan.progressionPlan.week2 && <p><span className="text-foreground">Semana 2:</span> {plan.progressionPlan.week2}</p>}
-                {plan.progressionPlan.week3 && <p><span className="text-foreground">Semana 3:</span> {plan.progressionPlan.week3}</p>}
-                {plan.progressionPlan.week4 && <p><span className="text-foreground">Semana 4:</span> {plan.progressionPlan.week4}</p>}
-                {plan.progressionPlan.deloadWeek && <p><span className="text-foreground">Deload:</span> {plan.progressionPlan.deloadWeek}</p>}
-              </div>
-            )}
+          <div className="text-center">
+            <Clock className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-xl font-semibold text-foreground">{plan.sessionDuration}</p>
+            <p className="text-xs text-muted-foreground">sessão</p>
+          </div>
+          <div className="text-center">
+            <Dumbbell className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-xl font-semibold text-foreground">{plan.workouts.reduce((acc, w) => acc + w.exercises.length, 0)}</p>
+            <p className="text-xs text-muted-foreground">exercícios</p>
           </div>
         </motion.div>
 
-        {/* Workouts List */}
+        {/* Workouts - Collapsible Apple style */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="space-y-4 mb-6"
+          className="space-y-3 mb-8"
         >
-          <h3 className="text-lg font-display font-semibold text-foreground">
-            Seus Treinos
-          </h3>
-          
           {plan.workouts.map((workout, index) => (
-            <motion.div
+            <div
               key={index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + index * 0.1 }}
-              className="bg-card border border-border rounded-xl p-4 shadow-card"
+              className="bg-card rounded-2xl border border-border overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => toggleWorkout(index)}
+                className="w-full p-4 flex items-center justify-between text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                     <Dumbbell className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">{workout.day}</p>
-                    <p className="text-sm text-muted-foreground">{workout.name}</p>
+                    <p className="font-medium text-foreground">{workout.day}</p>
+                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.slice(0, 2).join(' · ')}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{workout.estimatedDuration}</p>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground inline" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{workout.exercises.length} ex</span>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
+                      expandedWorkouts[index] ? 'rotate-180' : ''
+                    }`}
+                  />
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-3">
-                {workout.muscleGroups.map((muscle) => (
-                  <span
-                    key={muscle}
-                    className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium"
+              </button>
+              
+              <AnimatePresence>
+                {expandedWorkouts[index] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
                   >
-                    {muscle}
-                  </span>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                {workout.exercises.map((exercise, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between text-sm py-2 border-t border-border/50"
-                  >
-                    <div className="flex-1">
-                      <span className="text-foreground">{exercise.name}</span>
-                      {exercise.notes && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{exercise.notes}</p>
+                    <div className="px-4 pb-4 space-y-2">
+                      {workout.exercises.map((exercise, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between py-2 border-t border-border/50"
+                        >
+                          <span className="text-sm text-foreground">{exercise.name}</span>
+                          <span className="text-sm text-muted-foreground font-mono">
+                            {exercise.sets}×{exercise.reps}
+                          </span>
+                        </div>
+                      ))}
+                      
+                      {workout.cardio && (
+                        <div className="flex items-center justify-between py-2 border-t border-border/50">
+                          <div className="flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-primary" />
+                            <span className="text-sm text-foreground">{workout.cardio.type}</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">{workout.cardio.duration}</span>
+                        </div>
                       )}
                     </div>
-                    <div className="text-right text-muted-foreground shrink-0 ml-2">
-                      <span className="font-medium text-foreground">{exercise.sets}x{exercise.reps}</span>
-                      <span className="text-xs ml-2">({exercise.rest})</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Cardio block if present */}
-              {workout.cardio && (
-                <div className="mt-3 pt-3 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Flame className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-medium text-foreground">
-                        Cardio - {workout.cardio.type}
-                      </span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">{workout.cardio.duration}</span>
-                  </div>
-                  {workout.cardio.notes && (
-                    <p className="text-xs text-muted-foreground mt-1">{workout.cardio.notes}</p>
-                  )}
-                </div>
-              )}
-            </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ))}
         </motion.div>
 
-        {/* Weekly Volume */}
-        {plan.weeklyVolume && (
+        {/* Volume - Collapsible */}
+        {plan.weeklyVolume && Object.values(plan.weeklyVolume).some(v => v > 0) && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-card border border-border rounded-xl p-4 mb-6 shadow-card"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mb-4"
           >
-            <h3 className="text-lg font-display font-semibold text-foreground mb-3">
-              Volume Semanal (séries)
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {Object.entries(plan.weeklyVolume)
-                .filter(([_, value]) => value > 0)
-                .map(([muscle, volume]) => (
-                  <div key={muscle} className="flex justify-between p-2 bg-secondary rounded-lg">
-                    <span className="text-muted-foreground capitalize">
-                      {muscle === 'chest' ? 'Peitoral' :
-                       muscle === 'back' ? 'Costas' :
-                       muscle === 'shoulders' ? 'Ombros' :
-                       muscle === 'biceps' ? 'Bíceps' :
-                       muscle === 'triceps' ? 'Tríceps' :
-                       muscle === 'quadriceps' ? 'Quadríceps' :
-                       muscle === 'hamstrings' ? 'Posteriores' :
-                       muscle === 'glutes' ? 'Glúteos' :
-                       muscle === 'calves' ? 'Panturrilhas' :
-                       muscle === 'core' ? 'Core' : muscle}
-                    </span>
-                    <span className="font-semibold text-foreground">{volume}</span>
+            <button
+              onClick={() => setShowVolume(!showVolume)}
+              className="w-full flex items-center justify-between py-3 text-left"
+            >
+              <span className="text-sm font-medium text-foreground">Volume Semanal</span>
+              <ChevronDown 
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  showVolume ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            <AnimatePresence>
+              {showVolume && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-2 gap-2 pb-4">
+                    {Object.entries(plan.weeklyVolume)
+                      .filter(([_, value]) => value > 0)
+                      .map(([muscle, volume]) => (
+                        <div key={muscle} className="flex justify-between p-3 bg-muted/50 rounded-xl">
+                          <span className="text-xs text-muted-foreground">
+                            {muscleLabels[muscle] || muscle}
+                          </span>
+                          <span className="text-xs font-medium text-foreground">{volume} séries</span>
+                        </div>
+                      ))}
                   </div>
-                ))}
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
-        {/* CTA */}
+        {/* Progression - Collapsible */}
+        {plan.progressionPlan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="mb-8"
+          >
+            <button
+              onClick={() => setShowProgression(!showProgression)}
+              className="w-full flex items-center justify-between py-3 text-left"
+            >
+              <span className="text-sm font-medium text-foreground">Progressão</span>
+              <ChevronDown 
+                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                  showProgression ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            <AnimatePresence>
+              {showProgression && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="text-xs text-muted-foreground pb-4 space-y-2">
+                    {typeof plan.progressionPlan === 'string' ? (
+                      <p>{plan.progressionPlan}</p>
+                    ) : (
+                      <>
+                        {plan.progressionPlan.week1 && <p><span className="text-foreground">Sem 1:</span> {plan.progressionPlan.week1}</p>}
+                        {plan.progressionPlan.week2 && <p><span className="text-foreground">Sem 2:</span> {plan.progressionPlan.week2}</p>}
+                        {plan.progressionPlan.week3 && <p><span className="text-foreground">Sem 3:</span> {plan.progressionPlan.week3}</p>}
+                        {plan.progressionPlan.week4 && <p><span className="text-foreground">Sem 4:</span> {plan.progressionPlan.week4}</p>}
+                        {plan.progressionPlan.deloadWeek && <p><span className="text-foreground">Deload:</span> {plan.progressionPlan.deloadWeek}</p>}
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* CTA - Apple minimal */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.4 }}
           className="space-y-3"
         >
           {!isSaved ? (
             <Button 
-              variant="gradient" 
               size="lg" 
-              className="w-full"
+              className="w-full rounded-xl h-12"
               onClick={savePlanToDatabase}
               disabled={isCreating}
             >
               {isCreating ? (
-                <>
-                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                  Salvando...
-                </>
+                <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <Flame className="w-5 h-5 mr-2" />
-                  Salvar e Começar Treino
+                  <Check className="w-4 h-4 mr-2" />
+                  Salvar Plano
                 </>
               )}
             </Button>
           ) : (
-            <Button variant="gradient" size="lg" className="w-full">
-              <Check className="w-5 h-5 mr-2" />
-              Plano Salvo - Começar Treino
+            <Button size="lg" className="w-full rounded-xl h-12" onClick={() => navigate('/dashboard')}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Iniciar Treino
             </Button>
           )}
           <Button
-            variant="outline"
+            variant="ghost"
             size="lg"
-            className="w-full"
+            className="w-full text-muted-foreground"
             onClick={() => navigate('/onboarding')}
           >
-            Refazer Questionário
+            Refazer questionário
           </Button>
         </motion.div>
+
+        {/* Footer logo */}
+        <div className="mt-12 text-center">
+          <img
+            src={evolveLogo}
+            alt="Evolve"
+            className="w-6 h-6 mx-auto opacity-20"
+          />
+        </div>
       </div>
     </div>
   );

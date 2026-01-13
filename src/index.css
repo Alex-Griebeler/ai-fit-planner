@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    /* Academia Evolve - Minimalista Premium */
-    /* Preto puro e branco com acentos vibrantes */
+    /* Academia Evolve - Premium Minimalista */
+    /* Preto puro e branco com acentos vermelho premium */
     
     --background: 0 0% 100%;
     --foreground: 0 0% 4%;
@@ -18,8 +18,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 4%;
 
-    /* Laranja vibrante para CTAs */
-    --primary: 24 95% 53%;
+    /* Vermelho Evolve #c02e25 para CTAs */
+    --primary: 3 69% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
@@ -29,76 +29,77 @@
     --muted-foreground: 0 0% 45%;
 
     /* Vermelho para destaques secundários */
-    --accent: 0 84% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 24 95% 53%;
-
-    --radius: 0.75rem;
-
-    /* Custom tokens - Evolve Style */
-    --gradient-primary: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(0 84% 60%) 100%);
-    --gradient-glow: linear-gradient(180deg, hsl(24 95% 53% / 0.08) 0%, transparent 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
-    --shadow-glow: 0 0 40px hsl(24 95% 53% / 0.2);
-    --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.08);
-    --shadow-elevated: 0 20px 60px hsl(0 0% 0% / 0.1);
-
-    /* Sidebar - Light */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 4%;
-    --sidebar-primary: 24 95% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 90%;
-    --sidebar-ring: 24 95% 53%;
-  }
-
-  .dark {
-    /* Modo escuro - Preto profundo premium */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 24 95% 53%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
-
-    --accent: 0 84% 60%;
+    --accent: 3 69% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 24 95% 53%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 3 69% 45%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens - Evolve Premium Style */
+    --gradient-primary: linear-gradient(135deg, hsl(3 69% 45%) 0%, hsl(3 69% 38%) 100%);
+    --gradient-glow: linear-gradient(180deg, hsl(3 69% 45% / 0.06) 0%, transparent 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
+    --shadow-glow: 0 0 60px hsl(3 69% 45% / 0.15);
+    --shadow-card: 0 2px 16px hsl(0 0% 0% / 0.04);
+    --shadow-elevated: 0 12px 40px hsl(0 0% 0% / 0.08);
+
+    /* Sidebar - Light */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 4%;
+    --sidebar-primary: 3 69% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 3 69% 45%;
+  }
+
+  .dark {
+    /* Modo escuro - Preto profundo premium Apple-style */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Vermelho Evolve */
+    --primary: 3 69% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 50%;
+
+    --accent: 3 69% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
+    --ring: 3 69% 45%;
 
     /* Sidebar - Dark */
-    --sidebar-background: 0 0% 6%;
+    --sidebar-background: 0 0% 3%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-primary: 3 69% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent: 0 0% 10%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 3 69% 45%;
   }
 }
 
@@ -150,19 +151,19 @@
     background-clip: text;
   }
 
-  /* Glass effect for cards */
+  /* Glass effect for cards - Apple style */
   .glass {
     background: hsl(var(--background) / 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
-  /* Subtle hover lift */
+  /* Subtle hover lift - refined */
   .hover-lift {
-    @apply transition-all duration-300;
+    @apply transition-all duration-300 ease-out;
   }
   .hover-lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: var(--shadow-elevated);
   }
 }
