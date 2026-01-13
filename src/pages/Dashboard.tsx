@@ -13,14 +13,7 @@ import {
   ProgressPreviewCard 
 } from '@/components/dashboard';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
-import { 
-  Plus, 
-  LogOut, 
-  Dumbbell, 
-  Calendar, 
-  Target,
-  TrendingUp,
-} from 'lucide-react';
+import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
