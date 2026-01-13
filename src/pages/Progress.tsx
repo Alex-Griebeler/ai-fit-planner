@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PremiumGate } from '@/components/PremiumGate';
 import { LoadProgressChart } from '@/components/progress/LoadProgressChart';
 import { VolumeStats } from '@/components/progress/VolumeStats';
+import { PersonalRecordsCard } from '@/components/progress/PersonalRecordsCard';
+import { PeriodComparisonCard } from '@/components/progress/PeriodComparisonCard';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 
 export default function Progress() {
@@ -73,6 +75,12 @@ export default function Progress() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Personal Records */}
+            <PersonalRecordsCard />
+
+            {/* Period Comparison */}
+            <PeriodComparisonCard sessions={completedSessions} />
 
             {/* Load Progress Chart */}
             <Card>
