@@ -29,6 +29,7 @@ interface WorkoutExercise {
   sets: number;
   reps: string;
   rest: string;
+  intensity?: string;
   tempo?: string;
   notes?: string;
   isCompound?: boolean;
@@ -475,7 +476,7 @@ export default function Result() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{workout.day}</p>
-                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.slice(0, 2).join(' · ')}</p>
+                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.join(' · ')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -501,7 +502,7 @@ export default function Result() {
                     <div className="px-4 pb-1">
                       <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
                         <span className="col-span-5">Exercício</span>
-                        <span className="col-span-3 text-center">Séries × Reps</span>
+                        <span className="col-span-3 text-center">Sets×Reps / Int</span>
                         <span className="col-span-2 text-center">Carga</span>
                         <span className="col-span-2 text-right">Método</span>
                       </div>
@@ -509,25 +510,51 @@ export default function Result() {
                     
                     {/* Exercise Rows */}
                     <div className="px-4 pb-4">
-                      {workout.exercises.map((exercise, i) => (
-                        <div
-                          key={i}
-                          className="grid grid-cols-12 gap-2 items-center py-2.5 border-b border-border/30 last:border-0"
-                        >
-                          <span className="col-span-5 text-sm text-foreground truncate">
-                            {exercise.name}
-                          </span>
-                          <span className="col-span-3 text-center text-sm text-foreground font-mono">
-                            {exercise.sets} × {exercise.reps}
-                          </span>
-                          <span className="col-span-2 text-center text-xs text-muted-foreground">
-                            —
-                          </span>
-                          <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
-                            {exercise.method || '—'}
-                          </span>
-                        </div>
-                      ))}
+                      {workout.exercises.map((exercise, i) => {
+                        const exerciseKey = `${index}-${i}`;
+                        return (
+                          <div
+                            key={i}
+                            className="grid grid-cols-12 gap-2 items-start py-2.5 border-b border-border/30 last:border-0"
+                          >
+                            {/* Exercise Name + Intensity Badge */}
+                            <div className="col-span-5">
+                              <span className="text-sm text-foreground block truncate">
+                                {exercise.name}
+                              </span>
+                              {exercise.intensity && (
+                                <span className="text-[9px] text-muted-foreground/70 font-medium">
+                                  {exercise.intensity}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Sets × Reps / Rest */}
+                            <span className="col-span-3 text-center text-sm text-foreground font-mono">
+                              {exercise.sets}×{exercise.reps} / {exercise.rest || '60s'}
+                            </span>
+                            
+                            {/* Editable Load */}
+                            <div className="col-span-2 flex justify-center">
+                              <input
+                                type="text"
+                                placeholder="—"
+                                className="w-full max-w-[60px] text-center text-xs bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none py-0.5 text-foreground placeholder:text-muted-foreground/50"
+                                onChange={(e) => {
+                                  // Store locally - can be enhanced to persist
+                                  const value = e.target.value;
+                                  e.target.dataset.load = value;
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Method */}
+                            <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
+                              {exercise.method || '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
                       
                       {/* Cardio Row */}
                       {workout.cardio && (
