@@ -92,11 +92,13 @@ interface CalculatedVolumeRanges extends VolumeRanges {
 
 // Tabela do documento técnico: Volume SEMANAL por FREQUÊNCIA
 const FREQUENCY_VOLUME_RANGES: Record<string, VolumeRange> = {
-  "1-2": { min: 4, max: 12 },   // Full Body obrigatório
+  "1":   { min: 4, max: 10 },   // Full Body único (subótimo)
+  "2":   { min: 4, max: 12 },   // Full Body A/B
   "3":   { min: 6, max: 15 },   // Full Body ou A/B
-  "4":   { min: 8, max: 18 },   // A/B ou A/B/C
-  "5":   { min: 10, max: 20 },  // A/B/C ou PPL
-  "6-7": { min: 12, max: 20 },  // PPL ou divisão avançada
+  "4":   { min: 8, max: 18 },   // Upper/Lower A/B
+  "5":   { min: 10, max: 20 },  // Híbrido
+  "6":   { min: 12, max: 20 },  // PPL 2x
+  "7":   { min: 12, max: 20 },  // PPL 2x + Especialização
 };
 
 // Tabela do documento técnico: Volume SEMANAL por OBJETIVO
@@ -118,23 +120,18 @@ const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
 // Splits recomendados por frequência (consolidado)
 const RECOMMENDED_SPLITS: Record<string, string> = {
   "1":   "Full Body Único",
-  "1-2": "Full Body A/B",
+  "2":   "Full Body A/B",
   "3":   "Full Body 3x (iniciantes) ou FB + A/B (intermediários+)",
   "4":   "Upper/Lower A/B",
   "5":   "Híbrido (Sup-Inf-Puxar-Empurrar-Inf)",
   "6":   "Push/Pull/Legs 2x",
-  "6-7": "PPL 2x + Especialização",
   "7":   "PPL 2x + Especialização",
 };
 
 function getFrequencyKey(days: number): string {
-  if (days === 1) return "1";
-  if (days === 2) return "1-2";
-  if (days === 3) return "3";
-  if (days === 4) return "4";
-  if (days === 5) return "5";
-  if (days === 6) return "6";
-  return "7";
+  if (days <= 0) return "1";
+  if (days >= 7) return "7";
+  return days.toString();
 }
 
 function hasLowRecovery(sleepHours: string | null, stressLevel: string | null): boolean {
@@ -167,10 +164,10 @@ function calculateVolumeRanges(params: {
   
   // 1. Range base por FREQUÊNCIA SEMANAL
   const frequencyKey = getFrequencyKey(trainingDaysCount);
-  const frequencyRange = FREQUENCY_VOLUME_RANGES[frequencyKey];
+  const frequencyRange = FREQUENCY_VOLUME_RANGES[frequencyKey] || FREQUENCY_VOLUME_RANGES["3"];
   
   // 2. Range por OBJETIVO
-  const goalRange = GOAL_VOLUME_RANGES[goal || "health"];
+  const goalRange = GOAL_VOLUME_RANGES[goal || "health"] || GOAL_VOLUME_RANGES["health"];
   
   // 3. INTERSEÇÃO dos dois ranges (o range final válido)
   const intersectionMin = Math.max(frequencyRange.min, goalRange.min);
@@ -727,11 +724,13 @@ O volume semanal (séries por grupamento) é determinado pela INTERSEÇÃO de:
 ### TABELA 1: Volume por FREQUÊNCIA SEMANAL
 | Frequência | Min | Max | Split Recomendado |
 |------------|-----|-----|-------------------|
-| 1-2 dias   | 4   | 12  | Full Body |
-| 3 dias     | 6   | 15  | Full Body ou A/B |
-| 4 dias     | 8   | 18  | Upper/Lower x2 |
-| 5 dias     | 10  | 20  | PPL + Upper/Lower |
-| 6-7 dias   | 12  | 20  | PPL x2 |
+| 1 dia      | 4   | 10  | Full Body Único |
+| 2 dias     | 4   | 12  | Full Body A/B |
+| 3 dias     | 6   | 15  | Full Body ou FB + A/B |
+| 4 dias     | 8   | 18  | Upper/Lower A/B |
+| 5 dias     | 10  | 20  | Híbrido |
+| 6 dias     | 12  | 20  | PPL 2x |
+| 7 dias     | 12  | 20  | PPL 2x + Especialização |
 
 ### TABELA 2: Volume por OBJETIVO
 | Objetivo      | Min | Max | Característica |
