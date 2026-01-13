@@ -22,11 +22,10 @@ import {
   Info
 } from 'lucide-react';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 
 interface WorkoutExercise {
@@ -530,20 +529,20 @@ export default function Result() {
                                 {exercise.name}
                               </span>
                               {exercise.intensity && (
-                                <TooltipProvider delayDuration={200}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="text-[9px] text-muted-foreground/70 font-medium inline-flex items-center gap-0.5 cursor-help">
-                                        {exercise.intensity}
-                                        <Info className="w-2.5 h-2.5" />
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-[200px] text-xs">
-                                      <p className="font-medium">RR = Repetições de Reserva</p>
-                                      <p className="text-muted-foreground">Quantas reps você ainda conseguiria fazer antes de falhar</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="text-[9px] text-muted-foreground/70 font-medium inline-flex items-center gap-0.5">
+                                      {exercise.intensity}
+                                      <Info className="w-2.5 h-2.5" />
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent side="top" className="w-56 p-3">
+                                    <p className="font-medium text-sm">RR = Repetições de Reserva</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Quantas repetições você ainda conseguiria fazer antes de falhar completamente.
+                                    </p>
+                                  </PopoverContent>
+                                </Popover>
                               )}
                             </div>
                             
