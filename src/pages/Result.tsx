@@ -304,8 +304,8 @@ export default function Result() {
           <motion.img
             src={evolveLogo}
             alt="Evolve"
-            className="w-16 h-16 mx-auto mb-8 object-contain"
-            animate={{ scale: [1, 1.05, 1] }}
+            className="h-12 mx-auto mb-8 object-contain"
+            animate={{ scale: [1, 1.02, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.div
@@ -333,7 +333,7 @@ export default function Result() {
           <img
             src={evolveLogo}
             alt="Evolve"
-            className="w-12 h-12 mx-auto mb-8 object-contain opacity-50"
+            className="h-10 mx-auto mb-8 object-contain opacity-50"
           />
           
           {isRateLimited ? (
@@ -414,7 +414,7 @@ export default function Result() {
           <img
             src={evolveLogo}
             alt="Evolve"
-            className="w-10 h-10 mx-auto mb-6 object-contain"
+            className="h-10 mx-auto mb-6 object-contain"
           />
           <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
             Plano Pronto
@@ -679,7 +679,7 @@ export default function Result() {
           <img
             src={evolveLogo}
             alt="Evolve"
-            className="w-6 h-6 mx-auto opacity-20"
+            className="h-6 mx-auto opacity-20"
           />
         </div>
       </div>
