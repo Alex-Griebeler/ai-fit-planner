@@ -153,6 +153,164 @@ const RECOMMENDED_SPLITS: Record<string, string> = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          ANÁLISE DE PADRÃO DE DIAS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface DayPatternAnalysis {
+  pattern: 'alternating' | 'consecutive' | 'mixed';
+  consecutiveGroups: string[][];
+  maxConsecutive: number;
+  dayNames: string[];
+}
+
+const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+function analyzeDayPattern(trainingDays: string[]): DayPatternAnalysis {
+  if (!trainingDays || trainingDays.length === 0) {
+    return { pattern: 'alternating', consecutiveGroups: [], maxConsecutive: 0, dayNames: [] };
+  }
+  
+  // Normalizar e ordenar dias
+  const normalizedDays = trainingDays
+    .map(d => d.toLowerCase())
+    .sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+  
+  // Detectar grupos consecutivos
+  const consecutiveGroups: string[][] = [];
+  let currentGroup: string[] = [];
+  
+  for (let i = 0; i < normalizedDays.length; i++) {
+    const currentIdx = DAY_ORDER.indexOf(normalizedDays[i]);
+    const prevIdx = i > 0 ? DAY_ORDER.indexOf(normalizedDays[i - 1]) : -2;
+    
+    if (currentIdx === prevIdx + 1) {
+      if (currentGroup.length === 0) {
+        currentGroup.push(normalizedDays[i - 1]);
+      }
+      currentGroup.push(normalizedDays[i]);
+    } else {
+      if (currentGroup.length > 0) {
+        consecutiveGroups.push([...currentGroup]);
+        currentGroup = [];
+      }
+    }
+  }
+  if (currentGroup.length > 0) {
+    consecutiveGroups.push(currentGroup);
+  }
+  
+  const maxConsecutive = consecutiveGroups.reduce((max, g) => Math.max(max, g.length), 0);
+  
+  // Determinar padrão
+  let pattern: 'alternating' | 'consecutive' | 'mixed';
+  if (maxConsecutive === 0) {
+    pattern = 'alternating';
+  } else if (maxConsecutive === normalizedDays.length) {
+    pattern = 'consecutive';
+  } else {
+    pattern = 'mixed';
+  }
+  
+  return {
+    pattern,
+    consecutiveGroups,
+    maxConsecutive,
+    dayNames: normalizedDays
+  };
+}
+
+// Regras FIXAS de split baseadas no padrão de dias
+interface SplitRule {
+  split: string;
+  description: string;
+  dayStructure: string[];
+}
+
+const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
+  // 3 dias/semana
+  "3": {
+    alternating: {
+      split: "Full Body 3x",
+      description: "Treino completo cada dia, variando ênfase",
+      dayStructure: ["Full Body A", "Full Body B", "Full Body C"]
+    },
+    consecutive: {
+      split: "A/B/C Split (Push/Pull/Legs)",
+      description: "Push/Pull/Legs para evitar sobreposição muscular em dias seguidos",
+      dayStructure: ["Push (Peito/Ombro/Tríceps)", "Pull (Costas/Bíceps)", "Legs (Pernas/Core)"]
+    },
+    mixed: {
+      split: "Full Body + A/B",
+      description: "Full Body no dia isolado, A/B nos dias consecutivos",
+      dayStructure: ["Full Body", "Upper", "Lower"]
+    }
+  },
+  // 4 dias/semana
+  "4": {
+    alternating: {
+      split: "Upper/Lower 2x",
+      description: "Clássico Upper/Lower com 2 frequências por grupamento",
+      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+    },
+    consecutive: {
+      split: "Upper/Lower 2x (adaptado)",
+      description: "Alternar Upper/Lower mesmo em dias seguidos - sem sobreposição",
+      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+    },
+    mixed: {
+      split: "Upper/Lower 2x",
+      description: "Upper/Lower adaptado ao padrão misto",
+      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+    }
+  },
+  // 5 dias/semana
+  "5": {
+    alternating: {
+      split: "Híbrido ULPPL",
+      description: "Upper-Lower-Push-Pull-Legs",
+      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+    },
+    consecutive: {
+      split: "Híbrido ULPPL",
+      description: "Organizado para minimizar sobreposição em dias seguidos",
+      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+    },
+    mixed: {
+      split: "Híbrido ULPPL",
+      description: "Upper-Lower-Push-Pull-Legs adaptado",
+      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+    }
+  },
+  // 6 dias/semana
+  "6": {
+    alternating: {
+      split: "PPL 2x",
+      description: "Push/Pull/Legs repetido 2x na semana",
+      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+    },
+    consecutive: {
+      split: "PPL 2x",
+      description: "Push/Pull/Legs organizado para evitar mesmo grupo em dias seguidos",
+      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+    },
+    mixed: {
+      split: "PPL 2x",
+      description: "Push/Pull/Legs 2x",
+      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+    }
+  }
+};
+
+function getPatternLabel(pattern: 'alternating' | 'consecutive' | 'mixed'): string {
+  const labels = {
+    alternating: 'ALTERNADOS',
+    consecutive: 'CONSECUTIVOS',
+    mixed: 'MISTO'
+  };
+  return labels[pattern];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          TEMPO POR SESSÃO
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1159,14 +1317,47 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 | 6 dias | PPL 2x | PPL 2x | Arnold 2x |
 | 7 dias | NÃO RECOMENDADO | PPL + Espec. | PPL + Espec. |
 
-## SPLITS QUE REQUEREM DIAS ALTERNADOS (obrigatório):
-- Full Body 3x (iniciantes)
-- Full Body 2x
-
 ## SPLITS AUTO-OTIMIZADOS (sem conflitos naturais):
 - Upper/Lower 4x
 - Híbrido 5x
 - PPL 6x
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 3.2: DISTRIBUIÇÃO DE ESTÍMULOS POR DIA
+═══════════════════════════════════════════════════════════════════════════════
+
+## REGRA FUNDAMENTAL:
+O volume semanal TOTAL por grupamento é o que importa para hipertrofia.
+Porém, PREFERIR espaçar estímulos quando possível para otimizar recuperação.
+
+## REGRAS POR PADRÃO DE DIAS:
+
+### DIAS ALTERNADOS (ex: Seg/Qua/Sex):
+- Qualquer split é adequado
+- Ideal para Full Body, Upper/Lower, Push/Pull
+- Recuperação natural de 48-72h entre sessões
+
+### DIAS CONSECUTIVOS (ex: Seg/Ter/Qua):
+- OBRIGATÓRIO: Usar split que evite mesmo grupamento PRINCIPAL em dias seguidos
+- Para 3 dias consecutivos: USAR A/B/C (Push/Pull/Legs) - SEM exceção
+- Para 4+ dias consecutivos: Alternar Upper/Lower ou PPL
+- Grupamentos secundários/acessórios PODEM aparecer em dias seguidos
+
+### DIAS MISTOS (ex: Seg/Ter/Qui):
+- Adaptar split considerando onde estão os dias consecutivos
+- Nos dias consecutivos: aplicar regra de não-sobreposição
+- Dia(s) isolado(s): pode ser Full Body ou complementar
+
+## REGRA LOMBAR (lower_back):
+- Para fins de contagem de volume, lombar INTEGRA o grupo "core"
+- Exercícios de lombar (Hiperextensão, Good Morning) contam como séries de CORE
+- Se usuário tem lesão em "lower_back": NÃO prescrever exercícios de fortalecimento lombar
+- weeklyVolume.core = abdominais + oblíquos + lombar
+
+## EXEMPLOS DE ORGANIZAÇÃO PARA DIAS CONSECUTIVOS:
+- ✅ Seg=Peito/Tríceps → Ter=Costas/Bíceps → Qua=Pernas (sem sobreposição principal)
+- ✅ Seg=Upper → Ter=Lower → Qua=Upper (mesmo split, grupos diferentes)
+- ⚠️ EVITAR: Seg=Peito → Ter=Ombro (tríceps usado em ambos como sinergista)
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 3.1: VERIFICAÇÃO DE TEMPO POR SESSÃO
@@ -1822,12 +2013,40 @@ ${userData.healthDescription ? `
     goal: userData.goal,
   });
 
+  // Analyze day pattern for split selection
+  const dayPattern = analyzeDayPattern(userData.trainingDays || []);
+  const freqKey = (userData.trainingDays?.length || 3).toString();
+  const splitRule = SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
+    || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
+
+  // Build day pattern section
+  const dayPatternSection = splitRule ? `
+## 🗓️ PADRÃO DE DIAS E SPLIT OBRIGATÓRIO
+
+**Dias selecionados:** ${dayPattern.dayNames.map(d => getDayLabel(d)).join(', ')}
+**Padrão detectado:** ${getPatternLabel(dayPattern.pattern)}
+${dayPattern.consecutiveGroups.length > 0 
+  ? `**Dias consecutivos:** ${dayPattern.consecutiveGroups.map(g => g.map(d => getDayLabel(d)).join('→')).join(' | ')}` 
+  : '**Dias consecutivos:** Nenhum (ideal para recuperação)'}
+
+### ⚠️ SPLIT DEFINIDO (OBRIGATÓRIO):
+- **Tipo:** ${splitRule.split}
+- **Descrição:** ${splitRule.description}
+- **Estrutura:** ${splitRule.dayStructure.join(' → ')}
+
+### REGRAS DE ESPAÇAMENTO (PREFERENCIAL):
+1. PREFERIR espaçar estímulos do mesmo grupamento (48-72h ideal)
+2. Se dias são consecutivos: EVITAR mesmo grupamento PRINCIPAL em dias seguidos
+3. Grupamentos secundários/acessórios PODEM repetir em dias seguidos (ex: core, panturrilhas)
+4. O VOLUME SEMANAL TOTAL é o que determina hipertrofia, não a distribuição exata
+` : '';
+
   // Build volume section with CALCULATED values
   const volumeSection = `
 ## 🎯 VOLUME CALCULADO PARA ESTE USUÁRIO
 
 **Perfil**: ${getLevelLabel(userData.experienceLevel)} | ${getGoalShort(userData.goal)} | ${userData.sessionDuration || "45min"} | ${userData.trainingDays?.length || 3} dias/sem
-**Split recomendado**: ${volumeRanges.recommendedSplit}
+**Split recomendado**: ${splitRule?.split || volumeRanges.recommendedSplit}
 **Séries por treino**: ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}
 
 ### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
@@ -1851,6 +2070,7 @@ ${userData.healthDescription ? `
 - Costas >= Peitoral em volume (equilíbrio postural)
 - Se há área prioritária: pode aumentar até +30% apenas naquela área
 - NUNCA reduzir outros grupos abaixo do mínimo
+- Core INCLUI exercícios de lombar (Hiperextensão, Good Morning contam como core)
 - O plano será VALIDADO contra estes limites`;
 
   // Build periodization section
@@ -1888,6 +2108,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 ## DISPONIBILIDADE
 - Dias por semana: ${userData.trainingDays?.length || 3} dias
 - Dias específicos: ${userData.trainingDays?.map(getDayLabel).join(', ') || 'Flexível'}
+- Padrão de dias: ${getPatternLabel(dayPattern.pattern)}
 - Duração por sessão: ${getSessionLabel(userData.sessionDuration)}
 
 ## PREFERÊNCIAS
@@ -1908,6 +2129,8 @@ ${healthSection}
 - Estresse: ${getStressLabel(userData.stressLevel)}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
+${dayPatternSection}
+
 ${volumeSection}
 
 ${periodizationSection}
@@ -1920,8 +2143,8 @@ ${catalogStr}
 
 Gere um plano de treino completo seguindo RIGOROSAMENTE:
 
-1. Os RANGES DE VOLUME calculados acima (OBRIGATÓRIO)
-2. A divisão "${volumeRanges.recommendedSplit}" para ${userData.trainingDays?.length || 3} dias/semana
+1. O SPLIT OBRIGATÓRIO: "${splitRule?.split || volumeRanges.recommendedSplit}" (definido acima)
+2. Os RANGES DE VOLUME calculados acima
 3. ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max} séries por treino
 4. A periodização "${periodizationConfig.type}" definida acima
 5. TODAS as adaptações para condições de saúde
@@ -1929,10 +2152,11 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 7. USE APENAS EXERCÍCIOS DO CATÁLOGO
 8. INCLUA ALTERNATIVAS se houver lesão
 9. VARIE os intervalos de descanso CONFORME a faixa de repetições
-10. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa
+10. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa (core inclui lombar)
 11. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
 12. Se tempo exceder, REDUZA isoladores primeiro
-13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"`;
+13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"
+14. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos`;
 }
 
 function getGenderLabel(gender: string | null): string {
