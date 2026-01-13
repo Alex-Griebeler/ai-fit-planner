@@ -133,6 +133,7 @@ export type Database = {
           health_description: string | null
           id: string
           include_cardio: boolean | null
+          injury_areas: string[] | null
           session_duration: string | null
           sleep_hours: string | null
           stress_level: string | null
@@ -152,6 +153,7 @@ export type Database = {
           health_description?: string | null
           id?: string
           include_cardio?: boolean | null
+          injury_areas?: string[] | null
           session_duration?: string | null
           sleep_hours?: string | null
           stress_level?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           health_description?: string | null
           id?: string
           include_cardio?: boolean | null
+          injury_areas?: string[] | null
           session_duration?: string | null
           sleep_hours?: string | null
           stress_level?: string | null
