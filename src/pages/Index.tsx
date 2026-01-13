@@ -294,7 +294,7 @@ export default function Index() {
               <span className="font-display font-semibold">AI Trainer</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 AI Trainer. Todos os direitos reservados.
+              © {new Date().getFullYear()} AI Trainer. Todos os direitos reservados.
             </p>
           </div>
         </div>
