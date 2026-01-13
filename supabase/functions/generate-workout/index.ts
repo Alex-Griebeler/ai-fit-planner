@@ -110,10 +110,11 @@ const GOAL_VOLUME_RANGES: Record<string, VolumeRange> = {
 };
 
 // Tabela do documento técnico: Séries POR TREINO conforme duração
+// CORRIGIDO: 45min = 19-24, 60min = 25-30 conforme documento técnico
 const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
   "30min":  { min: 12, max: 18 },
-  "45min":  { min: 18, max: 24 },
-  "60min":  { min: 24, max: 30 },
+  "45min":  { min: 19, max: 24 },
+  "60min":  { min: 25, max: 30 },
   "60plus": { min: 28, max: 36 },
 };
 
@@ -822,8 +823,8 @@ O volume semanal (séries por grupamento) é determinado pela INTERSEÇÃO de:
 | Duração  | Séries/Treino | Exercícios |
 |----------|---------------|------------|
 | 30 min   | 12-18         | 4-6 exercícios |
-| 45 min   | 18-24         | 5-7 exercícios |
-| 60 min   | 24-30         | 6-8 exercícios |
+| 45 min   | 19-24         | 5-7 exercícios |
+| 60 min   | 25-30         | 6-8 exercícios |
 | 60+ min  | 28-36         | 7-10 exercícios |
 
 ### AJUSTES:
@@ -843,17 +844,44 @@ SIGA ESSES VALORES À RISCA - eles já consideram todos os fatores.
                          SEÇÃO 2: REPETIÇÕES E INTENSIDADE
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Número de Repetições por Objetivo:
-- FORÇA: 4-6 reps (70-85% 1RM)
-- HIPERTROFIA: 6-12 reps primário, 12-20 reps para isoladores (estímulo metabólico)
-- EMAGRECIMENTO: 12-20 reps (50-70% 1RM)
-- SAÚDE: 10-15 reps (60-75% 1RM, RIR 2-4)
+## Faixas de Repetições por Objetivo:
 
-## Intervalo entre Séries:
-- FORÇA: 2-3 minutos
-- HIPERTROFIA: 60-120 segundos (60-90s isoladores, 90-120s compostos)
-- EMAGRECIMENTO: 30-60 segundos
-- SAÚDE: 45-75 segundos
+### HIPERTROFIA (documento técnico):
+| Faixa        | Reps     | Intensidade | Descanso    | Quando Usar |
+|--------------|----------|-------------|-------------|-------------|
+| Força-Hipert | 6-8      | 75-85% 1RM  | 2-3 min     | Compostos principais, avançados |
+| Hipertrofia  | 8-12     | 65-80% 1RM  | 90-120s     | Compostos e isoladores primários |
+| Metabólico   | 12-15    | 60-70% 1RM  | 60-90s      | Isoladores, acabamento |
+| Alto Rep     | 15-20    | 50-65% 1RM  | 45-60s      | Panturrilhas, finalizadores |
+
+### FORÇA (avançados - apenas se objetivo = performance):
+| Faixa        | Reps     | Intensidade | Descanso    |
+|--------------|----------|-------------|-------------|
+| Força Máxima | 2-4      | 85-95% 1RM  | 3-5 min     |
+| Força-Hipert | 4-6      | 80-90% 1RM  | 2-4 min     |
+
+### EMAGRECIMENTO:
+| Faixa        | Reps     | Intensidade | Descanso    |
+|--------------|----------|-------------|-------------|
+| Circuito     | 12-15    | 50-65% 1RM  | 30-45s      |
+| Metabólico   | 15-20    | 40-60% 1RM  | 30-60s      |
+
+### SAÚDE:
+| Faixa        | Reps     | Intensidade | Descanso    |
+|--------------|----------|-------------|-------------|
+| Geral        | 10-15    | 60-75% 1RM  | 45-75s      |
+| RIR: 2-4 (não treinar até falha)
+
+## Intervalos Dinâmicos por Faixa de Repetições:
+| Repetições | Descanso Mínimo | Descanso Máximo | Aplicação |
+|------------|-----------------|-----------------|-----------|
+| 2-6 reps   | 2 min           | 4 min           | Força, compostos pesados |
+| 6-8 reps   | 90s             | 3 min           | Força-hipertrofia |
+| 8-12 reps  | 60s             | 2 min           | Hipertrofia clássica |
+| 12-15 reps | 45s             | 90s             | Metabólico, isoladores |
+| 15-20 reps | 30s             | 60s             | Alto rep, circuitos |
+
+## REGRA: Prescrever descanso baseado na FAIXA de repetições do exercício, não apenas no objetivo geral.
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 3: DIVISÕES DE TREINO (CONSOLIDADO)
