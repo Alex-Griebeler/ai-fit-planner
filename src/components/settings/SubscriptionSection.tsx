@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Crown, CreditCard, ExternalLink, Sparkles } from 'lucide-react';
+import { Crown, CreditCard, ExternalLink, Sparkles, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -121,6 +121,15 @@ export function SubscriptionSection() {
                   ↻
                 </Button>
               </div>
+
+              <Button 
+                variant="outline"
+                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-500"
+                onClick={() => window.open('mailto:suporte@evolve.app?subject=Suporte%20Premium', '_blank')}
+              >
+                <Headphones className="w-4 h-4 mr-2" />
+                Suporte Prioritário
+              </Button>
             </>
           ) : (
             <>
