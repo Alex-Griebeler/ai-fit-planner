@@ -2,7 +2,7 @@ import { OnboardingData } from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { OptionCard } from '../OptionCard';
 import { Button } from '@/components/ui/button';
-import { Dumbbell, Target, Layers } from 'lucide-react';
+import { Dumbbell, Target, Layers, Shuffle } from 'lucide-react';
 
 interface StepSplitPreferenceProps {
   data: OnboardingData;
@@ -30,6 +30,12 @@ const SPLIT_OPTIONS = [
     label: 'Híbrido (FB + A/B)', 
     desc: '1 dia completo + 2 especializados, garante 2 estímulos por grupo',
     icon: Layers,
+  },
+  { 
+    value: 'no_preference', 
+    label: 'Sem Preferência', 
+    desc: 'Full Body variado - exercícios diferentes cada dia, sem repetição',
+    icon: Shuffle,
   },
 ] as const;
 
