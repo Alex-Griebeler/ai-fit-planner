@@ -53,12 +53,9 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
           <h3 className="text-lg font-semibold text-foreground mb-2">
             Nenhum plano ativo
           </h3>
-          <p className="text-muted-foreground mb-4">
-            Crie seu primeiro plano de treino personalizado
+          <p className="text-muted-foreground">
+            Clique em "Novo Plano" acima para criar seu treino personalizado
           </p>
-          <Button variant="gradient" onClick={() => navigate('/onboarding')}>
-            Criar Plano
-          </Button>
         </CardContent>
       </Card>
     );
