@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      exercise_loads: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          id: string
+          load_value: string
+          updated_at: string
+          user_id: string
+          workout_day: string
+          workout_plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          id?: string
+          load_value: string
+          updated_at?: string
+          user_id: string
+          workout_day: string
+          workout_plan_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          id?: string
+          load_value?: string
+          updated_at?: string
+          user_id?: string
+          workout_day?: string
+          workout_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_loads_workout_plan_id_fkey"
+            columns: ["workout_plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string
