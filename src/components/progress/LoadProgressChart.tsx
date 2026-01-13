@@ -1,21 +1,26 @@
-import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Info } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { useLoadProgressData } from '@/hooks/useLoadProgressData';
+
+const COLOR_PALETTE = [
+  'hsl(var(--primary))',
+  'hsl(142, 76%, 36%)', // green
+  'hsl(38, 92%, 50%)',  // amber
+  'hsl(217, 91%, 60%)', // blue
+  'hsl(280, 87%, 65%)', // purple
+  'hsl(350, 89%, 60%)', // rose
+];
 
 export function LoadProgressChart() {
-  // Placeholder data for demo - in production, this would fetch from exercise_loads table
-  const chartData = useMemo(() => {
-    // Demo data showing load progression
-    return [
-      { date: '01/01', 'Supino Reto': 60, 'Agachamento': 80 },
-      { date: '08/01', 'Supino Reto': 62.5, 'Agachamento': 85 },
-      { date: '15/01', 'Supino Reto': 65, 'Agachamento': 87.5 },
-      { date: '22/01', 'Supino Reto': 65, 'Agachamento': 90 },
-    ];
-  }, []);
+  const { data: chartData, exerciseNames, isLoading } = useLoadProgressData();
 
-  const exerciseNames = ['Supino Reto', 'Agachamento'];
-  const colors = ['#f59e0b', '#10b981'];
+  if (isLoading) {
+    return (
+      <div className="h-64 flex items-center justify-center text-muted-foreground">
+        <Loader2 className="w-5 h-5 animate-spin" />
+      </div>
+    );
+  }
 
   if (chartData.length === 0) {
     return (
@@ -54,18 +59,14 @@ export function LoadProgressChart() {
                 key={name}
                 type="monotone"
                 dataKey={name}
-                stroke={colors[index % colors.length]}
+                stroke={COLOR_PALETTE[index % COLOR_PALETTE.length]}
                 strokeWidth={2}
-                dot={{ fill: colors[index % colors.length], r: 3 }}
+                dot={{ fill: COLOR_PALETTE[index % COLOR_PALETTE.length], r: 3 }}
                 connectNulls
               />
             ))}
           </LineChart>
         </ResponsiveContainer>
-      </div>
-      <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-        <Info className="w-4 h-4 shrink-0 mt-0.5" />
-        <p>Os dados reais serão exibidos conforme você registra as cargas nos seus treinos.</p>
       </div>
     </div>
   );

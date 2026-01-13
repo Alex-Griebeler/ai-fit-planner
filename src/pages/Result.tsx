@@ -8,6 +8,7 @@ import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useExerciseLoads } from '@/hooks/useExerciseLoads';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
 import { 
   Dumbbell, 
@@ -86,7 +87,8 @@ export default function Result() {
   const navigate = useNavigate();
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
-  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans } = useWorkoutPlans();
+  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans } = useWorkoutPlans();
+  const { isPremium } = useSubscription();
   
   // Get the plan ID for loading exercise loads
   const currentPlanId = activePlan?.id || null;
@@ -190,6 +192,13 @@ export default function Result() {
 
   const savePlanToDatabase = async () => {
     if (!plan) return;
+
+    // Check limit for Free users: max 1 plan
+    if (!isPremium && plans.length >= 1) {
+      toast.error('Limite de 1 plano atingido. Faça upgrade para Premium para planos ilimitados!');
+      navigate('/pricing');
+      return;
+    }
 
     try {
       await createPlan({
