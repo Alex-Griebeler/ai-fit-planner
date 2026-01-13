@@ -54,13 +54,21 @@ export default function Dashboard() {
   const weeklyFrequency = activePlan?.weekly_frequency ?? 0;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
-            <Button
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/onboarding')}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Novo Plano
+            </Button>
+            <Button 
               variant="ghost" 
               size="icon"
               onClick={handleSignOut}
