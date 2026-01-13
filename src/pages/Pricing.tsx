@@ -96,7 +96,7 @@ export default function Pricing() {
                 <ul className="space-y-3">
                   {freePlanFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                       <span className="text-sm text-foreground">{feature}</span>
                     </li>
                   ))}
@@ -119,20 +119,20 @@ export default function Pricing() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className={`h-full relative overflow-hidden ${isPremium ? 'ring-2 ring-amber-500' : ''}`}>
+            <Card className={`h-full relative overflow-hidden ${isPremium ? 'ring-2 ring-primary' : ''}`}>
               {/* Premium badge */}
-              <div className="absolute top-0 right-0 bg-gradient-to-br from-amber-400 to-amber-600 text-white px-4 py-1 text-xs font-semibold rounded-bl-lg">
+              <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-4 py-1 text-xs font-semibold rounded-bl-lg">
                 Recomendado
               </div>
 
               <CardHeader className="pt-8">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <Crown className="w-5 h-5 text-amber-500" />
+                    <Crown className="w-5 h-5 text-primary" />
                     Premium
                   </CardTitle>
                   {isPremium && !isLoading && (
-                    <Badge className="bg-gradient-to-r from-amber-500 to-amber-600">
+                    <Badge className="bg-primary text-primary-foreground">
                       Seu plano
                     </Badge>
                   )}
@@ -150,7 +150,7 @@ export default function Pricing() {
                 <ul className="space-y-3">
                   {premiumPlanFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <Sparkles className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                      <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                       <span className="text-sm text-foreground">{feature}</span>
                     </li>
                   ))}
@@ -159,7 +159,7 @@ export default function Pricing() {
                 <Button 
                   onClick={handleUpgrade}
                   disabled={isPremium || isLoading}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+                  className="w-full"
                   size="lg"
                 >
                   {isLoading ? (
@@ -191,7 +191,7 @@ export default function Pricing() {
 
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="text-center p-6">
-              <BarChart3 className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+              <BarChart3 className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Gráficos de Evolução</h4>
               <p className="text-sm text-muted-foreground">
                 Visualize sua progressão de cargas ao longo do tempo com gráficos detalhados.
@@ -199,7 +199,7 @@ export default function Pricing() {
             </Card>
 
             <Card className="text-center p-6">
-              <History className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+              <History className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Histórico Completo</h4>
               <p className="text-sm text-muted-foreground">
                 Acesse todo o seu histórico de treinos e analise seu desempenho.
@@ -207,7 +207,7 @@ export default function Pricing() {
             </Card>
 
             <Card className="text-center p-6">
-              <HeadphonesIcon className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+              <HeadphonesIcon className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Suporte Prioritário</h4>
               <p className="text-sm text-muted-foreground">
                 Tenha acesso a suporte exclusivo para tirar todas as suas dúvidas.
