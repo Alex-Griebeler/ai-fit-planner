@@ -21,7 +21,8 @@ import {
   Timer,
   Sparkles,
   Info,
-  Target
+  Target,
+  Settings
 } from 'lucide-react';
 import {
   Popover,
@@ -430,14 +431,23 @@ export default function Result() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center"
+          className="flex items-center justify-between"
         >
-          <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
-            Plano Pronto
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {userName}
-          </p>
+          <div className="text-left">
+            <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
+              Plano Pronto
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {userName}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/settings')}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+            aria-label="Configurações"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </button>
         </motion.div>
       </div>
 
@@ -463,12 +473,19 @@ export default function Result() {
           <div className="text-center">
             <Target className="w-5 h-5 mx-auto mb-2 text-primary" />
             <p className="text-xl font-semibold text-foreground">
-              {data?.goal ? ({
-                weight_loss: 'Emagrecimento',
-                hypertrophy: 'Hipertrofia',
-                health: 'Saúde',
-                performance: 'Performance',
-              }[data.goal] || data.goal) : 'Geral'}
+              {(() => {
+                const displayGoal = data?.goal 
+                  || (activePlan?.plan_data as Record<string, unknown>)?.goal as string
+                  || savedOnboardingData?.goal 
+                  || 'Geral';
+                const goalLabels: Record<string, string> = {
+                  weight_loss: 'Emagrecimento',
+                  hypertrophy: 'Hipertrofia',
+                  health: 'Saúde',
+                  performance: 'Performance',
+                };
+                return goalLabels[displayGoal] || displayGoal;
+              })()}
             </p>
             <p className="text-xs text-muted-foreground">objetivo</p>
           </div>
@@ -489,6 +506,7 @@ export default function Result() {
               {/* Workout Header */}
               <button
                 onClick={() => toggleWorkout(index)}
+                aria-expanded={expandedWorkouts[index]}
                 className="w-full p-4 flex items-center justify-between text-left"
               >
                 <div className="flex items-center gap-3">
@@ -590,11 +608,13 @@ export default function Result() {
                                 type="text"
                                 placeholder="—"
                                 defaultValue={savedLoad}
+                                aria-label={`Carga para ${exercise.name}`}
                                 className="w-full max-w-[60px] text-center text-xs bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none py-0.5 text-foreground placeholder:text-muted-foreground/50"
                                 onBlur={(e) => {
                                   const value = e.target.value.trim();
                                   if (value && value !== savedLoad && isSaved) {
                                     saveLoad(workout.day, exercise.name, value);
+                                    toast.success('Carga salva', { duration: 1500 });
                                   }
                                 }}
                               />
@@ -642,6 +662,7 @@ export default function Result() {
           >
             <button
               onClick={() => setShowWarnings(!showWarnings)}
+              aria-expanded={showWarnings}
               className="w-full flex items-center justify-between py-3 text-left"
             >
               <div className="flex items-center gap-2">
@@ -687,6 +708,7 @@ export default function Result() {
           >
             <button
               onClick={() => setShowVolume(!showVolume)}
+              aria-expanded={showVolume}
               className="w-full flex items-center justify-between py-3 text-left"
             >
               <span className="text-sm font-medium text-foreground">Volume Semanal</span>
@@ -733,6 +755,7 @@ export default function Result() {
           >
             <button
               onClick={() => setShowProgression(!showProgression)}
+              aria-expanded={showProgression}
               className="w-full flex items-center justify-between py-3 text-left"
             >
               <span className="text-sm font-medium text-foreground">Progressão</span>
@@ -795,8 +818,8 @@ export default function Result() {
             </Button>
           ) : (
             <Button size="lg" className="w-full rounded-xl h-12" onClick={() => navigate('/dashboard')}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Iniciar Treino
+              <Calendar className="w-4 h-4 mr-2" />
+              Ir para Dashboard
             </Button>
           )}
           <Button

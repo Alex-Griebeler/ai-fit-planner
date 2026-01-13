@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
@@ -33,6 +33,19 @@ export default function Onboarding() {
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Compute if split step should be shown (for step 9)
+  const shouldShowSplitStep = useMemo(() => 
+    data.experienceLevel !== 'beginner' && data.trainingDays.length === 3,
+    [data.experienceLevel, data.trainingDays.length]
+  );
+
+  // Skip step 9 automatically if conditions not met
+  useEffect(() => {
+    if (step === 9 && !shouldShowSplitStep) {
+      setStep(10);
+    }
+  }, [step, shouldShowSplitStep]);
 
   // Preenche dados do perfil e onboarding salvos
   useEffect(() => {
@@ -133,14 +146,8 @@ export default function Onboarding() {
       case 8:
         return <StepExperience {...stepProps} />;
       case 9:
-        // Show split preference ONLY for intermediate/advanced with exactly 3 training days
-        const shouldShowSplitStep = 
-          data.experienceLevel !== 'beginner' && 
-          data.trainingDays.length === 3;
-        
+        // Will be skipped by useEffect if conditions not met
         if (!shouldShowSplitStep) {
-          // Skip this step - handled in nextStep logic
-          nextStep();
           return null;
         }
         return <StepSplitPreference {...stepProps} />;
