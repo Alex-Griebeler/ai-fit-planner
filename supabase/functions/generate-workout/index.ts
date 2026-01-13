@@ -853,6 +853,7 @@ const WorkoutExerciseSchema = z.object({
   intensity: z.string(),
   notes: z.string(),
   isCompound: z.boolean(),
+  method: z.string().optional(),
   alternatives: z.array(z.string()).optional(),
 });
 
