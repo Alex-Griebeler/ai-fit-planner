@@ -281,6 +281,163 @@ function filterExercisesByEquipment(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          INJURY-BASED EXERCISE FILTERING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Define contraindicated exercises/patterns for each injury area
+interface InjuryContraindications {
+  muscleGroups: string[];           // Muscle groups to exclude entirely
+  movementPatterns: string[];       // Movement patterns to exclude
+  exerciseNamePatterns: string[];   // Partial name matches to exclude
+}
+
+const INJURY_CONTRAINDICATIONS: Record<string, InjuryContraindications> = {
+  shoulder: {
+    muscleGroups: [],  // Don't exclude entire groups, just specific movements
+    movementPatterns: [],
+    exerciseNamePatterns: [
+      "Desenv.",           // Overhead pressing movements
+      "Abdução dos ombros", // Lateral raises with full ROM
+      "Flexão dos ombros",  // Front raises
+      "Supino Inclinado",   // Incline pressing stresses shoulder
+      "Pull Over",          // Shoulder stress at end range
+      "Crucifixo Inclinado", // Incline flyes
+    ],
+  },
+  lower_back: {
+    muscleGroups: [],
+    movementPatterns: ["Dominância de Quadril"], // Deadlifts, good mornings, etc.
+    exerciseNamePatterns: [
+      "Stiff",              // Stiff-leg deadlift
+      "Remada Curvado",     // Bent-over rows
+      "Levantamento Terra", // Deadlift variations
+      "Good Morning",
+      "Hiperextensão",      // Back extensions
+      "Agachamento Livre",  // Free squats (spinal load)
+    ],
+  },
+  cervical: {
+    muscleGroups: [],
+    movementPatterns: [],
+    exerciseNamePatterns: [
+      "Desenv.",            // Overhead movements compress cervical
+      "Encolhimento",       // Shrugs
+      "Remada Alta",        // Upright rows
+      "Agachamento",        // Squats with bar on back
+    ],
+  },
+  knee: {
+    muscleGroups: [],
+    movementPatterns: ["Dominância de Joelho"], // Squats, lunges, leg extensions
+    exerciseNamePatterns: [
+      "Agachamento",
+      "Leg Press",          // Deep knee flexion under load
+      "Afundo",             // Lunges
+      "Avanço",             // Walking lunges
+      "Cadeira Extensora",  // Leg extensions (shear force)
+      "Passada",
+      "Sissy",
+      "Hack",
+    ],
+  },
+  hip: {
+    muscleGroups: [],
+    movementPatterns: ["Dominância de Quadril"],
+    exerciseNamePatterns: [
+      "Agachamento",        // Deep hip flexion
+      "Afundo",
+      "Avanço",
+      "Cadeira Adutora",    // Adductor machine
+      "Cadeira Abdutora",   // Abductor machine
+      "Stiff",
+      "Levantamento Terra",
+    ],
+  },
+  ankle_foot: {
+    muscleGroups: [],
+    movementPatterns: ["Dominância de Tornozelo"],
+    exerciseNamePatterns: [
+      "Panturrilha",        // Calf exercises
+      "Elevação de calcanhar",
+      "Gêmeos",
+      "Agachamento Livre",  // Ankle mobility required
+    ],
+  },
+};
+
+function filterExercisesByInjuries(
+  exercises: ExerciseWithEquipment[],
+  injuryAreas: string[]
+): { filtered: ExerciseWithEquipment[]; excludedCount: number; excludedByArea: Record<string, number> } {
+  if (!injuryAreas || injuryAreas.length === 0) {
+    return { filtered: exercises, excludedCount: 0, excludedByArea: {} };
+  }
+
+  // Collect all contraindications from all injury areas
+  const excludedMuscleGroups = new Set<string>();
+  const excludedPatterns = new Set<string>();
+  const excludedNamePatterns: string[] = [];
+
+  for (const area of injuryAreas) {
+    const contraindications = INJURY_CONTRAINDICATIONS[area];
+    if (contraindications) {
+      contraindications.muscleGroups.forEach(g => excludedMuscleGroups.add(g));
+      contraindications.movementPatterns.forEach(p => excludedPatterns.add(p));
+      excludedNamePatterns.push(...contraindications.exerciseNamePatterns);
+    }
+  }
+
+  const excludedByArea: Record<string, number> = {};
+  injuryAreas.forEach(a => excludedByArea[a] = 0);
+
+  const filtered = exercises.filter(exercise => {
+    // Check muscle group
+    if (excludedMuscleGroups.has(exercise.muscle_group)) {
+      // Count which injury caused exclusion
+      for (const area of injuryAreas) {
+        if (INJURY_CONTRAINDICATIONS[area]?.muscleGroups.includes(exercise.muscle_group)) {
+          excludedByArea[area]++;
+          break;
+        }
+      }
+      return false;
+    }
+
+    // Check movement pattern
+    if (exercise.movement_pattern && excludedPatterns.has(exercise.movement_pattern)) {
+      for (const area of injuryAreas) {
+        if (INJURY_CONTRAINDICATIONS[area]?.movementPatterns.includes(exercise.movement_pattern)) {
+          excludedByArea[area]++;
+          break;
+        }
+      }
+      return false;
+    }
+
+    // Check exercise name patterns
+    for (const pattern of excludedNamePatterns) {
+      if (exercise.name.includes(pattern)) {
+        for (const area of injuryAreas) {
+          if (INJURY_CONTRAINDICATIONS[area]?.exerciseNamePatterns.some(p => exercise.name.includes(p))) {
+            excludedByArea[area]++;
+            break;
+          }
+        }
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  return {
+    filtered,
+    excludedCount: exercises.length - filtered.length,
+    excludedByArea,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          VALIDATION SCHEMAS FOR AI RESPONSE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1190,9 +1347,21 @@ serve(async (req) => {
 
     // Filter exercises by user's equipment preferences
     const userEquipmentPrefs = validatedData.exerciseTypes || [];
-    const exercises = filterExercisesByEquipment(allExercises || [], userEquipmentPrefs);
+    const exercisesAfterEquipment = filterExercisesByEquipment(allExercises || [], userEquipmentPrefs);
     
-    console.log(`Exercise filtering: ${allExercises?.length || 0} total -> ${exercises.length} after equipment filter (prefs: ${userEquipmentPrefs.join(", ")})`);
+    console.log(`Exercise filtering: ${allExercises?.length || 0} total -> ${exercisesAfterEquipment.length} after equipment filter (prefs: ${userEquipmentPrefs.join(", ")})`);
+
+    // Filter exercises by user's injury areas (contraindicated exercises)
+    const userInjuries = validatedData.injuryAreas || [];
+    const { filtered: exercises, excludedCount, excludedByArea } = filterExercisesByInjuries(
+      exercisesAfterEquipment,
+      userInjuries
+    );
+    
+    if (excludedCount > 0) {
+      console.log(`Injury filtering: ${exercisesAfterEquipment.length} -> ${exercises.length} (excluded ${excludedCount} contraindicated exercises)`);
+      console.log(`Excluded by area:`, excludedByArea);
+    }
 
     // Build the user prompt with validated and sanitized data
     const userPrompt = buildUserPrompt(validatedData, exercises);
