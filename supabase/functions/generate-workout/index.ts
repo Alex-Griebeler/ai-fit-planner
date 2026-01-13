@@ -792,13 +792,13 @@ O volume semanal DEVE ser DISTRIBUÍDO entre as sessões. Exemplo:
 
 ## Número de Repetições:
 - FORÇA: 4-6 reps (70-85% 1RM)
-- HIPERTROFIA: 6-20 reps (60-80% 1RM) - FAIXA AMPLA para variação metabólica e mecânica
+- HIPERTROFIA: Preferencialmente 6-12 reps (65-80% 1RM), podendo variar até 20 reps para estímulo metabólico em exercícios isoladores
 - RESISTÊNCIA/EMAGRECIMENTO: 12-20 reps (50-70% 1RM)
 - SAÚDE: 10-15 reps (60-75% 1RM)
 
 ## Intervalo entre Séries:
 - FORÇA: 90-180 segundos (até 3 minutos para compostos pesados)
-- HIPERTROFIA: 60-120 segundos (USAR VARIAÇÃO: 60s para isoladores, 90-120s para compostos)
+- HIPERTROFIA: 60-120 segundos (60-90s para isoladores, 90-120s para compostos)
 - EMAGRECIMENTO: 30-60 segundos (alta densidade)
 - SAÚDE: 45-75 segundos
 
@@ -1735,7 +1735,7 @@ function getGenderLabel(gender: string | null): string {
 function getGoalLabel(goal: string | null): string {
   const labels: Record<string, string> = {
     weight_loss: "EMAGRECIMENTO - Aplicar: densidade alta, pausas curtas (30-60s), supersets, reps 12-20, cardio 2-4x/semana",
-    hypertrophy: "HIPERTROFIA - Aplicar: volume conforme Seção 1, reps 6-20 (variar entre mecânico e metabólico), pausas 60-120s (VARIAR: isoladores 60s, compostos 90-120s)",
+    hypertrophy: "HIPERTROFIA - Aplicar: volume conforme Seção 1, reps preferencialmente 6-12 (podendo chegar a 20 em isoladores para estímulo metabólico), pausas 60-120s",
     health: "SAÚDE E BEM-ESTAR - Aplicar: volume conforme Seção 1, reps 10-15, exercícios funcionais",
     performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
