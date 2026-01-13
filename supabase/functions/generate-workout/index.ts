@@ -128,6 +128,28 @@ const RECOMMENDED_SPLITS: Record<string, string> = {
   "7":   "PPL 2x + Especialização",
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          TEMPO POR SESSÃO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Tempo médio por série (execução + descanso) em segundos, por objetivo
+const TIME_PER_SET_BY_GOAL: Record<string, number> = {
+  "weight_loss":  85,   // 40s execução + 45s descanso
+  "hypertrophy":  135,  // 45s execução + 90s descanso
+  "health":       100,  // 40s execução + 60s descanso  
+  "performance":  170,  // 50s execução + 120s descanso
+};
+
+const WARMUP_MINUTES = 5;
+const SESSION_TIME_TOLERANCE = 0.15; // 15% de tolerância
+
+function getDurationMinutes(duration: string): number {
+  if (duration.includes("30")) return 30;
+  if (duration.includes("45")) return 45;
+  if (duration.includes("60") && !duration.includes("+") && !duration.includes("plus")) return 60;
+  return 75; // 60plus
+}
+
 function getFrequencyKey(days: number): string {
   if (days <= 0) return "1";
   if (days >= 7) return "7";
@@ -688,6 +710,44 @@ function validateWorkoutPlan(
     }
   }
   
+  // 7. VALIDATE SESSION TIME - Verificar se séries cabem no tempo disponível
+  const sessionDurationKey = userData.sessionDuration || "45min";
+  const maxMinutes = getDurationMinutes(sessionDurationKey);
+  const availableMinutes = maxMinutes - WARMUP_MINUTES;
+  const timePerSet = TIME_PER_SET_BY_GOAL[userData.goal || "health"];
+  const expectedSetsRange = SESSION_SETS_PER_WORKOUT[sessionDurationKey];
+
+  for (const workout of plan.workouts || []) {
+    const totalSets = workout.exercises?.reduce(
+      (sum: number, ex: any) => sum + (ex.sets || 0), 0
+    ) || 0;
+    
+    const estimatedMinutes = Math.round((totalSets * timePerSet) / 60);
+    const totalSessionMinutes = estimatedMinutes + WARMUP_MINUTES;
+    
+    // Log detalhado para debug
+    console.log(`Session time validation "${workout.name}": ${totalSets} sets, ~${totalSessionMinutes}min (limit: ${maxMinutes}min)`);
+    
+    // Validar total de séries contra limite esperado
+    if (totalSets < expectedSetsRange.min) {
+      warnings.push(
+        `Treino "${workout.name}": ${totalSets} séries (mínimo esperado: ${expectedSetsRange.min})`
+      );
+    }
+    if (totalSets > expectedSetsRange.max) {
+      warnings.push(
+        `Treino "${workout.name}": ${totalSets} séries (máximo esperado: ${expectedSetsRange.max})`
+      );
+    }
+    
+    // Validar tempo estimado vs disponível (com tolerância de 15%)
+    if (totalSessionMinutes > maxMinutes * (1 + SESSION_TIME_TOLERANCE)) {
+      warnings.push(
+        `Treino "${workout.name}": tempo estimado ~${totalSessionMinutes}min excede ${maxMinutes}min disponíveis`
+      );
+    }
+  }
+  
   return { 
     success: errors.length === 0, 
     warnings,
@@ -943,6 +1003,38 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 - PPL 6x
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 3.1: VERIFICAÇÃO DE TEMPO POR SESSÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+## TEMPO MÉDIO POR SÉRIE (incluindo descanso):
+| Objetivo      | Tempo/Série | Justificativa |
+|---------------|-------------|---------------|
+| Emagrecimento | ~1.5 min    | Execução rápida + descanso curto (45s) |
+| Hipertrofia   | ~2.25 min   | Execução controlada + descanso médio (90s) |
+| Saúde         | ~1.75 min   | Execução leve + descanso moderado (60s) |
+| Performance   | ~2.8 min    | Execução intensa + descanso longo (120s) |
+
+## CAPACIDADE POR SESSÃO (tempo útil = tempo total - 5min aquecimento):
+| Duração | Tempo Útil | Séries Máx (Hipertrofia) | Séries Máx (Emagrec.) |
+|---------|------------|--------------------------|------------------------|
+| 30 min  | 25 min     | ~11 séries               | ~16 séries             |
+| 45 min  | 40 min     | ~18 séries               | ~26 séries             |
+| 60 min  | 55 min     | ~24 séries               | ~36 séries             |
+| 60+ min | 70 min     | ~31 séries               | ~46 séries             |
+
+## VERIFICAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR CADA TREINO:
+1. Somar TODAS as séries do treino
+2. Multiplicar pelo tempo/série do objetivo
+3. Adicionar 5 min de aquecimento
+4. Verificar se ≤ tempo disponível
+
+## SE ULTRAPASSAR O TEMPO:
+1. PRIMEIRO: Reduzir séries dos isoladores (de 4→3, de 3→2)
+2. DEPOIS: Remover exercícios isoladores menos importantes
+3. NUNCA: Reduzir compostos principais abaixo de 3 séries
+4. NUNCA: Remover aquecimento
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 4: ESTRUTURA DO TREINO
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1188,6 +1280,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 7. weeklyVolume DEVE ter TODOS os grupos (incluindo scapular_belt)
 8. Inclua PELO MENOS 1 exercício de Cintura Escapular
 9. Volume de Costas >= Volume de Peitoral (se não há prioridade peitoral)
+10. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
+11. Se tempo exceder, REDUZA isoladores primeiro
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
@@ -1197,7 +1291,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 - Prescreva abaixo do MÍNIMO
 - Prescreva acima do MÁXIMO
 - Invente exercícios fora do catálogo
-- Negligencie a Cintura Escapular`;
+- Negligencie a Cintura Escapular
+- Gere treinos que excedam o tempo disponível`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //                          MAIN SERVER HANDLER
@@ -1601,7 +1696,9 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 6. USE APENAS EXERCÍCIOS DO CATÁLOGO
 7. INCLUA ALTERNATIVAS se houver lesão
 8. VARIE os intervalos de descanso
-9. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa`;
+9. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa
+10. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
+11. Se tempo exceder, REDUZA isoladores primeiro`;
 }
 
 function getGenderLabel(gender: string | null): string {
