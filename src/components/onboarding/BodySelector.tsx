@@ -73,7 +73,7 @@ export function BodySelector({ selectedAreas, onChange }: BodySelectorProps) {
       </div>
 
       {/* Selected areas list */}
-      {selectedAreas.length > 0 && (
+      {selectedAreas.length > 0 ? (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -90,10 +90,20 @@ export function BodySelector({ selectedAreas, onChange }: BodySelectorProps) {
               </span>
             ))}
         </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <span className="px-4 py-2 bg-secondary text-muted-foreground rounded-full text-sm">
+            Distribuição equilibrada (sem foco específico)
+          </span>
+        </motion.div>
       )}
 
       <p className="text-center text-muted-foreground text-sm">
-        Toque nas áreas que deseja focar
+        Toque nas áreas que deseja focar ou prossiga para distribuição equilibrada
       </p>
     </div>
   );

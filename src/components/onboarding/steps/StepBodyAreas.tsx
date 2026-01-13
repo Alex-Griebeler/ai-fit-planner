@@ -12,7 +12,8 @@ interface StepBodyAreasProps {
 }
 
 export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: StepBodyAreasProps) {
-  const canProceed = data.bodyAreas.length >= 1;
+  // Pode seguir sem seleção (distribuição equilibrada) - conforme documento técnico
+  const canProceed = true;
 
   return (
     <OnboardingLayout

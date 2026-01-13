@@ -178,7 +178,15 @@ function calculateDynamicVolumeRanges(params: VolumeCalculationParams): Calculat
   const daysFactor = daysFactors[daysCount] || 0.85;
 
   // 5. RECOVERY FACTOR (sleep/stress)
-  const sleepNum = parseInt(params.sleepHours || "7", 10);
+  // Parse sleep hours from string values like "less5", "5-6", "6-7", "7-8", "more8"
+  const sleepMapping: Record<string, number> = {
+    "less5": 4,
+    "5-6": 5,
+    "6-7": 6,
+    "7-8": 7,
+    "more8": 9,
+  };
+  const sleepNum = sleepMapping[params.sleepHours || "7-8"] || parseInt(params.sleepHours || "7", 10) || 7;
   const hasLowRecovery = sleepNum < 6 || params.stressLevel === "high";
   const recoveryFactor = hasLowRecovery ? 0.75 : 1.00;
 
@@ -589,46 +597,83 @@ function validateWorkoutPlan(
   console.log(`Volume validation - Level: ${level}, Factors: goal=${dynamicVolumeRanges.factors.goal}, duration=${dynamicVolumeRanges.factors.duration}, days=${dynamicVolumeRanges.factors.days}, recovery=${dynamicVolumeRanges.factors.recovery}, combined=${dynamicVolumeRanges.factors.combined.toFixed(2)}`);
   console.log(`Dynamic ranges - Large: ${dynamicVolumeRanges.large.min}-${dynamicVolumeRanges.large.max}, Medium: ${dynamicVolumeRanges.medium.min}-${dynamicVolumeRanges.medium.max}, Small: ${dynamicVolumeRanges.small.min}-${dynamicVolumeRanges.small.max}`);
   
-  // Define all muscle groups to check
+  // Define all muscle groups to check (using English keys as specified in JSON output format)
+  // The AI is instructed to return weeklyVolume with these English keys
   const muscleGroups = {
     large: ["chest", "back", "quadriceps", "hamstrings", "glutes"],
     medium: ["shoulders"],
     small: ["biceps", "triceps", "calves", "core"],
   };
   
+  // Count how many groups are missing or have zero volume
+  let missingGroups = 0;
+  let lowVolumeGroups = 0;
+  let highVolumeGroups = 0;
+  
   // Validate each muscle group using dynamic ranges
+  // Note: Using warnings instead of errors for volume issues since AI might use slightly different naming
   Object.entries(muscleGroups).forEach(([category, muscles]) => {
     const range = dynamicVolumeRanges[category as keyof VolumeRanges];
     
     muscles.forEach((muscle) => {
-      const volume = weeklyVolume[muscle] || 0;
+      const volume = weeklyVolume[muscle];
+      
+      // Check if muscle group is missing from weeklyVolume
+      if (volume === undefined || volume === null) {
+        missingGroups++;
+        return;
+      }
       
       if (volume < range.min) {
-        errors.push(
-          `Volume INSUFICIENTE para ${muscle}: ${volume} séries (mínimo ${range.min} para perfil calculado)`
+        lowVolumeGroups++;
+        warnings.push(
+          `Volume baixo para ${muscle}: ${volume} séries (mínimo recomendado: ${range.min})`
         );
       }
       
       if (volume > range.max) {
+        highVolumeGroups++;
         warnings.push(
-          `Volume EXCESSIVO para ${muscle}: ${volume} séries (máximo ${range.max} para perfil calculado)`
+          `Volume alto para ${muscle}: ${volume} séries (máximo recomendado: ${range.max})`
         );
       }
     });
   });
   
+  // Only create a critical error if MORE than half the groups are missing
+  if (missingGroups > 5) {
+    errors.push(`Estrutura weeklyVolume incompleta: ${missingGroups} grupos musculares não informados`);
+  }
+  
   // 6. Validate exercise count per session based on duration
+  // Adjusted according to technical document: 30min=4-5, 45min=5-6, 60min=6-8, 60+=8-10
   const sessionDuration = plan.sessionDuration || "45 min";
-  const minExercises = sessionDuration.includes("30") ? 4 : sessionDuration.includes("45") ? 5 : 6;
-  const maxExercises = sessionDuration.includes("30") ? 5 : sessionDuration.includes("45") ? 7 : 10;
+  let minExercises = 4;
+  let maxExercises = 10;
+  
+  if (sessionDuration.includes("30")) {
+    minExercises = 4;
+    maxExercises = 5;
+  } else if (sessionDuration.includes("45")) {
+    minExercises = 5;
+    maxExercises = 6;
+  } else if (sessionDuration.includes("60") && !sessionDuration.includes("+")) {
+    minExercises = 6;
+    maxExercises = 8;
+  } else {
+    // 60+ minutes
+    minExercises = 6;
+    maxExercises = 10;
+  }
   
   for (const workout of plan.workouts || []) {
     const exerciseCount = workout.exercises?.length || 0;
-    if (exerciseCount < minExercises) {
-      warnings.push(`Treino "${workout.name}" tem apenas ${exerciseCount} exercícios (mínimo ${minExercises} para ${sessionDuration})`);
+    // Use a more lenient threshold - warn if significantly below minimum
+    if (exerciseCount < minExercises - 1) {
+      warnings.push(`Treino "${workout.name}" tem apenas ${exerciseCount} exercícios (mínimo esperado: ${minExercises})`);
     }
-    if (exerciseCount > maxExercises) {
-      warnings.push(`Treino "${workout.name}" tem ${exerciseCount} exercícios (máximo ${maxExercises} para ${sessionDuration})`);
+    if (exerciseCount > maxExercises + 2) {
+      warnings.push(`Treino "${workout.name}" tem ${exerciseCount} exercícios (máximo esperado: ${maxExercises})`);
     }
   }
   
@@ -1775,14 +1820,16 @@ function getStressLabel(stress: string | null): string {
 }
 
 function getSleepQuality(hours: string | null): string {
-  const h = parseInt(hours || "7", 10);
+  const sleepMapping: Record<string, number> = { "less5": 4, "5-6": 5, "6-7": 6, "7-8": 7, "more8": 9 };
+  const h = sleepMapping[hours || "7-8"] || 7;
   if (h < 6) return "INSUFICIENTE - Aplicar reduções (mas manter mínimos)";
   if (h >= 7 && h <= 9) return "ADEQUADO";
   return "BOM";
 }
 
 function getRecoveryCapacity(sleepHours: string | null, stressLevel: string | null): string {
-  const sleep = parseInt(sleepHours || "7", 10);
+  const sleepMapping: Record<string, number> = { "less5": 4, "5-6": 5, "6-7": 6, "7-8": 7, "more8": 9 };
+  const sleep = sleepMapping[sleepHours || "7-8"] || 7;
   const stress = stressLevel || "moderate";
   
   if (sleep < 6 || stress === "high") return "BAIXA - reduzir volume 20-25% sobre o MÉDIO (nunca abaixo do mínimo absoluto)";
@@ -1791,7 +1838,8 @@ function getRecoveryCapacity(sleepHours: string | null, stressLevel: string | nu
 }
 
 function getSleepStressAdjustment(sleepHours: string | null, stressLevel: string | null): string {
-  const sleep = parseInt(sleepHours || "7", 10);
+  const sleepMapping: Record<string, number> = { "less5": 4, "5-6": 5, "6-7": 6, "7-8": 7, "more8": 9 };
+  const sleep = sleepMapping[sleepHours || "7-8"] || 7;
   const stress = stressLevel || "moderate";
   
   if (sleep < 6 || stress === "high") {

@@ -48,10 +48,19 @@ export function useProfile() {
     mutationFn: async (updates: ProfileUpdate) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
+      // Use upsert to create profile if it doesn't exist
       const { data, error } = await supabase
         .from("profiles")
-        .update(updates)
-        .eq("user_id", user.id)
+        .upsert({
+          user_id: user.id,
+          name: updates.name || "Usuário",
+          gender: updates.gender,
+          age: updates.age,
+          height: updates.height,
+          weight: updates.weight,
+        }, {
+          onConflict: "user_id",
+        })
         .select()
         .single();
 
