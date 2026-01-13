@@ -2,7 +2,7 @@ import { WorkoutPlan } from '@/hooks/useWorkoutPlans';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Dumbbell, ChevronRight, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Dumbbell, ChevronRight, Sparkles, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -107,18 +107,22 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             <p className="text-sm font-medium text-foreground">Próximos treinos:</p>
             <div className="grid gap-2">
               {workouts.slice(0, 3).map((workout, index) => (
-                <div 
+                <button 
                   key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  onClick={() => navigate(`/workout?day=${encodeURIComponent(workout.day)}`)}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group"
                 >
                   <div>
                     <p className="font-medium text-foreground">{workout.name}</p>
                     <p className="text-xs text-muted-foreground">{workout.focus}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {workout.exercises?.length ?? 0} exercícios
-                  </Badge>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {workout.exercises?.length ?? 0} exercícios
+                    </Badge>
+                    <Play className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </button>
               ))}
             </div>
           </div>
