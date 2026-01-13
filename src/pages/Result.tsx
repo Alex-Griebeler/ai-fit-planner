@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Info,
   RefreshCw,
-  Check
+  Check,
+  Timer
 } from 'lucide-react';
 
 interface WorkoutExercise {
@@ -90,9 +91,43 @@ export default function Result() {
   const [retryCount, setRetryCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
 
+  const [rateLimitResetAt, setRateLimitResetAt] = useState<Date | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  const formatTimeRemaining = (resetAt: Date): string => {
+    const now = new Date();
+    const diff = resetAt.getTime() - now.getTime();
+    if (diff <= 0) return '';
+    
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    
+    if (minutes > 0) {
+      return `${minutes}min ${seconds}s`;
+    }
+    return `${seconds}s`;
+  };
+
+  // Update timer every second for rate limit errors
+  useEffect(() => {
+    if (!isRateLimited || !rateLimitResetAt) return;
+    
+    const updateTimer = () => {
+      setTimeRemaining(formatTimeRemaining(rateLimitResetAt));
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isRateLimited, rateLimitResetAt]);
+
   const generatePlan = async (userData: OnboardingData) => {
     setLoading(true);
     setError(null);
+    setRateLimitResetAt(null);
+    setIsRateLimited(false);
 
     try {
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
@@ -100,15 +135,23 @@ export default function Result() {
         { body: { userData } }
       );
 
+      // Check if this is a rate limit response (HTTP 429 comes as data, not error)
+      if (responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
+        const resetAt = new Date(responseData.reset_at);
+        setRateLimitResetAt(resetAt);
+        setIsRateLimited(true);
+        const maxReq = responseData.max_requests || 5;
+        throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
+      }
+
       if (functionError) {
         throw new Error(functionError.message);
       }
 
       if (responseData?.error) {
-        if (responseData.error.includes('Rate limit')) {
-          toast.error('Limite de requisições atingido. Aguarde alguns segundos e tente novamente.');
-        } else if (responseData.error.includes('credits')) {
+        if (responseData.error.includes('credits')) {
           toast.error('Créditos de IA esgotados. Entre em contato com o suporte.');
+          throw new Error('Créditos de IA esgotados');
         }
         throw new Error(responseData.error);
       }
@@ -121,8 +164,13 @@ export default function Result() {
       }
     } catch (err) {
       console.error('Error generating workout:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao gerar plano');
-      toast.error('Erro ao gerar plano de treino. Tente novamente.');
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar plano';
+      setError(errorMessage);
+      
+      // Only show toast for non-rate-limit errors (rate limit shows in the UI)
+      if (!isRateLimited) {
+        toast.error('Erro ao gerar plano de treino. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -247,26 +295,68 @@ export default function Result() {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center px-6 max-w-md"
         >
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-destructive" />
-          </div>
-          <h2 className="text-xl font-display font-bold text-foreground mb-2">
-            Erro ao gerar plano
-          </h2>
-          <p className="text-muted-foreground mb-6">{error}</p>
-          <div className="space-y-3">
-            <Button onClick={handleRetry} variant="gradient" className="w-full">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Tentar Novamente
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate('/onboarding')}
-            >
-              Refazer Questionário
-            </Button>
-          </div>
+          {isRateLimited ? (
+            // Rate limit specific UI
+            <>
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                <Timer className="w-8 h-8 text-yellow-500" />
+              </div>
+              <h2 className="text-xl font-display font-bold text-foreground mb-2">
+                Limite de gerações atingido
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Você pode gerar até 5 planos por hora. Este limite ajuda a manter o serviço rápido para todos.
+              </p>
+              
+              {timeRemaining && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-yellow-500 mb-1">Tempo restante:</p>
+                  <p className="text-2xl font-bold text-yellow-500">{timeRemaining}</p>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Ir para Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={() => navigate('/onboarding')}
+                >
+                  Ajustar preferências
+                </Button>
+              </div>
+            </>
+          ) : (
+            // Generic error UI
+            <>
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+              </div>
+              <h2 className="text-xl font-display font-bold text-foreground mb-2">
+                Erro ao gerar plano
+              </h2>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <div className="space-y-3">
+                <Button onClick={handleRetry} variant="gradient" className="w-full">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Tentar Novamente
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate('/onboarding')}
+                >
+                  Refazer Questionário
+                </Button>
+              </div>
+            </>
+          )}
         </motion.div>
       </div>
     );
