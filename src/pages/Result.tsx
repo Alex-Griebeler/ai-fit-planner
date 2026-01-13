@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
+import { useExerciseLoads } from '@/hooks/useExerciseLoads';
 import { toast } from 'sonner';
 import { 
   Dumbbell, 
@@ -84,6 +85,10 @@ export default function Result() {
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
   const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans } = useWorkoutPlans();
+  
+  // Get the plan ID for loading exercise loads
+  const currentPlanId = activePlan?.id || null;
+  const { loads, saveLoad, isLoading: isLoadingLoads } = useExerciseLoads(currentPlanId);
   
   const [data, setData] = useState<OnboardingData | null>(null);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
@@ -535,7 +540,8 @@ export default function Result() {
                     {/* Exercise Rows */}
                     <div className="px-4 pb-4">
                       {workout.exercises.map((exercise, i) => {
-                        const exerciseKey = `${index}-${i}`;
+                        const loadKey = `${workout.day}|${exercise.name}`;
+                        const savedLoad = loads[loadKey] || '';
                         return (
                           <div
                             key={i}
@@ -591,11 +597,13 @@ export default function Result() {
                               <input
                                 type="text"
                                 placeholder="—"
+                                defaultValue={savedLoad}
                                 className="w-full max-w-[60px] text-center text-xs bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none py-0.5 text-foreground placeholder:text-muted-foreground/50"
-                                onChange={(e) => {
-                                  // Store locally - can be enhanced to persist
-                                  const value = e.target.value;
-                                  e.target.dataset.load = value;
+                                onBlur={(e) => {
+                                  const value = e.target.value.trim();
+                                  if (value && value !== savedLoad && isSaved) {
+                                    saveLoad(workout.day, exercise.name, value);
+                                  }
                                 }}
                               />
                             </div>
