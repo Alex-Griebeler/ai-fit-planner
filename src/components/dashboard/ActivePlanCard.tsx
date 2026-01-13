@@ -2,6 +2,7 @@ import { WorkoutPlan } from '@/hooks/useWorkoutPlans';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar, Clock, Dumbbell, ChevronRight, Sparkles, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,11 +35,23 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-muted rounded w-1/3" />
-            <div className="h-4 bg-muted rounded w-2/3" />
-            <div className="h-20 bg-muted rounded" />
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-6 w-40" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-md" />
+          </div>
+          <div className="flex gap-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
           </div>
         </CardContent>
       </Card>
