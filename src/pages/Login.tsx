@@ -13,13 +13,15 @@ import evolveLogo from '@/assets/evolve-logo.png';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   
   const passwordValidation = usePasswordValidation(password);
 
@@ -50,6 +52,25 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setResetSent(true);
+        toast.success('Email de recuperação enviado!');
+      }
+    } catch (err) {
+      toast.error('Erro ao enviar email de recuperação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await signInWithGoogle();
@@ -59,6 +80,87 @@ export default function Login() {
     }
     // OAuth will redirect, so we don't need to handle success here
   };
+
+  // Forgot password view
+  if (isForgotPassword) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="absolute inset-0 gradient-glow opacity-50" />
+        
+        <div className="flex-1 flex flex-col items-center justify-center px-4 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-sm"
+          >
+            <div className="text-center mb-10">
+              <img src={evolveLogo} alt="Evolve" className="h-16 mx-auto mb-4" />
+              <h1 className="text-xl font-bold">Recuperar senha</h1>
+              <p className="text-muted-foreground mt-2">
+                {resetSent 
+                  ? 'Verifique sua caixa de entrada' 
+                  : 'Digite seu email para receber o link de recuperação'}
+              </p>
+            </div>
+
+            {resetSent ? (
+              <div className="text-center space-y-4">
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-sm text-green-400">
+                    Enviamos um email para <strong>{email}</strong> com instruções para redefinir sua senha.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setResetSent(false);
+                  }}
+                >
+                  Voltar ao login
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <Input
+                  type="email"
+                  placeholder="E-mail"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+
+                <Button 
+                  variant="gradient" 
+                  size="lg" 
+                  className="w-full" 
+                  type="submit"
+                  disabled={loading || !email}
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : null}
+                  Enviar link de recuperação
+                </Button>
+
+                <Button 
+                  variant="ghost" 
+                  className="w-full"
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  disabled={loading}
+                >
+                  Voltar ao login
+                </Button>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -143,6 +245,20 @@ export default function Login() {
               {isLogin ? 'Entrar' : 'Criar conta'}
             </Button>
           </form>
+
+          {/* Forgot password link */}
+          {isLogin && (
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => setIsForgotPassword(true)}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                disabled={loading}
+              >
+                Esqueceu sua senha?
+              </button>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="flex items-center gap-4 my-6">
