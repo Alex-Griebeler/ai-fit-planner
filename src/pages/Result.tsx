@@ -20,7 +20,8 @@ import {
   Check,
   Timer,
   Sparkles,
-  Info
+  Info,
+  Target
 } from 'lucide-react';
 import {
   Popover,
@@ -460,9 +461,16 @@ export default function Result() {
             <p className="text-xs text-muted-foreground">sessão</p>
           </div>
           <div className="text-center">
-            <Dumbbell className="w-5 h-5 mx-auto mb-2 text-primary" />
-            <p className="text-xl font-semibold text-foreground">{plan.workouts.reduce((acc, w) => acc + w.exercises.length, 0)}</p>
-            <p className="text-xs text-muted-foreground">exercícios</p>
+            <Target className="w-5 h-5 mx-auto mb-2 text-primary" />
+            <p className="text-xl font-semibold text-foreground">
+              {data?.goal ? ({
+                weight_loss: 'Emagrecimento',
+                hypertrophy: 'Hipertrofia',
+                health: 'Saúde',
+                performance: 'Performance',
+              }[data.goal] || data.goal) : 'Geral'}
+            </p>
+            <p className="text-xs text-muted-foreground">objetivo</p>
           </div>
         </motion.div>
 
