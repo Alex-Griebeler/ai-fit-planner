@@ -1150,6 +1150,70 @@ function validateWorkoutPlan(
   };
 }
 
+// Calculate actual weekly volume from exercises (not from AI's declared values)
+function calculateActualWeeklyVolume(plan: any): Record<string, number> {
+  const volumeByMuscle: Record<string, number> = {};
+  
+  // Normalize muscle group names to internal keys
+  const normalizeGroup = (group: string): string => {
+    const normalized = group.toLowerCase().trim();
+    
+    const mapping: Record<string, string> = {
+      'peito': 'chest',
+      'peitoral': 'chest',
+      'chest': 'chest',
+      'costas': 'back',
+      'dorsal': 'back',
+      'back': 'back',
+      'ombro': 'shoulders',
+      'ombros': 'shoulders',
+      'deltoides': 'shoulders',
+      'shoulders': 'shoulders',
+      'biceps': 'biceps',
+      'bíceps': 'biceps',
+      'triceps': 'triceps',
+      'tríceps': 'triceps',
+      'quadriceps': 'quadriceps',
+      'quadríceps': 'quadriceps',
+      'posterior': 'hamstrings',
+      'posteriores': 'hamstrings',
+      'isquiotibiais': 'hamstrings',
+      'hamstrings': 'hamstrings',
+      'gluteos': 'glutes',
+      'glúteos': 'glutes',
+      'glutes': 'glutes',
+      'panturrilha': 'calves',
+      'panturrilhas': 'calves',
+      'calves': 'calves',
+      'abdomen': 'core',
+      'abdominal': 'core',
+      'lombar': 'core',
+      'lower_back': 'core',
+      'core': 'core',
+      'escapular': 'scapular_belt',
+      'escapulares': 'scapular_belt',
+      'cintura_escapular': 'scapular_belt',
+      'scapular_belt': 'scapular_belt',
+    };
+    
+    return mapping[normalized] || normalized;
+  };
+  
+  // Sum sets from all workouts
+  for (const workout of plan.workouts || []) {
+    for (const exercise of workout.exercises || []) {
+      const muscleGroup = normalizeGroup(exercise.muscleGroup || '');
+      const sets = exercise.sets || 0;
+      
+      if (muscleGroup && sets > 0) {
+        volumeByMuscle[muscleGroup] = (volumeByMuscle[muscleGroup] || 0) + sets;
+      }
+    }
+  }
+  
+  return volumeByMuscle;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //                          INJURY AREA LABELS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2021,6 +2085,17 @@ serve(async (req) => {
     if (validationWarnings.warnings.length > 0) {
       console.warn("Workout plan validation warnings:", validationWarnings.warnings);
     }
+
+    // Calculate REAL volume from exercises (replace AI's declared values)
+    const aiDeclaredVolume = workoutPlan.weeklyVolume || {};
+    const calculatedVolume = calculateActualWeeklyVolume(workoutPlan);
+    
+    // Log comparison for debugging
+    console.log("Volume comparison - AI declared:", JSON.stringify(aiDeclaredVolume));
+    console.log("Volume comparison - Calculated:", JSON.stringify(calculatedVolume));
+    
+    // Replace with calculated volume
+    workoutPlan.weeklyVolume = calculatedVolume;
 
     console.log("Successfully generated workout plan for user:", userId);
 
