@@ -3,7 +3,9 @@ import { Profile } from '@/hooks/useProfile';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { User, Ruler, Scale, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User, Ruler, Scale, Settings, Crown } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface ProfileCardProps {
   profile: Profile | null;
@@ -12,6 +14,7 @@ interface ProfileCardProps {
 
 export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
   const navigate = useNavigate();
+  const { isPremium } = useSubscription();
 
   if (isLoading) {
     return (
@@ -57,9 +60,17 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
           </Avatar>
           
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-foreground truncate">
-              {profile.name}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-foreground truncate">
+                {profile.name}
+              </h2>
+              {isPremium && (
+                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 shrink-0">
+                  <Crown className="w-3 h-3 mr-1" />
+                  Premium
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
               {profile.gender && (
                 <span className="flex items-center gap-1">
