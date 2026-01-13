@@ -337,7 +337,12 @@ export default function Login() {
             {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}{' '}
             <button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                // Limpa campos ao trocar entre login e cadastro
+                setPassword('');
+                setConfirmPassword('');
+              }}
               className="text-primary font-semibold hover:underline"
               disabled={loading}
             >
