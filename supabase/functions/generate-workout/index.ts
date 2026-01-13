@@ -38,7 +38,7 @@ const OnboardingSchema = z.object({
   exerciseTypes: z.array(z.string().max(20)).max(5),
   includeCardio: z.boolean(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
-  splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid"]).nullable().optional(),
+  splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid", "no_preference"]).nullable().optional(),
   variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
@@ -225,6 +225,7 @@ interface SplitRule {
   split: string;
   description: string;
   dayStructure: string[];
+  specialInstruction?: string;
 }
 
 const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
@@ -2243,6 +2244,12 @@ ${userData.healthDescription ? `
         split: "Full Body + Push/Pull Híbrido",
         description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
         dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
+      },
+      'no_preference': {
+        split: "Full Body 3x (Variedade Máxima)",
+        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
+        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
+        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
       }
     };
     splitRule = splitPreferenceMap[userData.splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
@@ -2268,7 +2275,10 @@ ${dayPattern.consecutiveGroups.length > 0
 - **Tipo:** ${splitRule.split}
 - **Descrição:** ${splitRule.description}
 - **Estrutura:** ${splitRule.dayStructure.join(' → ')}
-
+${splitRule.specialInstruction ? `
+### 🔴 INSTRUÇÃO ESPECIAL (CRÍTICA):
+${splitRule.specialInstruction}
+` : ''}
 ### REGRAS DE ESPAÇAMENTO (PREFERENCIAL):
 1. PREFERIR espaçar estímulos do mesmo grupamento (48-72h ideal)
 2. Se dias são consecutivos: EVITAR mesmo grupamento PRINCIPAL em dias seguidos
