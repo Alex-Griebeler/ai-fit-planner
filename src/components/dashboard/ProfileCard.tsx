@@ -65,7 +65,7 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
                 {profile.name}
               </h2>
               {isPremium && (
-                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 shrink-0">
+                <Badge className="bg-primary text-primary-foreground border-0 shrink-0">
                   <Crown className="w-3 h-3 mr-1" />
                   Premium
                 </Badge>
