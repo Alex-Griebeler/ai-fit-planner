@@ -267,6 +267,120 @@ function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          PERIODIZAÇÃO DINÂMICA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface PeriodizationConfig {
+  type: "linear" | "undulating" | "linear_undulating";
+  description: string;
+  weeklyPattern: string;
+  progressionRules: string[];
+}
+
+/**
+ * PERIODIZAÇÃO DINÂMICA conforme documento técnico:
+ * - ≤3 dias/semana: Periodização LINEAR
+ * - ≥4 dias/semana: Periodização LINEAR + ONDULATÓRIA
+ * - Ajuste adicional por nível e objetivo
+ */
+function determinePeriodization(params: {
+  trainingDaysCount: number;
+  experienceLevel: string;
+  goal: string | null;
+}): PeriodizationConfig {
+  const { trainingDaysCount, experienceLevel, goal } = params;
+  
+  // Regra base: frequência determina tipo de periodização
+  const isHighFrequency = trainingDaysCount >= 4;
+  const isAdvanced = experienceLevel === "advanced";
+  const isIntermediate = experienceLevel === "intermediate";
+  const isHypertrophy = goal === "hypertrophy";
+  
+  // ≤3 dias/semana: sempre LINEAR
+  if (!isHighFrequency) {
+    return {
+      type: "linear",
+      description: "Progressão linear clássica - aumentar carga/reps semanalmente",
+      weeklyPattern: "Semanas 1-4: aumento progressivo de 2.5-5% na carga ou 1-2 reps",
+      progressionRules: [
+        "Semana 1: Adaptação - 60-70% do esforço máximo",
+        "Semana 2: Acumulação - 70-80% do esforço",
+        "Semana 3: Intensificação - 80-90% do esforço",
+        "Semana 4: Pico - 85-95% do esforço",
+        "Semana 5: Deload - 50-60% do volume",
+      ],
+    };
+  }
+  
+  // ≥4 dias/semana para iniciantes: ainda LINEAR (por simplicidade)
+  if (isHighFrequency && !isIntermediate && !isAdvanced) {
+    return {
+      type: "linear",
+      description: "Progressão linear para iniciantes - foco em técnica e adaptação",
+      weeklyPattern: "Aumento gradual de carga mantendo técnica perfeita",
+      progressionRules: [
+        "Semana 1-2: Aprender movimentos, carga leve",
+        "Semana 3-4: Aumentar carga 5-10% se técnica impecável",
+        "Semana 5: Deload leve - consolidar aprendizado",
+      ],
+    };
+  }
+  
+  // ≥4 dias/semana para intermediários/avançados: LINEAR + ONDULATÓRIA
+  if (isHighFrequency && (isIntermediate || isAdvanced)) {
+    // Ondulação mais intensa para hipertrofia
+    if (isHypertrophy) {
+      return {
+        type: "linear_undulating",
+        description: "Periodização linear + ondulatória diária para hipertrofia",
+        weeklyPattern: "Alternar intensidades entre sessões: Força (6-8) → Hipertrofia (8-12) → Metabólico (12-15)",
+        progressionRules: [
+          "Sessão A (Força): 6-8 reps, descanso 2-3min, carga alta",
+          "Sessão B (Hipertrofia): 8-12 reps, descanso 60-90s, carga moderada",
+          "Sessão C (Metabólico): 12-15 reps, descanso 45-60s, carga leve-moderada",
+          "Progressão semanal: +2.5% na carga OU +1 rep por sessão",
+          "Semana 4-5: Deload - reduzir volume 40%, manter intensidade",
+        ],
+      };
+    }
+    
+    // Outros objetivos: ondulação moderada
+    return {
+      type: "linear_undulating",
+      description: "Periodização linear com ondulação semanal",
+      weeklyPattern: "Semanas alternando entre maior volume e maior intensidade",
+      progressionRules: [
+        "Semana 1: Volume alto, intensidade moderada",
+        "Semana 2: Volume moderado, intensidade alta",
+        "Semana 3: Volume alto, intensidade moderada-alta",
+        "Semana 4: Volume moderado-baixo, intensidade máxima",
+        "Semana 5: Deload - 50% do volume",
+      ],
+    };
+  }
+  
+  // Fallback: linear
+  return {
+    type: "linear",
+    description: "Progressão linear padrão",
+    weeklyPattern: "Aumento gradual semana a semana",
+    progressionRules: [
+      "Semanas 1-4: progressão gradual",
+      "Semana 5: deload",
+    ],
+  };
+}
+
+function getPeriodizationLabel(config: PeriodizationConfig): string {
+  const typeLabels: Record<string, string> = {
+    linear: "LINEAR",
+    undulating: "ONDULATÓRIA",
+    linear_undulating: "LINEAR + ONDULATÓRIA",
+  };
+  return typeLabels[config.type] || "LINEAR";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          EQUIPMENT FILTERING
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -483,7 +597,8 @@ const WorkoutPlanSchema = z.object({
   description: z.string(),
   weeklyFrequency: z.number(),
   sessionDuration: z.string(),
-  periodization: z.string(),
+  periodization: z.enum(["linear", "undulating", "linear_undulating"]),
+  periodizationDescription: z.string().optional(),
   experienceLevel: z.string().optional(),
   mainGoal: z.string().optional(),
   weeklyVolumeStrategy: z.string().optional(),
@@ -1063,6 +1178,47 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 4. NUNCA: Remover aquecimento
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 3.2: PERIODIZAÇÃO DINÂMICA
+═══════════════════════════════════════════════════════════════════════════════
+
+## REGRA FUNDAMENTAL DE PERIODIZAÇÃO:
+A periodização é definida DINAMICAMENTE com base na frequência semanal e nível do usuário.
+
+| Frequência | Nível       | Periodização        | Padrão |
+|------------|-------------|---------------------|--------|
+| ≤3 dias    | Todos       | LINEAR              | Aumento semanal de carga/reps |
+| ≥4 dias    | Iniciante   | LINEAR              | Foco em técnica e adaptação |
+| ≥4 dias    | Intermediário | LINEAR + ONDULATÓRIA | Alternar intensidades entre sessões |
+| ≥4 dias    | Avançado    | LINEAR + ONDULATÓRIA | Ondulação diária + progressão semanal |
+
+## PERIODIZAÇÃO LINEAR (linear):
+- Semana 1: Adaptação (60-70% esforço)
+- Semana 2: Acumulação (70-80% esforço)
+- Semana 3: Intensificação (80-90% esforço)
+- Semana 4: Pico (85-95% esforço)
+- Semana 5: Deload (50-60% volume)
+
+## PERIODIZAÇÃO LINEAR + ONDULATÓRIA (linear_undulating):
+Aplicar ondulação DIÁRIA entre as sessões:
+
+| Tipo Sessão | Repetições | Descanso | Carga |
+|-------------|------------|----------|-------|
+| Força       | 6-8 reps   | 2-3 min  | Alta (80-85%) |
+| Hipertrofia | 8-12 reps  | 60-90s   | Moderada (70-80%) |
+| Metabólico  | 12-15 reps | 45-60s   | Leve-Moderada (60-70%) |
+
+Exemplo 4x/semana Hipertrofia:
+- Treino A (Seg): Força-Hipertrofia (8 reps)
+- Treino B (Ter): Metabólico (12-15 reps)
+- Treino C (Qui): Hipertrofia (10-12 reps)
+- Treino D (Sex): Força-Hipertrofia (6-8 reps)
+
+## OBRIGATÓRIO:
+- O campo "periodization" no JSON DEVE ser o tipo definido no prompt do usuário
+- O campo "progressionPlan" DEVE refletir as semanas de progressão
+- O campo "periodizationDescription" DEVE explicar a estratégia
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 4: ESTRUTURA DO TREINO
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1229,7 +1385,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
   "description": "Descrição personalizada",
   "weeklyFrequency": numero,
   "sessionDuration": "duração",
-  "periodization": "linear",
+  "periodization": "linear | undulating | linear_undulating",
+  "periodizationDescription": "Descrição da estratégia de periodização",
   "experienceLevel": "beginner/intermediate/advanced",
   "mainGoal": "objetivo",
   "weeklyVolumeStrategy": "Explicação da estratégia de volume",
@@ -1635,6 +1792,13 @@ ${userData.healthDescription ? `
 - Sem restrições`;
   }
 
+  // Calculate periodization based on frequency and level
+  const periodizationConfig = determinePeriodization({
+    trainingDaysCount: userData.trainingDays?.length || 3,
+    experienceLevel: level,
+    goal: userData.goal,
+  });
+
   // Build volume section with CALCULATED values
   const volumeSection = `
 ## 🎯 VOLUME CALCULADO PARA ESTE USUÁRIO
@@ -1665,6 +1829,21 @@ ${userData.healthDescription ? `
 - Se há área prioritária: pode aumentar até +30% apenas naquela área
 - NUNCA reduzir outros grupos abaixo do mínimo
 - O plano será VALIDADO contra estes limites`;
+
+  // Build periodization section
+  const periodizationSection = `
+## 📈 PERIODIZAÇÃO DEFINIDA PARA ESTE USUÁRIO
+
+**Tipo**: ${getPeriodizationLabel(periodizationConfig)}
+**Descrição**: ${periodizationConfig.description}
+**Padrão semanal**: ${periodizationConfig.weeklyPattern}
+
+### REGRAS DE PROGRESSÃO:
+${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).join('\n')}
+
+### ⚠️ OBRIGATÓRIO NO JSON:
+- Campo "periodization" deve ser: "${periodizationConfig.type}"
+- Campo "progressionPlan" deve refletir as regras acima`;
 
   return `
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1708,6 +1887,8 @@ ${healthSection}
 
 ${volumeSection}
 
+${periodizationSection}
+
 ${catalogStr}
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1719,14 +1900,16 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 1. Os RANGES DE VOLUME calculados acima (OBRIGATÓRIO)
 2. A divisão "${volumeRanges.recommendedSplit}" para ${userData.trainingDays?.length || 3} dias/semana
 3. ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max} séries por treino
-4. TODAS as adaptações para condições de saúde
-5. Priorização das áreas solicitadas (se houver)
-6. USE APENAS EXERCÍCIOS DO CATÁLOGO
-7. INCLUA ALTERNATIVAS se houver lesão
-8. VARIE os intervalos de descanso
-9. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa
-10. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
-11. Se tempo exceder, REDUZA isoladores primeiro`;
+4. A periodização "${periodizationConfig.type}" definida acima
+5. TODAS as adaptações para condições de saúde
+6. Priorização das áreas solicitadas (se houver)
+7. USE APENAS EXERCÍCIOS DO CATÁLOGO
+8. INCLUA ALTERNATIVAS se houver lesão
+9. VARIE os intervalos de descanso CONFORME a faixa de repetições
+10. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa
+11. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
+12. Se tempo exceder, REDUZA isoladores primeiro
+13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"`;
 }
 
 function getGenderLabel(gender: string | null): string {
