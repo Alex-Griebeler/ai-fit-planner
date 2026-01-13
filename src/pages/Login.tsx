@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePasswordValidation } from '@/hooks/usePasswordValidation';
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { toast } from 'sonner';
 import evolveLogo from '@/assets/evolve-logo.png';
 
@@ -18,6 +20,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  
+  const passwordValidation = usePasswordValidation(password);
 
   // Get the redirect destination from location state
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
@@ -95,29 +99,35 @@ export default function Login() {
               />
             </div>
 
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pr-12"
-                required
-                minLength={6}
-                disabled={loading}
+            <div>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-12"
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              
+              <PasswordStrengthIndicator 
+                validation={passwordValidation} 
+                show={!isLogin && password.length > 0} 
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={loading}
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
             </div>
 
             <Button 
@@ -125,7 +135,7 @@ export default function Login() {
               size="lg" 
               className="w-full" 
               type="submit"
-              disabled={loading}
+              disabled={loading || (!isLogin && !passwordValidation.isValid)}
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
