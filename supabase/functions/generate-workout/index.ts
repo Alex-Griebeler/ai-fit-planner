@@ -1740,46 +1740,9 @@ serve(async (req) => {
     console.log("Authenticated user:", userId);
 
     // === RATE LIMITING ===
-    const RATE_LIMIT_MAX_REQUESTS = 5;
-    const RATE_LIMIT_WINDOW_HOURS = 1;
-
-    const { data: rateLimitData, error: rateLimitError } = await supabase
-      .rpc("check_rate_limit", {
-        p_user_id: userId,
-        p_endpoint: "generate-workout",
-        p_max_requests: RATE_LIMIT_MAX_REQUESTS,
-        p_window_hours: RATE_LIMIT_WINDOW_HOURS,
-      });
-
-    if (rateLimitError) {
-      console.error("Rate limit check error:", rateLimitError);
-    } else if (rateLimitData && rateLimitData[0]) {
-      const { allowed, current_count, remaining, reset_at } = rateLimitData[0];
-      console.log(`Rate limit check: user=${userId}, count=${current_count}/${RATE_LIMIT_MAX_REQUESTS}, remaining=${remaining}`);
-      
-      if (!allowed) {
-        const resetDate = new Date(reset_at);
-        return new Response(
-          JSON.stringify({
-            error: "Rate limit exceeded",
-            message: `Você atingiu o limite de ${RATE_LIMIT_MAX_REQUESTS} gerações de treino por hora. Tente novamente após ${resetDate.toLocaleTimeString("pt-BR")}.`,
-            reset_at: reset_at,
-            current_count: current_count,
-            max_requests: RATE_LIMIT_MAX_REQUESTS,
-          }),
-          {
-            status: 429,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-              "X-RateLimit-Limit": RATE_LIMIT_MAX_REQUESTS.toString(),
-              "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": reset_at,
-            },
-          }
-        );
-      }
-    }
+    // TODO: REATIVAR RATE LIMIT ANTES DO DEPLOY EM PRODUÇÃO
+    // Rate limit temporariamente desabilitado para desenvolvimento/testes
+    console.log("⚠️ Rate limit DESABILITADO para desenvolvimento");
 
     // === INPUT VALIDATION ===
     const { userData } = await req.json();
