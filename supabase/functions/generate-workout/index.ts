@@ -714,6 +714,8 @@ function getInjuryAdaptationRules(area: string): string {
 
 const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente qualificado para academias low-cost. Você DEVE gerar planos de treino personalizados seguindo RIGOROSAMENTE TODAS as diretrizes técnicas abaixo. NUNCA ignore uma regra.
 
+IMPORTANTE: TODO o output (planName, description, notes, etc.) DEVE ser em PORTUGUÊS BRASILEIRO.
+
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 1: VOLUME SEMANAL DINÂMICO (CRÍTICO)
 ═══════════════════════════════════════════════════════════════════════════════
@@ -769,10 +771,20 @@ Usuário Avançado, Hipertrofia, 45min, 3 dias/semana, sono normal:
 - NUNCA prescreva acima do MÁXIMO calculado
 - TODOS os grupamentos devem estar DENTRO da faixa específica
 
-## Volume por Frequência Semanal (distribuição):
-- 2-3 treinos/semana: distribuir volume em todas as sessões (Full Body ou A/B)
-- 4 treinos/semana: dividir volume entre Upper/Lower (2x cada)
-- 5-6 treinos/semana: PPL ou divisão similar (cada grupo 2x/semana)
+## Volume por Frequência Semanal (DISTRIBUIÇÃO OBRIGATÓRIA):
+O volume semanal DEVE ser DISTRIBUÍDO entre as sessões. Exemplo:
+- Se volume semanal de peitoral = 12 séries e treina 3x/semana → ~4 séries por sessão
+- Se volume semanal de costas = 15 séries e treina 4x/semana → dividir em Upper 1 (8 séries) e Upper 2 (7 séries)
+
+### Divisões recomendadas:
+- 2-3 treinos/semana: Full Body - distribuir volume de CADA grupo em CADA sessão
+- 4 treinos/semana: Upper/Lower x2 - dividir volume entre as 2 sessões de cada tipo
+- 5-6 treinos/semana: PPL x2 ou similar - dividir volume entre as 2 sessões de cada grupo
+
+### REGRA CRÍTICA:
+- NÃO concentrar todo o volume de um grupo em uma única sessão
+- PRIORIZAR frequência 2-3x/semana por grupo muscular
+- Distribuir as séries de forma equilibrada entre os dias que trabalham aquele grupo
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 2: REPETIÇÕES E INTENSIDADE POR OBJETIVO
@@ -780,13 +792,13 @@ Usuário Avançado, Hipertrofia, 45min, 3 dias/semana, sono normal:
 
 ## Número de Repetições:
 - FORÇA: 4-6 reps (70-85% 1RM)
-- HIPERTROFIA: 6-12 reps (65-80% 1RM)
+- HIPERTROFIA: 6-20 reps (60-80% 1RM) - FAIXA AMPLA para variação metabólica e mecânica
 - RESISTÊNCIA/EMAGRECIMENTO: 12-20 reps (50-70% 1RM)
 - SAÚDE: 10-15 reps (60-75% 1RM)
 
 ## Intervalo entre Séries:
 - FORÇA: 90-180 segundos (até 3 minutos para compostos pesados)
-- HIPERTROFIA: 60-90 segundos (USAR VARIAÇÃO: 60s, 75s, 90s - não apenas 90s)
+- HIPERTROFIA: 60-120 segundos (USAR VARIAÇÃO: 60s para isoladores, 90-120s para compostos)
 - EMAGRECIMENTO: 30-60 segundos (alta densidade)
 - SAÚDE: 45-75 segundos
 
@@ -1723,7 +1735,7 @@ function getGenderLabel(gender: string | null): string {
 function getGoalLabel(goal: string | null): string {
   const labels: Record<string, string> = {
     weight_loss: "EMAGRECIMENTO - Aplicar: densidade alta, pausas curtas (30-60s), supersets, reps 12-20, cardio 2-4x/semana",
-    hypertrophy: "HIPERTROFIA - Aplicar: volume conforme Seção 1, reps 6-12, pausas 60-90s (VARIAR)",
+    hypertrophy: "HIPERTROFIA - Aplicar: volume conforme Seção 1, reps 6-20 (variar entre mecânico e metabólico), pausas 60-120s (VARIAR: isoladores 60s, compostos 90-120s)",
     health: "SAÚDE E BEM-ESTAR - Aplicar: volume conforme Seção 1, reps 10-15, exercícios funcionais",
     performance: "PERFORMANCE/FORÇA - Aplicar: reps 4-6, pausas longas 2-3min, periodização ondulatória",
   };
