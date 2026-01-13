@@ -32,6 +32,7 @@ interface WorkoutExercise {
   tempo?: string;
   notes?: string;
   isCompound?: boolean;
+  method?: string;
 }
 
 interface WorkoutCardio {
@@ -463,6 +464,7 @@ export default function Result() {
               key={index}
               className="bg-card rounded-2xl border border-border overflow-hidden"
             >
+              {/* Workout Header */}
               <button
                 onClick={() => toggleWorkout(index)}
                 className="w-full p-4 flex items-center justify-between text-left"
@@ -495,26 +497,52 @@ export default function Result() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 space-y-2">
+                    {/* Table Header - BTB Style */}
+                    <div className="px-4 pb-1">
+                      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
+                        <span className="col-span-5">Exercício</span>
+                        <span className="col-span-3 text-center">Séries × Reps</span>
+                        <span className="col-span-2 text-center">Carga</span>
+                        <span className="col-span-2 text-right">Método</span>
+                      </div>
+                    </div>
+                    
+                    {/* Exercise Rows */}
+                    <div className="px-4 pb-4">
                       {workout.exercises.map((exercise, i) => (
                         <div
                           key={i}
-                          className="flex items-center justify-between py-2 border-t border-border/50"
+                          className="grid grid-cols-12 gap-2 items-center py-2.5 border-b border-border/30 last:border-0"
                         >
-                          <span className="text-sm text-foreground">{exercise.name}</span>
-                          <span className="text-sm text-muted-foreground font-mono">
-                            {exercise.sets}×{exercise.reps}
+                          <span className="col-span-5 text-sm text-foreground truncate">
+                            {exercise.name}
+                          </span>
+                          <span className="col-span-3 text-center text-sm text-foreground font-mono">
+                            {exercise.sets} × {exercise.reps}
+                          </span>
+                          <span className="col-span-2 text-center text-xs text-muted-foreground">
+                            —
+                          </span>
+                          <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
+                            {exercise.method || '—'}
                           </span>
                         </div>
                       ))}
                       
+                      {/* Cardio Row */}
                       {workout.cardio && (
-                        <div className="flex items-center justify-between py-2 border-t border-border/50">
-                          <div className="flex items-center gap-2">
-                            <Flame className="w-4 h-4 text-primary" />
+                        <div className="grid grid-cols-12 gap-2 items-center py-2.5 border-t border-border/50 mt-2">
+                          <div className="col-span-5 flex items-center gap-2">
+                            <Flame className="w-3.5 h-3.5 text-primary" />
                             <span className="text-sm text-foreground">{workout.cardio.type}</span>
                           </div>
-                          <span className="text-sm text-muted-foreground">{workout.cardio.duration}</span>
+                          <span className="col-span-3 text-center text-sm text-muted-foreground">
+                            {workout.cardio.duration}
+                          </span>
+                          <span className="col-span-2 text-center text-xs text-muted-foreground">—</span>
+                          <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
+                            Cardio
+                          </span>
                         </div>
                       )}
                     </div>
