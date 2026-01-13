@@ -6,10 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { BottomNav } from "@/components/BottomNav";
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
-
 // Lazy load pages for better performance
 const Index = lazy(() => import('./pages/Index'));
 const Login = lazy(() => import('./pages/Login'));
@@ -127,6 +127,7 @@ const App = () => (
                 </Routes>
               </PageTransition>
             </Suspense>
+            <BottomNav />
           </ScrollToTopWrapper>
         </BrowserRouter>
       </AuthProvider>

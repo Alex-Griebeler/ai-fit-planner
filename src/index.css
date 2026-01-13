@@ -187,4 +187,9 @@
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-[1.02];
   }
+
+  /* Safe area para dispositivos iOS com notch */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

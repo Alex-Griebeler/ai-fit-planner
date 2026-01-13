@@ -111,7 +111,7 @@ export default function Dashboard() {
       </header>
 
       {/* Content */}
-      <main className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6">
         {/* Profile Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
