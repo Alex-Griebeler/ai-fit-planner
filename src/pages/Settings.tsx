@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Dumbbell, Heart, Moon } from 'lucide-react';
+import { ArrowLeft, User, Dumbbell, Heart, Moon, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
-import { ProfileSection } from '@/components/settings/ProfileSection';
-import { TrainingSection } from '@/components/settings/TrainingSection';
-import { HealthSection } from '@/components/settings/HealthSection';
-import { WellbeingSection } from '@/components/settings/WellbeingSection';
+import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection } from '@/components/settings';
 import { Loader2 } from 'lucide-react';
 
 export default function Settings() {
@@ -53,7 +50,7 @@ export default function Settings() {
           transition={{ duration: 0.3 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 <span className="hidden sm:inline">Perfil</span>
@@ -69,6 +66,10 @@ export default function Settings() {
               <TabsTrigger value="wellbeing" className="flex items-center gap-2">
                 <Moon className="w-4 h-4" />
                 <span className="hidden sm:inline">Bem-estar</span>
+              </TabsTrigger>
+              <TabsTrigger value="subscription" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                <span className="hidden sm:inline">Assinatura</span>
               </TabsTrigger>
             </TabsList>
 
@@ -102,6 +103,10 @@ export default function Settings() {
                 onSave={updateOnboardingData}
                 isSaving={isSaving}
               />
+            </TabsContent>
+
+            <TabsContent value="subscription">
+              <SubscriptionSection />
             </TabsContent>
           </Tabs>
         </motion.div>
