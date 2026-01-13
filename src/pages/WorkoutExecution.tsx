@@ -1,0 +1,346 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Timer, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
+import { useExerciseLoads } from '@/hooks/useExerciseLoads';
+import { RestTimer } from '@/components/workout/RestTimer';
+import { ExerciseCard } from '@/components/workout/ExerciseCard';
+import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface Exercise {
+  order: number;
+  name: string;
+  equipment: string;
+  sets: number;
+  reps: string;
+  rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
+  method?: string;
+}
+
+interface Workout {
+  day: string;
+  name: string;
+  focus: string;
+  muscleGroups: string[];
+  estimatedDuration: string;
+  exercises: Exercise[];
+}
+
+export default function WorkoutExecution() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dayParam = searchParams.get('day');
+
+  const { activePlan, isLoading } = useWorkoutPlans();
+  const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
+
+  // State
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
+  const [completedSets, setCompletedSets] = useState<Record<number, number>>({});
+  const [showTimer, setShowTimer] = useState(false);
+  const [currentRestTime, setCurrentRestTime] = useState(60);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [localLoads, setLocalLoads] = useState<Record<string, string>>({});
+  const [workoutStartTime] = useState(new Date());
+
+  // Get workout data
+  const workout = useMemo(() => {
+    if (!activePlan?.plan_data) return null;
+    const planData = activePlan.plan_data as { workouts?: Workout[] };
+    if (!planData.workouts) return null;
+    
+    return planData.workouts.find(w => w.day === dayParam) || planData.workouts[0];
+  }, [activePlan, dayParam]);
+
+  // Initialize local loads from saved loads
+  useEffect(() => {
+    if (loads && workout) {
+      const loadMap: Record<string, string> = {};
+      workout.exercises.forEach(ex => {
+        const key = `${workout.day}|${ex.name}`;
+        if (loads[key]) {
+          loadMap[ex.name] = loads[key];
+        }
+      });
+      setLocalLoads(loadMap);
+    }
+  }, [loads, workout]);
+
+  // Parse rest time from string like "60s" or "2min"
+  const parseRestTime = useCallback((rest: string): number => {
+    const match = rest.match(/(\d+)/);
+    if (!match) return 60;
+    const value = parseInt(match[1]);
+    if (rest.toLowerCase().includes('min')) return value * 60;
+    return value;
+  }, []);
+
+  // Calculate progress
+  const progressStats = useMemo(() => {
+    if (!workout) return { totalExercises: 0, completedExercises: 0, totalSets: 0, completedSets: 0 };
+    
+    const totalExercises = workout.exercises.length;
+    const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+    const completedSetsCount = Object.values(completedSets).reduce((sum, sets) => sum + sets, 0);
+    const completedExercisesCount = workout.exercises.filter(
+      (_, index) => completedSets[index] >= workout.exercises[index].sets
+    ).length;
+
+    return {
+      totalExercises,
+      completedExercises: completedExercisesCount,
+      totalSets,
+      completedSets: completedSetsCount,
+    };
+  }, [workout, completedSets]);
+
+  const isWorkoutComplete = progressStats.completedSets === progressStats.totalSets;
+
+  // Handle set completion
+  const handleSetComplete = useCallback((exerciseIndex: number, setNumber: number) => {
+    setCompletedSets(prev => ({
+      ...prev,
+      [exerciseIndex]: (prev[exerciseIndex] || 0) + 1,
+    }));
+
+    const exercise = workout?.exercises[exerciseIndex];
+    if (exercise) {
+      const restTime = parseRestTime(exercise.rest);
+      setCurrentRestTime(restTime);
+      setShowTimer(true);
+
+      // Haptic feedback simulation
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }
+  }, [workout, parseRestTime]);
+
+  // Handle set undo
+  const handleSetUndo = useCallback((exerciseIndex: number, setNumber: number) => {
+    setCompletedSets(prev => ({
+      ...prev,
+      [exerciseIndex]: Math.max(0, (prev[exerciseIndex] || 0) - 1),
+    }));
+  }, []);
+
+  // Handle load change
+  const handleLoadChange = useCallback((exerciseName: string, value: string) => {
+    setLocalLoads(prev => ({ ...prev, [exerciseName]: value }));
+  }, []);
+
+  // Save load on blur
+  const handleLoadBlur = useCallback((exerciseName: string) => {
+    const value = localLoads[exerciseName];
+    if (value && workout) {
+      saveLoad(workout.day, exerciseName, value);
+    }
+  }, [localLoads, workout, saveLoad]);
+
+  // Handle exit
+  const handleExit = useCallback(() => {
+    if (progressStats.completedSets > 0 && !isWorkoutComplete) {
+      setShowExitDialog(true);
+    } else {
+      navigate('/dashboard');
+    }
+  }, [progressStats.completedSets, isWorkoutComplete, navigate]);
+
+  // Handle workout completion
+  const handleFinishWorkout = useCallback(() => {
+    const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
+    toast.success(`Treino concluído em ${duration} minutos! 💪`);
+    navigate('/dashboard');
+  }, [workoutStartTime, navigate]);
+
+  // Navigate between exercises
+  const goToNextExercise = useCallback(() => {
+    if (workout && activeExerciseIndex < workout.exercises.length - 1) {
+      setActiveExerciseIndex(prev => prev + 1);
+    }
+  }, [workout, activeExerciseIndex]);
+
+  const goToPreviousExercise = useCallback(() => {
+    if (activeExerciseIndex > 0) {
+      setActiveExerciseIndex(prev => prev - 1);
+    }
+  }, [activeExerciseIndex]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!workout) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+        <p className="text-muted-foreground mb-4">Treino não encontrado</p>
+        <Button onClick={() => navigate('/dashboard')}>Voltar ao Dashboard</Button>
+      </div>
+    );
+  }
+
+  const activeExercise = workout.exercises[activeExerciseIndex];
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={handleExit}
+              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+              aria-label="Sair do treino"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            
+            <div className="text-center flex-1">
+              <h1 className="font-semibold text-sm">{workout.name}</h1>
+              <p className="text-xs text-muted-foreground">{workout.focus}</p>
+            </div>
+
+            <div className="w-9" /> {/* Spacer for alignment */}
+          </div>
+
+          <WorkoutProgress {...progressStats} />
+        </div>
+      </header>
+
+      {/* Timer overlay */}
+      <AnimatePresence>
+        {showTimer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-background/95 backdrop-blur-md flex flex-col items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="text-center"
+            >
+              <h2 className="text-xl font-semibold mb-2">Tempo de Descanso</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {activeExercise?.name}
+              </p>
+              
+              <RestTimer
+                initialSeconds={currentRestTime}
+                autoStart
+                onComplete={() => setShowTimer(false)}
+              />
+
+              <Button
+                variant="ghost"
+                className="mt-8"
+                onClick={() => setShowTimer(false)}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Pular descanso
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exercise list */}
+      <main className="flex-1 overflow-y-auto p-4 pb-32">
+        <div className="max-w-lg mx-auto space-y-3">
+          {workout.exercises.map((exercise, index) => (
+            <ExerciseCard
+              key={`${exercise.name}-${index}`}
+              exercise={exercise}
+              completedSets={completedSets[index] || 0}
+              onSetComplete={(setNum) => handleSetComplete(index, setNum)}
+              onSetUndo={(setNum) => handleSetUndo(index, setNum)}
+              load={localLoads[exercise.name]}
+              onLoadChange={(value) => handleLoadChange(exercise.name, value)}
+              isActive={activeExerciseIndex === index}
+              onSelect={() => setActiveExerciseIndex(index)}
+            />
+          ))}
+        </div>
+      </main>
+
+      {/* Bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border p-4 safe-area-inset-bottom">
+        <div className="max-w-lg mx-auto">
+          {isWorkoutComplete ? (
+            <Button
+              size="lg"
+              className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-500 hover:bg-green-600"
+              onClick={handleFinishWorkout}
+            >
+              <Check className="w-5 h-5 mr-2" />
+              Finalizar Treino
+            </Button>
+          ) : (
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 h-14 rounded-2xl"
+                onClick={goToPreviousExercise}
+                disabled={activeExerciseIndex === 0}
+              >
+                <ChevronUp className="w-5 h-5 mr-1" />
+                Anterior
+              </Button>
+              <Button
+                size="lg"
+                className="flex-1 h-14 rounded-2xl"
+                onClick={goToNextExercise}
+                disabled={activeExerciseIndex === workout.exercises.length - 1}
+              >
+                Próximo
+                <ChevronDown className="w-5 h-5 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Exit confirmation dialog */}
+      <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair do treino?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você completou {progressStats.completedSets} de {progressStats.totalSets} séries. 
+              Seu progresso não será salvo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar treino</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/dashboard')}>
+              Sair mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
