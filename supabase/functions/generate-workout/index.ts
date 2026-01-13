@@ -74,7 +74,7 @@ interface VolumeRange {
 
 interface VolumeRanges {
   large: VolumeRange;   // chest, back, quadriceps, hamstrings, glutes
-  medium: VolumeRange;  // shoulders
+  medium: VolumeRange;  // shoulders, scapular_belt (cintura escapular)
   small: VolumeRange;   // biceps, triceps, calves, core
 }
 
@@ -236,7 +236,7 @@ function calculateVolumeRanges(params: {
 
 function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
   const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes"];
-  const mediumGroups = ["shoulders"];
+  const mediumGroups = ["shoulders", "scapular_belt"];
   
   if (largeGroups.includes(muscle.toLowerCase())) return "large";
   if (mediumGroups.includes(muscle.toLowerCase())) return "medium";
@@ -576,9 +576,27 @@ function validateWorkoutPlan(
   // Muscle groups to validate
   const muscleGroups = {
     large: ["chest", "back", "quadriceps", "hamstrings", "glutes"],
-    medium: ["shoulders"],
+    medium: ["shoulders", "scapular_belt"],
     small: ["biceps", "triceps", "calves", "core"],
   };
+  
+  // 5b. VALIDATE BACK vs CHEST RATIO (Pull/Push balance)
+  const backVolume = weeklyVolume["back"] || 0;
+  const chestVolume = weeklyVolume["chest"] || 0;
+  
+  // Check if user has chest as priority area
+  const chestIsPriority = (userData.bodyAreas || []).some(area => 
+    ["peitoral", "peito", "chest"].includes(area.toLowerCase())
+  );
+  
+  // If chest is NOT priority, back should be >= chest
+  if (!chestIsPriority && backVolume > 0 && chestVolume > 0) {
+    if (backVolume < chestVolume) {
+      warnings.push(
+        `Volume de Costas (${backVolume}) deve ser >= Peitoral (${chestVolume}) para equilíbrio postural`
+      );
+    }
+  }
   
   // Check if muscle is a priority area (allow +30% volume)
   const isPriorityGroup = (muscle: string): boolean => {
@@ -980,6 +998,62 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 - IMPORTANTE: NÃO REDUZIR volume dos demais grupos abaixo do mínimo
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 6.1: CINTURA ESCAPULAR (OBRIGATÓRIA)
+═══════════════════════════════════════════════════════════════════════════════
+
+## REGRA CRÍTICA: A CINTURA ESCAPULAR É FREQUENTEMENTE NEGLIGENCIADA
+
+A Cintura Escapular (deltóide posterior, trapézio médio, romboides) é ESSENCIAL para:
+- Equilíbrio postural
+- Prevenção de lesões no ombro
+- Estabilidade escapular
+
+### REGRA OBRIGATÓRIA:
+- Incluir PELO MENOS 1 exercício de Cintura Escapular por semana
+- Volume: Tratar como grupo MÉDIO (8-14 séries/semana após ajustes)
+
+### EXERCÍCIOS DO CATÁLOGO PARA CINTURA ESCAPULAR:
+- Crucifixo inverso (pegada pronada ou romana)
+- Remada pegada aberta (banco alto, cabo ou máquina)
+- Face Pull (se disponível)
+
+### POSICIONAMENTO:
+- Em dias de COSTAS ou PUXAR
+- Após os exercícios principais de Grande Dorsal
+- Pode ser feito como superset com deltóide lateral
+
+═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 6.2: PROPORÇÃO COSTAS vs EMPURRAR
+═══════════════════════════════════════════════════════════════════════════════
+
+## REGRA DE EQUILÍBRIO POSTURAL (Pull/Push Ratio)
+
+Para postura saudável e prevenção de lesões, o volume de PUXAR deve ser 
+LIGEIRAMENTE SUPERIOR ao de EMPURRAR.
+
+### Quando NÃO há prioridade declarada para Peitoral:
+- Costas (Grande Dorsal): +2-3 séries/semana em relação ao Peitoral
+- Exemplo: Se Peitoral = 12 séries, Costas = 14-15 séries
+- Proporção Puxar : Empurrar = 1.1:1 até 1.25:1
+
+### Quando HÁ prioridade declarada para Peitoral:
+- Manter proporção 1:1 (igualar volumes)
+- NÃO reduzir costas abaixo do mínimo
+
+### Exercícios de PUXAR (contabilizar para Costas):
+- Puxadas (todas variações)
+- Remadas (todas variações exceto as abertas que são Cintura Escapular)
+- Pullover
+
+### Exercícios de EMPURRAR (contabilizar para Peitoral):
+- Supino (todas variações)
+- Crucifixo frontal (peitoral)
+
+### ⚠️ IMPORTANTE:
+- Desenvolvimento e elevações de ombro NÃO entram nesta conta
+- Deltóide posterior NÃO é "empurrar" - faz parte da cintura escapular
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 7: SONO E ESTRESSE
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1073,6 +1147,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
   "weeklyVolume": {
     "chest": X,
     "back": X,
+    "scapular_belt": X,
     "shoulders": X,
     "biceps": X,
     "triceps": X,
@@ -1110,7 +1185,9 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 4. Inclua ALTERNATIVAS se houver lesão
 5. VARIE os intervalos de descanso (não use só 90s)
 6. Adapte instruções ao nível do usuário
-7. weeklyVolume DEVE ter TODOS os grupos
+7. weeklyVolume DEVE ter TODOS os grupos (incluindo scapular_belt)
+8. Inclua PELO MENOS 1 exercício de Cintura Escapular
+9. Volume de Costas >= Volume de Peitoral (se não há prioridade peitoral)
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
@@ -1119,7 +1196,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 - Ignore o tempo de sessão disponível
 - Prescreva abaixo do MÍNIMO
 - Prescreva acima do MÁXIMO
-- Invente exercícios fora do catálogo`;
+- Invente exercícios fora do catálogo
+- Negligencie a Cintura Escapular`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //                          MAIN SERVER HANDLER
@@ -1443,21 +1521,24 @@ ${userData.healthDescription ? `
 **Séries por treino**: ${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}
 
 ### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
-| Grupamento    | Mínimo | Máximo |
-|---------------|--------|--------|
-| Peitoral      | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Costas        | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Quadríceps    | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Isquiotibiais | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Glúteos       | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Ombros        | ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
-| Bíceps        | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
-| Tríceps       | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
-| Panturrilhas  | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
-| Core          | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+| Grupamento       | Mínimo | Máximo |
+|------------------|--------|--------|
+| Peitoral         | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
+| Costas           | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
+| Cintura Escapular| ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
+| Quadríceps       | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
+| Isquiotibiais    | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
+| Glúteos          | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
+| Ombros           | ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
+| Bíceps           | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+| Tríceps          | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+| Panturrilhas     | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+| Core             | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
 
 ### ⚠️ REGRAS CRÍTICAS:
 - TODOS os grupamentos DEVEM estar DENTRO das faixas acima
+- Cintura Escapular: OBRIGATÓRIO pelo menos 1 exercício (crucifixo inverso, remada aberta)
+- Costas >= Peitoral em volume (equilíbrio postural)
 - Se há área prioritária: pode aumentar até +30% apenas naquela área
 - NUNCA reduzir outros grupos abaixo do mínimo
 - O plano será VALIDADO contra estes limites`;
