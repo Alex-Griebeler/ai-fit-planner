@@ -94,7 +94,7 @@ export default function Index() {
                 variant="gradient"
                 size="lg"
                 className="w-full sm:w-auto min-w-[200px] text-base h-14 press-scale"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/login?mode=signup')}
                 aria-label="Começar agora - criar conta ou entrar"
               >
                 Começar Agora
@@ -276,7 +276,7 @@ export default function Index() {
               variant="gradient"
               size="lg"
               className="min-w-[280px] h-16 text-lg press-scale"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login?mode=signup')}
               aria-label="Criar meu treino personalizado gratuitamente"
             >
               Criar Meu Treino Grátis
