@@ -90,7 +90,7 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
       {data.includeCardio && (
         <div className="space-y-3 mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
           <p className="text-sm text-muted-foreground font-medium">
-            Como você prefere fazer o cardio?
+            Como você prefere fazer o cardio? <span className="text-destructive">*</span>
           </p>
           {CARDIO_TIMING_OPTIONS.map((option) => (
             <OptionCard
@@ -102,6 +102,11 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
               onClick={() => updateData('cardioTiming', option.value)}
             />
           ))}
+          {data.cardioTiming === null && (
+            <p className="text-xs text-destructive mt-2">
+              Selecione uma opção para continuar
+            </p>
+          )}
         </div>
       )}
 
