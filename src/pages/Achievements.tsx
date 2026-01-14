@@ -39,7 +39,7 @@ export default function Achievements() {
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="shrink-0"
+            className="shrink-0 press-scale"
             aria-label="Voltar"
           >
             <ChevronLeft className="w-5 h-5" />

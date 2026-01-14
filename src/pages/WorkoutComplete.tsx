@@ -305,7 +305,8 @@ export default function WorkoutComplete() {
                     onClick={() => setSessionNotes(prev => 
                       prev ? `${prev}, ${note}` : note
                     )}
-                    className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label={`Adicionar nota: ${note}`}
                   >
                     {note}
                   </button>
@@ -324,7 +325,7 @@ export default function WorkoutComplete() {
         >
           <Button
             size="lg"
-            className="w-full h-14 rounded-2xl text-lg font-semibold"
+            className="w-full h-14 rounded-2xl text-lg font-semibold press-scale"
             onClick={handleSave}
             disabled={isSaving}
           >

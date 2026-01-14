@@ -64,7 +64,8 @@ export function PremiumGate({
           <div className="space-y-3">
             <Button 
               onClick={createCheckout}
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+              variant="gradient"
+              className="w-full press-scale"
               size="lg"
             >
               <Sparkles className="w-4 h-4 mr-2" />

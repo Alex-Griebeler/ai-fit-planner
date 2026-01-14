@@ -129,7 +129,8 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
                 <button 
                   key={index}
                   onClick={() => navigate(`/workout?day=${encodeURIComponent(workout.day)}`)}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group"
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={`Iniciar treino ${workout.name}`}
                 >
                   <div>
                     <p className="font-medium text-foreground">{workout.name}</p>
