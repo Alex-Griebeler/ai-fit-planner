@@ -47,7 +47,9 @@ export function useWorkoutPlans() {
       return data as WorkoutPlan[];
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 30, // 30 segundos para melhor sincronização
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Buscar plano ativo
@@ -68,7 +70,9 @@ export function useWorkoutPlans() {
       return data as WorkoutPlan | null;
     },
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 30, // 30 segundos para melhor sincronização
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Criar novo plano
@@ -144,6 +148,11 @@ export function useWorkoutPlans() {
     },
   });
 
+  // Função para forçar refetch dos planos
+  const refetchPlans = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
+  };
+
   return {
     plans: allPlansQuery.data ?? [],
     activePlan: activePlanQuery.data,
@@ -153,5 +162,6 @@ export function useWorkoutPlans() {
     isCreating: createMutation.isPending,
     deactivatePlan: deactivateMutation.mutateAsync,
     deletePlan: deleteMutation.mutateAsync,
+    refetchPlans,
   };
 }
