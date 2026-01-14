@@ -1906,7 +1906,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
     {
       "day": "Dia da semana",
       "name": "Nome do treino",
-      "focus": "Foco principal",
+      "focus": "Grupos musculares principais separados por ' • ' (ex: 'Peitoral • Ombros • Tríceps')",
       "muscleGroups": ["Peitoral", "Ombros", "Tríceps"],
       "estimatedDuration": "XX min",
       "warmup": {
@@ -1987,6 +1987,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 11. Se tempo exceder, REDUZA isoladores primeiro
 12. Se splitPreference = "no_preference": ZERO exercícios repetidos na semana
 13. Aplique estratégia de variação conforme preferência do usuário (alta/moderada/baixa)
+14. O campo "focus" DEVE listar os grupos musculares principais separados por " • " (ex: "Peitoral • Ombros • Tríceps"), NÃO o tipo de estímulo
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
