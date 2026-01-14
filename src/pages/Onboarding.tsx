@@ -88,11 +88,18 @@ export default function Onboarding() {
         weight: data.weight,
       });
 
+      // Sanitiza trainingDays antes de salvar (remove duplicatas e valida dias)
+      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      const sanitizedData = {
+        ...data,
+        trainingDays: [...new Set(data.trainingDays)].filter(d => validDays.includes(d)),
+      };
+
       // Salva preferências de treino
-      await saveOnboardingData(data);
+      await saveOnboardingData(sanitizedData);
 
       // Salva no sessionStorage temporariamente para a página de resultado
-      sessionStorage.setItem('onboardingData', JSON.stringify(data));
+      sessionStorage.setItem('onboardingData', JSON.stringify(sanitizedData));
       
       toast.success('Dados salvos com sucesso!');
       navigate('/result');

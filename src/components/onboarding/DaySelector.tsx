@@ -16,13 +16,17 @@ const days = [
   { key: 'sun', label: 'D', fullLabel: 'Domingo' },
 ];
 
+const VALID_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
 export function DaySelector({ selectedDays, onChange }: DaySelectorProps) {
   const toggleDay = (day: string) => {
-    if (selectedDays.includes(day)) {
-      onChange(selectedDays.filter((d) => d !== day));
+    const currentSet = new Set(selectedDays.filter(d => VALID_DAYS.includes(d)));
+    if (currentSet.has(day)) {
+      currentSet.delete(day);
     } else {
-      onChange([...selectedDays, day]);
+      currentSet.add(day);
     }
+    onChange([...currentSet]);
   };
 
   return (
