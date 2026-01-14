@@ -1,14 +1,19 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Dumbbell, Heart, Moon, CreditCard, Loader2 } from 'lucide-react';
+import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
+import { useAdmin } from '@/hooks/useAdmin';
 import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection } from '@/components/settings';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { profile, isLoading: profileLoading, updateProfile, isUpdating } = useProfile();
   const { onboardingData, isLoading: onboardingLoading, updateOnboardingData, isSaving } = useOnboardingData();
+  const { isAdmin } = useAdmin();
   const [activeTab, setActiveTab] = useState('profile');
 
   const isLoading = profileLoading || onboardingLoading;
@@ -31,8 +36,19 @@ export default function Settings() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-center">
+        <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Configurações</h1>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Admin</span>
+            </Button>
+          )}
         </div>
       </header>
 

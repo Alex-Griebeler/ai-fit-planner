@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import { BottomNav } from "@/components/BottomNav";
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +26,7 @@ const Progress = lazy(() => import('./pages/Progress'));
 const WorkoutComplete = lazy(() => import('./pages/WorkoutComplete'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 const queryClient = new QueryClient();
 
@@ -147,6 +149,14 @@ const App = () => (
                       <ProtectedRoute>
                         <Achievements />
                       </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
                     } 
                   />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

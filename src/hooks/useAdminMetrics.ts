@@ -1,0 +1,115 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { subDays, format } from 'date-fns';
+
+export type Period = '7d' | '30d' | '90d';
+
+export interface AdminMetrics {
+  summary: {
+    totalUsers: number;
+    newUsersInPeriod: number;
+    premiumUsers: number;
+    conversionRate: number;
+    mrr: number;
+    activeUsersInPeriod: number;
+  };
+  engagement: {
+    totalSessions: number;
+    completedSessions: number;
+    completionRate: number;
+    avgDuration: number;
+    avgRpe: number;
+    avgStreak: number;
+  };
+  funnel: {
+    signups: number;
+    onboarded: number;
+    withPlan: number;
+    premium: number;
+  };
+  timeSeries: {
+    signups: { date: string; count: number }[];
+    sessions: { date: string; count: number }[];
+    conversions: { date: string; count: number }[];
+  };
+}
+
+const defaultMetrics: AdminMetrics = {
+  summary: {
+    totalUsers: 0,
+    newUsersInPeriod: 0,
+    premiumUsers: 0,
+    conversionRate: 0,
+    mrr: 0,
+    activeUsersInPeriod: 0,
+  },
+  engagement: {
+    totalSessions: 0,
+    completedSessions: 0,
+    completionRate: 0,
+    avgDuration: 0,
+    avgRpe: 0,
+    avgStreak: 0,
+  },
+  funnel: {
+    signups: 0,
+    onboarded: 0,
+    withPlan: 0,
+    premium: 0,
+  },
+  timeSeries: {
+    signups: [],
+    sessions: [],
+    conversions: [],
+  },
+};
+
+export function useAdminMetrics(period: Period = '30d') {
+  const [metrics, setMetrics] = useState<AdminMetrics>(defaultMetrics);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const periodDays = {
+    '7d': 7,
+    '30d': 30,
+    '90d': 90,
+  };
+
+  const fetchMetrics = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const endDate = new Date();
+      const startDate = subDays(endDate, periodDays[period]);
+
+      const { data, error: fnError } = await supabase.functions.invoke('admin-metrics', {
+        body: {
+          startDate: format(startDate, 'yyyy-MM-dd'),
+          endDate: format(endDate, 'yyyy-MM-dd'),
+        },
+      });
+
+      if (fnError) {
+        throw fnError;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setMetrics(data);
+    } catch (err) {
+      console.error('Error fetching admin metrics:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao carregar métricas');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  return { metrics, isLoading, error, refetch: fetchMetrics };
+}
