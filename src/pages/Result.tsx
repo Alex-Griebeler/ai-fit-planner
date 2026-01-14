@@ -151,7 +151,7 @@ export default function Result() {
         { body: { userData } }
       );
 
-      if (responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
+      if (responseData?.error?.includes('Limite de gerações') || responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
         const resetAt = new Date(responseData.reset_at);
         setRateLimitResetAt(resetAt);
         setIsRateLimited(true);
