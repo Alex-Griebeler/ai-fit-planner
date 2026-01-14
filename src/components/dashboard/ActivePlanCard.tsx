@@ -17,6 +17,7 @@ interface PlanDataWorkout {
   day: string;
   name: string;
   focus: string;
+  muscleGroups?: string[];
   exercises: Array<{
     name: string;
     sets: number;
@@ -134,7 +135,9 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
                 >
                   <div>
                     <p className="font-medium text-foreground">{workout.name}</p>
-                    <p className="text-xs text-muted-foreground">{workout.focus}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {workout.muscleGroups?.slice(0, 3).join(' • ') || workout.focus}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="text-xs">

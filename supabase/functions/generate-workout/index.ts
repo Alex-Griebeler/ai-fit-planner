@@ -1988,6 +1988,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 12. Se splitPreference = "no_preference": ZERO exercícios repetidos na semana
 13. Aplique estratégia de variação conforme preferência do usuário (alta/moderada/baixa)
 14. O campo "focus" DEVE listar os grupos musculares principais separados por " • " (ex: "Peitoral • Ombros • Tríceps"), NÃO o tipo de estímulo
+15. O campo "planName" DEVE ser simples e amigável. NUNCA use siglas técnicas como ULPPL, PPL, ABC, PHUL. Use formatos como "Plano X Dias - Objetivo" (ex: "Plano 5 Dias - Hipertrofia")
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
