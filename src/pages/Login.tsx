@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePasswordValidation } from '@/hooks/usePasswordValidation';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
+import { TermsCheckbox } from '@/components/TermsCheckbox';
 import { toast } from 'sonner';
 import evolveLogo from '@/assets/evolve-logo.png';
 
@@ -25,6 +26,8 @@ export default function Login() {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [termsError, setTermsError] = useState(false);
   
   const passwordValidation = usePasswordValidation(password);
 
@@ -33,6 +36,14 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate terms acceptance for signup
+    if (!isLogin && !acceptedTerms) {
+      setTermsError(true);
+      toast.error('Você precisa aceitar os Termos de Uso e a Política de Privacidade');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -272,12 +283,25 @@ export default function Login() {
               </div>
             )}
 
+            {/* Terms and Privacy checkbox - only for signup */}
+            {!isLogin && (
+              <TermsCheckbox
+                accepted={acceptedTerms}
+                onAcceptChange={(accepted) => {
+                  setAcceptedTerms(accepted);
+                  if (accepted) setTermsError(false);
+                }}
+                error={termsError}
+                disabled={loading}
+              />
+            )}
+
             <Button 
               variant="gradient" 
               size="lg" 
               className="w-full press-scale" 
               type="submit"
-              disabled={loading || (!isLogin && (!passwordValidation.isValid || password !== confirmPassword))}
+              disabled={loading || (!isLogin && (!passwordValidation.isValid || password !== confirmPassword || !acceptedTerms))}
               aria-label={isLogin ? 'Entrar na conta' : 'Criar nova conta'}
             >
               {loading ? (
@@ -347,6 +371,8 @@ export default function Login() {
                 // Limpa campos ao trocar entre login e cadastro
                 setPassword('');
                 setConfirmPassword('');
+                setAcceptedTerms(false);
+                setTermsError(false);
               }}
               className="text-primary font-semibold hover:underline"
               disabled={loading}

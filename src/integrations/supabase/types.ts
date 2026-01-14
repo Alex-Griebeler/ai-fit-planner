@@ -171,6 +171,9 @@ export type Database = {
           height: number | null
           id: string
           name: string
+          privacy_accepted_at: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
           user_id: string
           weight: number | null
@@ -182,6 +185,9 @@ export type Database = {
           height?: number | null
           id?: string
           name: string
+          privacy_accepted_at?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_id: string
           weight?: number | null
@@ -193,6 +199,9 @@ export type Database = {
           height?: number | null
           id?: string
           name?: string
+          privacy_accepted_at?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_id?: string
           weight?: number | null

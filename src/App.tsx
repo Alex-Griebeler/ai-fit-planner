@@ -27,6 +27,8 @@ const WorkoutComplete = lazy(() => import('./pages/WorkoutComplete'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
 const queryClient = new QueryClient();
 
@@ -159,6 +161,9 @@ const App = () => (
                       </AdminRoute>
                     } 
                   />
+                  {/* Public legal pages */}
+                  <Route path="/termos" element={<TermsOfUse />} />
+                  <Route path="/privacidade" element={<PrivacyPolicy />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
