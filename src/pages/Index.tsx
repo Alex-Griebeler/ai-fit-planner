@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { 
@@ -289,13 +289,31 @@ export default function Index() {
       {/* Footer */}
       <footer className="py-8 border-t border-border">
         <div className="container max-w-5xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Dumbbell className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="font-display font-semibold">AI Trainer</span>
             </div>
+            
+            {/* Legal Links */}
+            <div className="flex items-center gap-4 text-sm">
+              <Link 
+                to="/termos" 
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Termos de Uso
+              </Link>
+              <span className="text-border">|</span>
+              <Link 
+                to="/privacidade" 
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Política de Privacidade
+              </Link>
+            </div>
+            
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} AI Trainer. Todos os direitos reservados.
             </p>
