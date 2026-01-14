@@ -88,10 +88,9 @@ export function EffortScale({ value, onChange }: EffortScaleProps) {
           min={1}
           max={10}
           step={1}
-          className="cursor-pointer"
+          className="cursor-pointer [&_[data-slot=range]]:transition-colors [&_[data-slot=range]]:duration-200"
           style={{
-            '--slider-track-color': 'hsl(var(--muted))',
-            '--slider-range-color': color,
+            '--effort-color': color,
           } as React.CSSProperties}
         />
         

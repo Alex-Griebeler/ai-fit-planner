@@ -74,6 +74,7 @@ export default function WorkoutComplete() {
     };
 
     initializeCompletion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Hide confetti after 3 seconds

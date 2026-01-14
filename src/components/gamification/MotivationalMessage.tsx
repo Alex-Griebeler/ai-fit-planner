@@ -63,7 +63,7 @@ export function MotivationalMessage({ userName }: MotivationalMessageProps) {
       };
     }
 
-    // Time-based greetings
+    // Time-based greetings - using deterministic selection based on hour
     if (hour >= 5 && hour < 12) {
       const morningMessages = [
         `Bom dia${name ? `, ${name}` : ''}! Energia matinal para treinar!`,
@@ -71,7 +71,7 @@ export function MotivationalMessage({ userName }: MotivationalMessageProps) {
         `Manhã é o melhor horário para construir hábitos.`,
       ];
       return {
-        text: morningMessages[Math.floor(Math.random() * morningMessages.length)],
+        text: morningMessages[hour % morningMessages.length],
         icon: Sun,
         gradient: 'from-yellow-400 to-orange-400',
       };
@@ -84,7 +84,7 @@ export function MotivationalMessage({ userName }: MotivationalMessageProps) {
         `Tarde perfeita para evoluir.`,
       ];
       return {
-        text: afternoonMessages[Math.floor(Math.random() * afternoonMessages.length)],
+        text: afternoonMessages[hour % afternoonMessages.length],
         icon: Coffee,
         gradient: 'from-amber-500 to-orange-500',
       };
@@ -96,7 +96,7 @@ export function MotivationalMessage({ userName }: MotivationalMessageProps) {
       `A noite é jovem e você está pronto!`,
     ];
     return {
-      text: eveningMessages[Math.floor(Math.random() * eveningMessages.length)],
+      text: eveningMessages[hour % eveningMessages.length],
       icon: Moon,
       gradient: 'from-indigo-500 to-purple-500',
     };
