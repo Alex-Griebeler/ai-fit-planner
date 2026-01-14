@@ -228,6 +228,9 @@ export default function Result() {
         })),
       });
 
+      // Pequeno delay para garantir propagação do cache invalidation
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
     } catch (err) {

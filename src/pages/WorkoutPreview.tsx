@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Play, Clock, Dumbbell, Info } from 'lucide-react';
+import { ArrowLeft, Download, Play, Clock, Dumbbell, Info, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
@@ -40,8 +40,10 @@ export default function WorkoutPreview() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dayParam = searchParams.get('day');
+  const [hasAutoRetried, setHasAutoRetried] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  const { activePlan, isLoading } = useWorkoutPlans();
+  const { activePlan, isLoading, refetchPlans } = useWorkoutPlans();
 
   const workout = useMemo(() => {
     if (!activePlan?.plan_data) return null;
@@ -50,6 +52,21 @@ export default function WorkoutPreview() {
     
     return planData.workouts.find(w => w.day === dayParam) || planData.workouts[0];
   }, [activePlan, dayParam]);
+
+  // Auto-retry uma vez se não encontrar o treino (resolve problemas de cache)
+  useEffect(() => {
+    if (!isLoading && !workout && !hasAutoRetried && activePlan === null) {
+      setHasAutoRetried(true);
+      setIsRetrying(true);
+      refetchPlans().finally(() => setIsRetrying(false));
+    }
+  }, [isLoading, workout, hasAutoRetried, activePlan, refetchPlans]);
+
+  const handleManualRetry = async () => {
+    setIsRetrying(true);
+    await refetchPlans();
+    setIsRetrying(false);
+  };
 
   const handleDownloadPdf = () => {
     if (!workout || !activePlan) return;
@@ -71,12 +88,14 @@ export default function WorkoutPreview() {
     navigate(`/workout?day=${encodeURIComponent(workout?.day || '')}`);
   };
 
-  if (isLoading) {
+  if (isLoading || isRetrying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <span className="text-sm text-muted-foreground">Carregando treino...</span>
+          <span className="text-sm text-muted-foreground">
+            {isRetrying ? 'Atualizando dados...' : 'Carregando treino...'}
+          </span>
         </div>
       </div>
     );
@@ -85,8 +104,20 @@ export default function WorkoutPreview() {
   if (!workout) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-        <p className="text-muted-foreground mb-4">Treino não encontrado</p>
-        <Button onClick={() => navigate('/dashboard')}>Voltar ao Dashboard</Button>
+        <Dumbbell className="w-12 h-12 text-muted-foreground mb-4" />
+        <p className="text-foreground font-medium mb-2">Treino não encontrado</p>
+        <p className="text-sm text-muted-foreground text-center mb-6 max-w-xs">
+          Se você acabou de criar um plano, aguarde um momento e tente atualizar.
+        </p>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Button onClick={handleManualRetry} variant="outline" className="w-full">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Tentar Novamente
+          </Button>
+          <Button onClick={() => navigate('/dashboard')} className="w-full">
+            Voltar ao Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
