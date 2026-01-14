@@ -1,12 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Dumbbell, TrendingUp, Settings } from 'lucide-react';
+import { Home, Dumbbell, Trophy, TrendingUp, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/dashboard', icon: Home, label: 'Início' },
   { path: '/result', icon: Dumbbell, label: 'Treino' },
+  { path: '/achievements', icon: Trophy, label: 'Conquistas' },
   { path: '/progress', icon: TrendingUp, label: 'Progresso' },
   { path: '/settings', icon: Settings, label: 'Config' },
 ];
