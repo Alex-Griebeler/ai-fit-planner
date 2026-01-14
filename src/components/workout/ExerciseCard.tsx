@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronDown, Dumbbell, Info } from 'lucide-react';
+import { Check, Dumbbell, Info, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Exercise {
   order: number;
@@ -32,6 +37,9 @@ interface ExerciseCardProps {
   onLoadChange?: (value: string) => void;
   isActive?: boolean;
   onSelect?: () => void;
+  onCompleteExercise?: () => void;
+  onStartTimer?: () => void;
+  restTime?: string;
 }
 
 export function ExerciseCard({
@@ -43,8 +51,12 @@ export function ExerciseCard({
   onLoadChange,
   isActive = false,
   onSelect,
+  onCompleteExercise,
+  onStartTimer,
+  restTime,
 }: ExerciseCardProps) {
-  const [showDetails, setShowDetails] = useState(false);
+  const [showLoadInput, setShowLoadInput] = useState(false);
+  const [showSeriesButtons, setShowSeriesButtons] = useState(false);
   const allSetsComplete = completedSets >= exercise.sets;
 
   const handleSetClick = (setIndex: number) => {
@@ -167,55 +179,137 @@ export function ExerciseCard({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 pt-2 border-t border-border/50">
-              {/* Load input */}
-              <div className="flex items-center gap-3 mb-4">
-                <Dumbbell className="w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Carga (ex: 20kg)"
-                  value={load || ''}
-                  onChange={(e) => onLoadChange?.(e.target.value)}
-                  className="flex-1 h-10"
-                  aria-label={`Carga para ${exercise.name}`}
-                />
+              {/* Progress indicator */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-muted-foreground">
+                  {completedSets}/{exercise.sets} séries
+                </span>
+                <div className="flex gap-1">
+                  {Array.from({ length: exercise.sets }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-colors",
+                        idx < completedSets ? "bg-green-500" : "bg-muted"
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Set buttons */}
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: exercise.sets }).map((_, index) => {
-                  const isCompleted = index < completedSets;
-                  const isCurrent = index === completedSets;
-                  
-                  return (
-                    <motion.button
-                      key={index}
-                      whileTap={{ scale: 0.95 }}
+              {/* Main action button - Complete Exercise */}
+              {!allSetsComplete && (
+                <Button
+                  size="lg"
+                  className="w-full h-12 rounded-xl mb-3 press-scale"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCompleteExercise?.();
+                  }}
+                >
+                  <Check className="w-5 h-5 mr-2" />
+                  Completar Exercício
+                </Button>
+              )}
+
+              {/* Secondary actions row */}
+              <div className="flex gap-2">
+                {/* Timer button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-10 rounded-xl"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartTimer?.();
+                  }}
+                >
+                  <Timer className="w-4 h-4 mr-1.5" />
+                  Timer {restTime || exercise.rest}
+                </Button>
+
+                {/* Load input toggle */}
+                {showLoadInput ? (
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Ex: 20kg"
+                      value={load || ''}
+                      onChange={(e) => onLoadChange?.(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 h-10"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-10 px-3"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleSetClick(index);
+                        setShowLoadInput(false);
                       }}
-                      className={cn(
-                        "h-12 w-12 rounded-xl font-semibold text-sm transition-all duration-200",
-                        isCompleted
-                          ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
-                          : isCurrent
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                            : "bg-muted text-muted-foreground"
-                      )}
                     >
-                      {isCompleted ? (
-                        <Check className="w-5 h-5 mx-auto" />
-                      ) : (
-                        `S${index + 1}`
-                      )}
-                    </motion.button>
-                  );
-                })}
+                      OK
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-10 rounded-xl"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowLoadInput(true);
+                    }}
+                  >
+                    <Dumbbell className="w-4 h-4 mr-1.5" />
+                    {load || 'Carga'}
+                  </Button>
+                )}
               </div>
 
-              <p className="text-xs text-muted-foreground mt-3 text-center">
-                {completedSets}/{exercise.sets} séries completadas
-              </p>
+              {/* Collapsible series buttons - advanced option */}
+              <Collapsible open={showSeriesButtons} onOpenChange={setShowSeriesButtons}>
+                <CollapsibleTrigger
+                  className="w-full mt-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {showSeriesButtons ? '▲ Ocultar séries individuais' : '▼ Marcar série a série'}
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Array.from({ length: exercise.sets }).map((_, index) => {
+                      const isCompleted = index < completedSets;
+                      const isCurrent = index === completedSets;
+                      
+                      return (
+                        <motion.button
+                          key={index}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSetClick(index);
+                          }}
+                          className={cn(
+                            "h-12 w-12 rounded-xl font-semibold text-sm transition-all duration-200",
+                            isCompleted
+                              ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
+                              : isCurrent
+                                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {isCompleted ? (
+                            <Check className="w-5 h-5 mx-auto" />
+                          ) : (
+                            `S${index + 1}`
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </motion.div>
         )}
