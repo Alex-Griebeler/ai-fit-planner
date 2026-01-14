@@ -1,5 +1,10 @@
 project_id = "drudjgrbludyqdogwvqc"
 
+[auth]
+# Enable leaked password protection via Have I Been Pwned (HIBP)
+# This prevents users from using passwords that have been exposed in data breaches
+hibp_enabled = true
+
 [functions.generate-workout]
 enabled = true
 verify_jwt = false
