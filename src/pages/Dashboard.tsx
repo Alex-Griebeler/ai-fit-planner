@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { 
   ProfileCard, 
   ActivePlanCard, 
@@ -12,7 +13,7 @@ import {
   SessionHistoryCard,
   ProgressPreviewCard 
 } from '@/components/dashboard';
-import { StreakCard, MotivationalMessage } from '@/components/gamification';
+import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -141,6 +142,17 @@ export default function Dashboard() {
           transition={{ duration: 0.3, delay: 0.1 }}
         >
           <StreakCard />
+        </motion.div>
+
+        {/* Weekly Progress */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
+          <Card className="p-4">
+            <WeeklyProgress />
+          </Card>
         </motion.div>
 
         {/* Stats Grid */}
