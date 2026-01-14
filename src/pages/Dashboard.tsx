@@ -63,6 +63,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip link for accessibility */}
+      <a href="#main-content" className="skip-link">
+        Pular para conteúdo principal
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -71,7 +76,7 @@ export default function Dashboard() {
             {activePlan && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="press-scale">
                     <Plus className="w-4 h-4 mr-1" />
                     Novo Plano
                   </Button>
@@ -85,7 +90,10 @@ export default function Dashboard() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => navigate('/onboarding')}>
+                    <AlertDialogAction 
+                      onClick={() => navigate('/onboarding')}
+                      className="press-scale"
+                    >
                       Continuar
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -97,6 +105,7 @@ export default function Dashboard() {
               size="icon"
               onClick={handleSignOut}
               aria-label="Sair da conta"
+              className="focus-ring"
             >
               <LogOut className="w-4 h-4" />
             </Button>
@@ -105,7 +114,7 @@ export default function Dashboard() {
       </header>
 
       {/* Content */}
-      <main className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6">
+      <main id="main-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6">
         {/* Profile Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

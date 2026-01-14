@@ -317,7 +317,7 @@ export default function Result() {
 
   const userName = profile?.name || data?.name || 'Atleta';
 
-  // Loading State - Apple minimal
+  // Loading State - Apple minimal with progress indicator
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -327,12 +327,17 @@ export default function Result() {
           className="text-center px-6"
         >
           <motion.div
-            className="w-8 h-8 mx-auto mb-6 border-2 border-primary border-t-transparent rounded-full"
+            className="w-10 h-10 mx-auto mb-6 border-2 border-primary border-t-transparent rounded-full"
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            role="status"
+            aria-label="Carregando"
           />
+          <p className="text-foreground text-base font-medium mb-2">
+            Criando seu plano
+          </p>
           <p className="text-muted-foreground text-sm tracking-wide">
-            Gerando plano personalizado
+            Isso pode levar alguns segundos...
           </p>
         </motion.div>
       </div>
@@ -812,9 +817,10 @@ export default function Result() {
           {!isSaved ? (
             <Button 
               size="lg" 
-              className="w-full rounded-xl h-12"
+              className="w-full rounded-xl h-12 press-scale"
               onClick={savePlanToDatabase}
               disabled={isCreating}
+              aria-label="Salvar plano de treino"
             >
               {isCreating ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
@@ -826,7 +832,12 @@ export default function Result() {
               )}
             </Button>
           ) : (
-            <Button size="lg" className="w-full rounded-xl h-12" onClick={() => navigate('/dashboard')}>
+            <Button 
+              size="lg" 
+              className="w-full rounded-xl h-12 press-scale" 
+              onClick={() => navigate('/dashboard')}
+              aria-label="Ir para o dashboard"
+            >
               <Calendar className="w-4 h-4 mr-2" />
               Ir para Dashboard
             </Button>

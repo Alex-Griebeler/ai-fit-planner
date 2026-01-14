@@ -69,7 +69,12 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
           <p className="text-muted-foreground mb-4">
             Crie seu primeiro plano de treino personalizado
           </p>
-          <Button variant="gradient" onClick={() => navigate('/onboarding')}>
+          <Button 
+            variant="gradient" 
+            className="press-scale"
+            onClick={() => navigate('/onboarding')}
+            aria-label="Criar plano de treino personalizado"
+          >
             Criar Plano
           </Button>
         </CardContent>
@@ -94,6 +99,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             variant="ghost" 
             size="icon"
             onClick={() => navigate('/result')}
+            aria-label="Ver detalhes do plano"
           >
             <ChevronRight className="w-5 h-5" />
           </Button>

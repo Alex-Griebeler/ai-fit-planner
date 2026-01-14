@@ -16,7 +16,7 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background" role="status" aria-label="Carregando configurações">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -24,6 +24,11 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip link for accessibility */}
+      <a href="#settings-content" className="skip-link">
+        Pular para conteúdo principal
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-center">
@@ -32,7 +37,7 @@ export default function Settings() {
       </header>
 
       {/* Content */}
-      <main className="container max-w-4xl mx-auto px-4 py-6 pb-24">
+      <main id="settings-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
