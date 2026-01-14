@@ -18,6 +18,11 @@ export default function Progress() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Skip link for accessibility */}
+      <a href="#progress-content" className="skip-link">
+        Pular para conteúdo principal
+      </a>
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-center">
@@ -25,7 +30,7 @@ export default function Progress() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 pb-24 max-w-4xl">
+      <main id="progress-content" className="container mx-auto px-4 py-6 pb-24 max-w-4xl">
         <PremiumGate feature="Análises de progresso" showPreview>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

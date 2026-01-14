@@ -178,9 +178,9 @@
     scroll-behavior: smooth;
   }
 
-  /* Micro-interaction: scale on press */
+  /* Micro-interaction: scale on press - enhanced haptic feel */
   .press-scale {
-    @apply transition-transform duration-150 active:scale-[0.97];
+    @apply transition-transform duration-100 active:scale-[0.97];
   }
 
   /* Micro-interaction: hover scale */
@@ -191,5 +191,15 @@
   /* Safe area para dispositivos iOS com notch */
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Focus visible ring for accessibility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  
+  /* Skip link for keyboard navigation */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-md;
   }
 }
