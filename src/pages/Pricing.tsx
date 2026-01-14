@@ -45,7 +45,8 @@ export default function Pricing() {
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="mr-4"
+            className="mr-4 press-scale"
+            aria-label="Voltar"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -159,7 +160,8 @@ export default function Pricing() {
                 <Button 
                   onClick={handleUpgrade}
                   disabled={isPremium || isLoading}
-                  className="w-full"
+                  variant="gradient"
+                  className="w-full press-scale"
                   size="lg"
                 >
                   {isLoading ? (
@@ -190,7 +192,7 @@ export default function Pricing() {
           </h3>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="text-center p-6">
+            <Card className="text-center p-6 hover-lift transition-transform">
               <BarChart3 className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Gráficos de Evolução</h4>
               <p className="text-sm text-muted-foreground">
@@ -198,7 +200,7 @@ export default function Pricing() {
               </p>
             </Card>
 
-            <Card className="text-center p-6">
+            <Card className="text-center p-6 hover-lift transition-transform">
               <History className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Histórico Completo</h4>
               <p className="text-sm text-muted-foreground">
@@ -206,7 +208,7 @@ export default function Pricing() {
               </p>
             </Card>
 
-            <Card className="text-center p-6">
+            <Card className="text-center p-6 hover-lift transition-transform">
               <HeadphonesIcon className="w-10 h-10 text-primary mx-auto mb-4" />
               <h4 className="font-semibold mb-2">Suporte Prioritário</h4>
               <p className="text-sm text-muted-foreground">
