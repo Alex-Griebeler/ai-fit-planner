@@ -139,16 +139,28 @@ export default function Result() {
     return () => clearInterval(interval);
   }, [isRateLimited, rateLimitResetAt]);
 
+  // Sanitiza trainingDays removendo duplicatas e validando dias
+  const sanitizeTrainingDays = (days: string[]): string[] => {
+    const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    return [...new Set(days)].filter(day => validDays.includes(day));
+  };
+
   const generatePlan = async (userData: OnboardingData) => {
     setLoading(true);
     setError(null);
     setRateLimitResetAt(null);
     setIsRateLimited(false);
 
+    // Sanitiza os dados antes de enviar
+    const sanitizedUserData: OnboardingData = {
+      ...userData,
+      trainingDays: sanitizeTrainingDays(userData.trainingDays),
+    };
+
     try {
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
         'generate-workout',
-        { body: { userData } }
+        { body: { userData: sanitizedUserData } }
       );
 
       if (responseData?.error?.includes('Limite de gerações') || responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
@@ -263,6 +275,16 @@ export default function Result() {
     if (savedSessionData) {
       hasStartedGeneration.current = true;
       const parsedData: OnboardingData = JSON.parse(savedSessionData);
+      
+      // Sanitiza trainingDays do sessionStorage (pode estar corrompido)
+      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
+      
+      // Se estava corrompido, atualiza o sessionStorage
+      if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
+        sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
+      }
+      
       setData(parsedData);
       generatePlan(parsedData);
       return;
