@@ -1802,6 +1802,60 @@ LIGEIRAMENTE SUPERIOR ao de EMPURRAR.
 - Redução máxima de 10%, não 25%
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 7.1: VARIAÇÃO DE EXERCÍCIOS
+═══════════════════════════════════════════════════════════════════════════════
+
+## DEFINIÇÕES:
+- **Exercícios BASE**: Multiarticulares principais (Supino, Agachamento, Remada, etc.)
+- **Exercícios ACESSÓRIOS**: Isoladores e variações secundárias
+
+## NÍVEIS DE VARIAÇÃO:
+
+### ALTA VARIAÇÃO (variationPreference = high):
+- Exercícios ACESSÓRIOS: Trocar a cada SEMANA
+- Exercícios BASE: Manter 2-3 semanas, depois variar angulação/equipamento
+- Dentro da mesma semana: Usar variações diferentes do mesmo padrão
+  - Ex: Supino Reto (Dia A) → Supino Inclinado (Dia B) → Crucifixo (Dia C)
+- Priorizar catálogo diverso de exercícios para evitar monotonia
+- progressionPlan DEVE indicar troca semanal de acessórios
+
+### MODERADA (variationPreference = moderate):
+- Exercícios ACESSÓRIOS: Trocar a cada 2 SEMANAS
+- Exercícios BASE: Manter 3-4 semanas
+- Dentro da mesma semana: Pode repetir exercícios entre dias diferentes
+- progressionPlan DEVE indicar troca quinzenal de acessórios
+
+### BAIXA VARIAÇÃO (variationPreference = low):
+- Exercícios BASE E ACESSÓRIOS: Manter 4 semanas mínimo
+- Dentro da mesma semana: Repetir os mesmos exercícios é aceitável
+- Foco em progressão de carga, não em variação de estímulo
+- progressionPlan DEVE focar em progressão de carga/volume
+
+## REGRA ESPECIAL: VARIEDADE MÁXIMA (splitPreference = no_preference)
+
+Quando o usuário seleciona "Sem Preferência" em 3 dias de treino:
+- USAR Full Body 3x com regra CRÍTICA:
+- **NENHUM EXERCÍCIO pode ser repetido durante a semana inteira**
+- Cada dia (A, B, C) DEVE usar exercícios DIFERENTES para o mesmo grupamento
+- Exemplo para Peitoral:
+  - Dia A: Supino Reto com Barra
+  - Dia B: Supino Inclinado com Halteres
+  - Dia C: Crucifixo na Máquina
+- Esta regra SOBREPÕE a preferência de variação normal
+- Objetivo: Maximizar variedade de estímulos em 3 treinos
+
+## APLICAÇÃO NO JSON:
+
+O campo "notes" de cada exercício pode incluir:
+- "Manter por X semanas" (para base)
+- "Trocar após Xª semana por [alternativa]" (para acessórios)
+
+O campo progressionPlan DEVE refletir a estratégia de variação:
+- week1: "Semana base - aprender movimentos"
+- week2: "Manter exercícios, aumentar carga" ou "Trocar acessórios"
+- etc.
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 8: MÉTODOS DE INTENSIFICAÇÃO
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1930,6 +1984,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 9. Volume de Costas >= Volume de Peitoral (se não há prioridade peitoral)
 10. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
 11. Se tempo exceder, REDUZA isoladores primeiro
+12. Se splitPreference = "no_preference": ZERO exercícios repetidos na semana
+13. Aplique estratégia de variação conforme preferência do usuário (alta/moderada/baixa)
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
@@ -2463,6 +2519,14 @@ ${healthSection}
 - Estresse: ${getStressLabel(userData.stressLevel)}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
+${userData.splitPreference === 'no_preference' ? `
+## ⚠️ REGRA CRÍTICA - VARIEDADE MÁXIMA
+- Split: Full Body 3x
+- **NENHUM exercício pode se repetir na semana**
+- Cada dia (A, B, C) DEVE ter exercícios DIFERENTES para cada grupamento
+- Exemplo: Supino Reto (A) → Supino Inclinado (B) → Crucifixo (C)
+- Esta regra é OBRIGATÓRIA e sobrepõe outras preferências de variação
+` : ''}
 ${dayPatternSection}
 
 ${densitySection}
