@@ -46,7 +46,7 @@ export function SubscriptionSection() {
             </div>
             <Badge 
               variant={isPremium ? 'default' : 'secondary'}
-              className={isPremium ? 'bg-gradient-to-r from-amber-500 to-amber-600' : ''}
+              className={isPremium ? 'bg-primary' : ''}
             >
               {isPremium ? (
                 <>
@@ -62,9 +62,9 @@ export function SubscriptionSection() {
         <CardContent className="space-y-4">
           {isPremium ? (
             <>
-              <div className="bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/20 rounded-lg p-4">
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Crown className="w-5 h-5 text-amber-500" />
+                  <Crown className="w-5 h-5 text-primary" />
                   <span className="font-semibold text-foreground">Plano Premium Ativo</span>
                 </div>
                 {subscription?.subscriptionEnd && (
@@ -124,7 +124,7 @@ export function SubscriptionSection() {
 
               <Button 
                 variant="outline"
-                className="w-full border-amber-500/30 text-amber-600 hover:bg-amber-500/10 hover:text-amber-500"
+                className="w-full border-primary/30 text-primary hover:bg-primary/10"
                 onClick={() => window.open('mailto:suporte@evolve.app?subject=Suporte%20Premium', '_blank')}
               >
                 <Headphones className="w-4 h-4 mr-2" />
@@ -146,19 +146,19 @@ export function SubscriptionSection() {
                 </h4>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-primary" />
                     Gráficos de evolução de cargas
                   </li>
                   <li className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-primary" />
                     Histórico completo de treinos
                   </li>
                   <li className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-primary" />
                     Análises avançadas de desempenho
                   </li>
                   <li className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Sparkles className="w-4 h-4 text-primary" />
                     Planos de treino ilimitados
                   </li>
                 </ul>
@@ -166,7 +166,8 @@ export function SubscriptionSection() {
 
               <Button 
                 onClick={createCheckout}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700"
+                variant="gradient"
+                className="w-full press-scale"
                 size="lg"
               >
                 <Crown className="w-4 h-4 mr-2" />
