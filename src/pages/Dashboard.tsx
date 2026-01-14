@@ -12,6 +12,7 @@ import {
   SessionHistoryCard,
   ProgressPreviewCard 
 } from '@/components/dashboard';
+import { StreakCard, WeeklyProgress, MotivationalMessage } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -122,6 +123,24 @@ export default function Dashboard() {
           transition={{ duration: 0.3 }}
         >
           <ProfileCard profile={profile} isLoading={profileLoading} />
+        </motion.div>
+
+        {/* Motivational Message */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+        >
+          <MotivationalMessage userName={profile?.name} />
+        </motion.div>
+
+        {/* Streak Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <StreakCard />
         </motion.div>
 
         {/* Stats Grid */}

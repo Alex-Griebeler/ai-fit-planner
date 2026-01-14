@@ -202,6 +202,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_onboarding_data: {
         Row: {
           body_areas: string[] | null
@@ -268,6 +289,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_workout_date: string | null
+          longest_streak: number
+          streak_freezes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number
+          streak_freezes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number
+          streak_freezes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_plans: {
         Row: {
           created_at: string
@@ -318,6 +372,8 @@ export type Database = {
           duration_minutes: number | null
           exercises_data: Json | null
           id: string
+          perceived_effort: number | null
+          session_notes: string | null
           started_at: string
           status: string
           total_sets: number
@@ -333,6 +389,8 @@ export type Database = {
           duration_minutes?: number | null
           exercises_data?: Json | null
           id?: string
+          perceived_effort?: number | null
+          session_notes?: string | null
           started_at?: string
           status?: string
           total_sets?: number
@@ -348,6 +406,8 @@ export type Database = {
           duration_minutes?: number | null
           exercises_data?: Json | null
           id?: string
+          perceived_effort?: number | null
+          session_notes?: string | null
           started_at?: string
           status?: string
           total_sets?: number
