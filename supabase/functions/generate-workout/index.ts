@@ -1990,9 +1990,35 @@ serve(async (req) => {
     console.log("Authenticated user:", userId);
 
     // === RATE LIMITING ===
-    // TODO: REATIVAR RATE LIMIT ANTES DO DEPLOY EM PRODUÇÃO
-    // Rate limit temporariamente desabilitado para desenvolvimento/testes
-    console.log("⚠️ Rate limit DESABILITADO para desenvolvimento");
+    const { data: rateLimitData, error: rateLimitError } = await supabase
+      .rpc('check_rate_limit', {
+        p_user_id: userId,
+        p_endpoint: 'generate-workout',
+        p_max_requests: 5,
+        p_window_hours: 1
+      });
+
+    if (rateLimitError) {
+      console.error('Rate limit check error:', rateLimitError);
+      return new Response(
+        JSON.stringify({ error: 'Rate limit check failed' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!rateLimitData?.[0]?.allowed) {
+      console.log(`Rate limit exceeded for user ${userId}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Limite de gerações excedido. Tente novamente mais tarde.',
+          reset_at: rateLimitData?.[0]?.reset_at,
+          remaining: 0
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    console.log(`Rate limit check passed: ${rateLimitData[0].remaining} requests remaining`);
 
     // === INPUT VALIDATION ===
     const { userData } = await req.json();
