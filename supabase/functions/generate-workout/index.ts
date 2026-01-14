@@ -37,6 +37,7 @@ const OnboardingSchema = z.object({
   sessionDuration: z.enum(["30min", "45min", "60min", "60plus"]).nullable(),
   exerciseTypes: z.array(z.string().max(20)).max(5),
   includeCardio: z.boolean(),
+  cardioTiming: z.enum(["post_workout", "separate_day", "ai_decides"]).nullable().optional(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
   splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid", "no_preference"]).nullable().optional(),
   variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
@@ -2504,6 +2505,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 ## PREFERÊNCIAS
 - Tipos de exercício: ${userData.exerciseTypes?.join(', ') || 'Variado'}
 - Aceita cardio: ${userData.includeCardio ? 'SIM' : 'NÃO'}
+${userData.includeCardio && userData.cardioTiming ? `- Timing do cardio: ${getCardioTimingLabel(userData.cardioTiming)}` : ''}
 - Nível: ${getLevelLabel(userData.experienceLevel)}
 - Preferência de variação: ${getVariationLabel(userData.variationPreference)}
 
@@ -2557,7 +2559,21 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 12. Aquecimento: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.description})
 13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"
 14. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos
-${!densityStrategy.allowIsolation ? `15. ❌ SEM ISOLADOS: Use APENAS exercícios compostos. Bíceps/Tríceps = trabalho indireto` : ''}`;
+${!densityStrategy.allowIsolation ? `15. ❌ SEM ISOLADOS: Use APENAS exercícios compostos. Bíceps/Tríceps = trabalho indireto` : ''}
+${userData.includeCardio ? `
+## CARDIO SOLICITADO
+- Timing preferido: ${getCardioTimingLabel(userData.cardioTiming)}
+${userData.cardioTiming === 'post_workout' ? 
+  `- INCLUIR cardio ao final de cada treino (10-20min dependendo da duração da sessão)
+- Se sessão = 30min: Avisar no "notes" que cardio deve ser feito separadamente por falta de tempo` :
+  userData.cardioTiming === 'separate_day' ?
+  `- NÃO incluir cardio na sessão de força
+- Indicar no progressionPlan os dias ideais para cardio separado (dias sem treino de força)` :
+  `- Decidir timing baseado em:
+  - Objetivo: ${userData.goal === 'weight_loss' ? 'pós-treino preferível para maximizar gasto calórico' : 'flexível'}
+  - Duração: ${userData.sessionDuration === '30min' ? 'sessão curta = cardio em dia separado obrigatório' : 'pós-treino possível'}
+  - Nível: ${userData.experienceLevel}`
+}` : ''}`;
 }
 
 function getGenderLabel(gender: string | null): string {
@@ -2626,6 +2642,15 @@ function getVariationLabel(variation: string | null): string {
     low: "BAIXA - treino fixo 4 semanas",
   };
   return labels[variation || "moderate"] || "MODERADA";
+}
+
+function getCardioTimingLabel(timing: string | null | undefined): string {
+  const labels: Record<string, string> = {
+    post_workout: "Pós-treino (adicionar ao final da sessão)",
+    separate_day: "Em dias separados (não incluir na sessão de força)",
+    ai_decides: "IA decide baseado no objetivo e tempo disponível",
+  };
+  return labels[timing || "ai_decides"] || "IA decide";
 }
 
 function getStressLabel(stress: string | null): string {

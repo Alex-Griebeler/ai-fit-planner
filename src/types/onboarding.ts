@@ -10,6 +10,8 @@ export const INJURY_AREA_OPTIONS = [
 
 export type InjuryArea = typeof INJURY_AREA_OPTIONS[number]['key'];
 
+export type CardioTiming = 'post_workout' | 'separate_day' | 'ai_decides';
+
 export interface OnboardingData {
   // Step 1 - Name
   name: string;
@@ -35,6 +37,7 @@ export interface OnboardingData {
   // Step 7 - Exercise Types
   exerciseTypes: string[];
   includeCardio: boolean;
+  cardioTiming: CardioTiming | null;
   
   // Step 8 - Experience Level
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null;
@@ -70,6 +73,7 @@ export const initialOnboardingData: OnboardingData = {
   sessionDuration: null,
   exerciseTypes: [],
   includeCardio: false,
+  cardioTiming: null,
   experienceLevel: null,
   splitPreference: null,
   variationPreference: null,
