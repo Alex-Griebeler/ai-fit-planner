@@ -206,8 +206,15 @@ export default function WorkoutExecution() {
       try {
         await completeSession(currentSession.id);
         const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
-        toast.success(`Treino concluído em ${duration} minutos! 💪`);
-        navigate('/dashboard');
+        navigate('/workout-complete', {
+          state: {
+            sessionId: currentSession.id,
+            durationMinutes: duration,
+            completedSets: progressStats.completedSets,
+            totalSets: progressStats.totalSets,
+            workoutName: workout?.name ?? 'Treino',
+          },
+        });
       } catch (error) {
         console.error('Error completing session:', error);
         navigate('/dashboard');
@@ -215,7 +222,7 @@ export default function WorkoutExecution() {
     } else {
       navigate('/dashboard');
     }
-  }, [currentSession, completeSession, workoutStartTime, navigate]);
+  }, [currentSession, completeSession, workoutStartTime, navigate, progressStats, workout]);
 
   // Navigate between exercises
   const goToNextExercise = useCallback(() => {
