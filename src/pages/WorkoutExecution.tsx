@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Timer, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { useExerciseLoads } from '@/hooks/useExerciseLoads';
@@ -10,6 +10,7 @@ import { RestTimer } from '@/components/workout/RestTimer';
 import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,8 +133,52 @@ export default function WorkoutExecution() {
   }, [workout, completedSets]);
 
   const isWorkoutComplete = progressStats.completedSets === progressStats.totalSets;
+  const canFinishEarly = progressStats.completedSets >= progressStats.totalSets * 0.5;
 
-  // Handle set completion
+  // Handle complete exercise (all sets at once)
+  const handleCompleteExercise = useCallback((exerciseIndex: number) => {
+    const exercise = workout?.exercises[exerciseIndex];
+    if (!exercise) return;
+
+    // Mark all sets as complete
+    const newCompletedSets = {
+      ...completedSets,
+      [exerciseIndex]: exercise.sets,
+    };
+    setCompletedSets(newCompletedSets);
+
+    // Haptic feedback - double vibration pattern
+    if (navigator.vibrate) {
+      navigator.vibrate([50, 30, 50]);
+    }
+
+    // Update session in database
+    if (currentSession) {
+      const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
+      const exercisesData = workout?.exercises.map((ex, idx) => ({
+        name: ex.name,
+        completedSets: newCompletedSets[idx] || 0,
+        totalSets: ex.sets,
+        load: localLoads[ex.name] || null,
+      }));
+      
+      updateSession(currentSession.id, {
+        completedSets: totalCompleted,
+        exercisesData,
+      }).catch(console.error);
+    }
+
+    // Auto-advance to next exercise
+    if (workout && exerciseIndex < workout.exercises.length - 1) {
+      setTimeout(() => {
+        setActiveExerciseIndex(exerciseIndex + 1);
+      }, 300);
+    }
+
+    toast.success(`${exercise.name} completo!`, { duration: 1500 });
+  }, [workout, completedSets, currentSession, localLoads, updateSession]);
+
+  // Handle single set completion (for granular tracking)
   const handleSetComplete = useCallback((exerciseIndex: number, setNumber: number) => {
     const newCompletedSets = {
       ...completedSets,
@@ -143,11 +188,7 @@ export default function WorkoutExecution() {
 
     const exercise = workout?.exercises[exerciseIndex];
     if (exercise) {
-      const restTime = parseRestTime(exercise.rest);
-      setCurrentRestTime(restTime);
-      setShowTimer(true);
-
-      // Haptic feedback simulation
+      // Haptic feedback
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
@@ -168,7 +209,7 @@ export default function WorkoutExecution() {
         }).catch(console.error);
       }
     }
-  }, [workout, parseRestTime, completedSets, currentSession, localLoads, updateSession]);
+  }, [workout, completedSets, currentSession, localLoads, updateSession]);
 
   // Handle set undo
   const handleSetUndo = useCallback((exerciseIndex: number, setNumber: number) => {
@@ -178,18 +219,24 @@ export default function WorkoutExecution() {
     }));
   }, []);
 
+  // Handle manual timer start
+  const handleStartTimer = useCallback((exerciseIndex: number) => {
+    const exercise = workout?.exercises[exerciseIndex];
+    if (exercise) {
+      const restTime = parseRestTime(exercise.rest);
+      setCurrentRestTime(restTime);
+      setShowTimer(true);
+    }
+  }, [workout, parseRestTime]);
+
   // Handle load change
   const handleLoadChange = useCallback((exerciseName: string, value: string) => {
     setLocalLoads(prev => ({ ...prev, [exerciseName]: value }));
-  }, []);
-
-  // Save load on blur
-  const handleLoadBlur = useCallback((exerciseName: string) => {
-    const value = localLoads[exerciseName];
+    // Auto-save on change
     if (value && workout) {
       saveLoad(workout.day, exerciseName, value);
     }
-  }, [localLoads, workout, saveLoad]);
+  }, [workout, saveLoad]);
 
   // Handle exit
   const handleExit = useCallback(() => {
@@ -267,7 +314,7 @@ export default function WorkoutExecution() {
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={handleExit}
-              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors press-scale"
               aria-label="Sair do treino"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -313,7 +360,7 @@ export default function WorkoutExecution() {
 
               <Button
                 variant="ghost"
-                className="mt-8"
+                className="mt-8 press-scale"
                 onClick={() => setShowTimer(false)}
               >
                 <X className="w-4 h-4 mr-2" />
@@ -338,6 +385,9 @@ export default function WorkoutExecution() {
               onLoadChange={(value) => handleLoadChange(exercise.name, value)}
               isActive={activeExerciseIndex === index}
               onSelect={() => setActiveExerciseIndex(index)}
+              onCompleteExercise={() => handleCompleteExercise(index)}
+              onStartTimer={() => handleStartTimer(index)}
+              restTime={exercise.rest}
             />
           ))}
         </div>
@@ -349,18 +399,53 @@ export default function WorkoutExecution() {
           {isWorkoutComplete ? (
             <Button
               size="lg"
-              className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-500 hover:bg-green-600"
+              className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-500 hover:bg-green-600 press-scale"
               onClick={handleFinishWorkout}
             >
               <Check className="w-5 h-5 mr-2" />
               Finalizar Treino
             </Button>
+          ) : canFinishEarly ? (
+            <div className="space-y-2">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="flex-1 h-12 rounded-xl press-scale"
+                  onClick={goToPreviousExercise}
+                  disabled={activeExerciseIndex === 0}
+                >
+                  <ChevronUp className="w-5 h-5 mr-1" />
+                  Anterior
+                </Button>
+                <Button
+                  size="lg"
+                  className="flex-1 h-12 rounded-xl press-scale"
+                  onClick={goToNextExercise}
+                  disabled={activeExerciseIndex === workout.exercises.length - 1}
+                >
+                  Próximo
+                  <ChevronDown className="w-5 h-5 ml-1" />
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="lg"
+                className={cn(
+                  "w-full h-12 rounded-xl border-orange-500/50 text-orange-600 hover:bg-orange-500/10 press-scale"
+                )}
+                onClick={handleFinishWorkout}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Encerrar Treino ({Math.round((progressStats.completedSets / progressStats.totalSets) * 100)}%)
+              </Button>
+            </div>
           ) : (
             <div className="flex gap-3">
               <Button
                 variant="outline"
                 size="lg"
-                className="flex-1 h-14 rounded-2xl"
+                className="flex-1 h-14 rounded-2xl press-scale"
                 onClick={goToPreviousExercise}
                 disabled={activeExerciseIndex === 0}
               >
@@ -369,7 +454,7 @@ export default function WorkoutExecution() {
               </Button>
               <Button
                 size="lg"
-                className="flex-1 h-14 rounded-2xl"
+                className="flex-1 h-14 rounded-2xl press-scale"
                 onClick={goToNextExercise}
                 disabled={activeExerciseIndex === workout.exercises.length - 1}
               >
