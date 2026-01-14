@@ -15,6 +15,8 @@ export interface WorkoutSession {
   started_at: string;
   completed_at: string | null;
   duration_minutes: number | null;
+  perceived_effort: number | null;
+  session_notes: string | null;
   status: 'in_progress' | 'completed' | 'abandoned';
   created_at: string;
 }

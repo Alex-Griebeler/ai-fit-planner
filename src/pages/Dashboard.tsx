@@ -12,7 +12,7 @@ import {
   SessionHistoryCard,
   ProgressPreviewCard 
 } from '@/components/dashboard';
-import { StreakCard, WeeklyProgress, MotivationalMessage } from '@/components/gamification';
+import { StreakCard, MotivationalMessage } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
