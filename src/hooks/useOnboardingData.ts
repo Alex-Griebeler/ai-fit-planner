@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { OnboardingData, InjuryArea } from "@/types/onboarding";
+import { OnboardingData, InjuryArea, CardioTiming } from "@/types/onboarding";
 
 export interface UserOnboardingData {
   id: string;
@@ -12,6 +12,7 @@ export interface UserOnboardingData {
   session_duration: OnboardingData["sessionDuration"];
   exercise_types: string[];
   include_cardio: boolean;
+  cardio_timing: CardioTiming | null;
   experience_level: OnboardingData["experienceLevel"];
   split_preference: OnboardingData["splitPreference"];
   variation_preference: OnboardingData["variationPreference"];
@@ -33,6 +34,7 @@ function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
     sessionDuration: data.session_duration,
     exerciseTypes: data.exercise_types,
     includeCardio: data.include_cardio,
+    cardioTiming: data.cardio_timing,
     experienceLevel: data.experience_level,
     splitPreference: data.split_preference,
     variationPreference: data.variation_preference,
@@ -53,6 +55,7 @@ function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "u
     session_duration: data.sessionDuration,
     exercise_types: data.exerciseTypes,
     include_cardio: data.includeCardio,
+    cardio_timing: data.cardioTiming,
     experience_level: data.experienceLevel,
     split_preference: data.splitPreference,
     variation_preference: data.variationPreference,
@@ -123,6 +126,7 @@ export function useOnboardingData() {
       if (partialData.sessionDuration !== undefined) updateFields.session_duration = partialData.sessionDuration;
       if (partialData.exerciseTypes !== undefined) updateFields.exercise_types = partialData.exerciseTypes;
       if (partialData.includeCardio !== undefined) updateFields.include_cardio = partialData.includeCardio;
+      if (partialData.cardioTiming !== undefined) updateFields.cardio_timing = partialData.cardioTiming;
       if (partialData.splitPreference !== undefined) updateFields.split_preference = partialData.splitPreference;
       if (partialData.experienceLevel !== undefined) updateFields.experience_level = partialData.experienceLevel;
       if (partialData.variationPreference !== undefined) updateFields.variation_preference = partialData.variationPreference;

@@ -226,6 +226,7 @@ export type Database = {
       user_onboarding_data: {
         Row: {
           body_areas: string[] | null
+          cardio_timing: string | null
           created_at: string
           exercise_types: string[] | null
           experience_level: string | null
@@ -247,6 +248,7 @@ export type Database = {
         }
         Insert: {
           body_areas?: string[] | null
+          cardio_timing?: string | null
           created_at?: string
           exercise_types?: string[] | null
           experience_level?: string | null
@@ -268,6 +270,7 @@ export type Database = {
         }
         Update: {
           body_areas?: string[] | null
+          cardio_timing?: string | null
           created_at?: string
           exercise_types?: string[] | null
           experience_level?: string | null
