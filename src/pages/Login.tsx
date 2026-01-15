@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,13 @@ export default function Login() {
   const [resetSent, setResetSent] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [termsError, setTermsError] = useState(false);
+  
+  // Sync isLogin state with URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlMode = params.get('mode');
+    setIsLogin(urlMode !== 'signup');
+  }, [location.search]);
   
   const passwordValidation = usePasswordValidation(password);
 
