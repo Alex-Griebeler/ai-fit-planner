@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield, Bell } from 'lucide-react';
+import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield, Bell, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useAdmin } from '@/hooks/useAdmin';
-import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection, NotificationSection } from '@/components/settings';
+import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection, NotificationSection, ThemeSection } from '@/components/settings';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -60,7 +60,7 @@ export default function Settings() {
           transition={{ duration: 0.3 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-6">
+            <TabsList className="grid w-full grid-cols-7 mb-6">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 <span className="hidden sm:inline">Perfil</span>
@@ -80,6 +80,10 @@ export default function Settings() {
               <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
                 <span className="hidden sm:inline">Notificações</span>
+              </TabsTrigger>
+              <TabsTrigger value="appearance" className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                <span className="hidden sm:inline">Aparência</span>
               </TabsTrigger>
               <TabsTrigger value="subscription" className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
@@ -121,6 +125,10 @@ export default function Settings() {
 
             <TabsContent value="notifications">
               <NotificationSection />
+            </TabsContent>
+
+            <TabsContent value="appearance">
+              <ThemeSection />
             </TabsContent>
 
             <TabsContent value="subscription">
