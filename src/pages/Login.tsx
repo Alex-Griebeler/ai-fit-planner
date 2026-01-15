@@ -9,7 +9,7 @@ import { usePasswordValidation } from '@/hooks/usePasswordValidation';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { TermsCheckbox } from '@/components/TermsCheckbox';
 import { toast } from 'sonner';
-import evolveLogo from '@/assets/evolve-logo.png';
+import evolveLogo from '@/assets/evolve-logo-new.png';
 
 export default function Login() {
   const navigate = useNavigate();
