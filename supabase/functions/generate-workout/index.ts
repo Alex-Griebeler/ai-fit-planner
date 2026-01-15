@@ -2126,8 +2126,40 @@ serve(async (req) => {
       console.log(`Injury filtering: Excluded ${injuryResult.excludedCount} exercises. By area:`, injuryResult.excludedByArea);
     }
 
+    // === FETCH USER HISTORY FOR LEARNING (Phase 1 - Read Only) ===
+    let learningContext = "";
+    try {
+      // 1. Fetch last 10 completed sessions for RPE and completion analysis
+      const { data: recentSessions } = await supabase
+        .from('workout_sessions')
+        .select('perceived_effort, completed_sets, total_sets, completed_at, duration_minutes')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(10);
+
+      // 2. Fetch load progression history
+      const { data: loadHistory } = await supabase
+        .from('exercise_loads')
+        .select('exercise_name, load_value, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      // 3. Build learning context if we have data
+      if (recentSessions && recentSessions.length > 0) {
+        learningContext = buildLearningContext(recentSessions, loadHistory || []);
+        console.log(`Learning context built from ${recentSessions.length} sessions and ${loadHistory?.length || 0} load records`);
+      } else {
+        console.log("No workout history found for user - skipping learning context");
+      }
+    } catch (historyError) {
+      console.warn("Could not fetch user history for learning context:", historyError);
+      // Continue normally without history - graceful degradation
+    }
+
     // === BUILD USER PROMPT ===
-    const userPrompt = buildUserPrompt(validatedData, filteredExercises);
+    const userPrompt = buildUserPrompt(validatedData, filteredExercises, learningContext);
 
     // === CALL AI ===
     console.log("Calling Lovable AI for user:", userId);
@@ -2247,7 +2279,140 @@ function getAllowedLevels(userLevel: string): string[] {
   }
 }
 
-function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[]): string {
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          LEARNING CONTEXT BUILDER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface SessionData {
+  perceived_effort: number | null;
+  completed_sets: number;
+  total_sets: number;
+  completed_at: string | null;
+  duration_minutes: number | null;
+}
+
+interface LoadData {
+  exercise_name: string;
+  load_value: string;
+  created_at: string;
+}
+
+function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]): string {
+  // Calculate average RPE from sessions with valid RPE
+  const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
+  const avgRpe = sessionsWithRpe.length > 0
+    ? (sessionsWithRpe.reduce((sum, s) => sum + (s.perceived_effort || 0), 0) / sessionsWithRpe.length).toFixed(1)
+    : null;
+
+  // Calculate completion rate
+  const totalPrescribed = sessions.reduce((sum, s) => sum + s.total_sets, 0);
+  const totalCompleted = sessions.reduce((sum, s) => sum + s.completed_sets, 0);
+  const completionRate = totalPrescribed > 0 
+    ? ((totalCompleted / totalPrescribed) * 100).toFixed(0)
+    : null;
+
+  // Analyze load progression (group by exercise, check if loads are increasing)
+  const loadsByExercise: Record<string, { value: string; date: string }[]> = {};
+  loadHistory.forEach(load => {
+    if (!loadsByExercise[load.exercise_name]) {
+      loadsByExercise[load.exercise_name] = [];
+    }
+    loadsByExercise[load.exercise_name].push({
+      value: load.load_value,
+      date: load.created_at
+    });
+  });
+
+  // Find exercises with progression (at least 2 records, latest > oldest)
+  const progressions: string[] = [];
+  const stagnations: string[] = [];
+  
+  Object.entries(loadsByExercise).forEach(([exercise, loads]) => {
+    if (loads.length >= 2) {
+      const sortedLoads = loads.sort((a, b) => 
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      const oldest = parseFloat(sortedLoads[0].value) || 0;
+      const newest = parseFloat(sortedLoads[sortedLoads.length - 1].value) || 0;
+      
+      if (oldest > 0 && newest > oldest) {
+        const increase = (((newest - oldest) / oldest) * 100).toFixed(0);
+        progressions.push(`${exercise}: ${sortedLoads[0].value} → ${sortedLoads[sortedLoads.length - 1].value} (+${increase}%)`);
+      } else if (oldest > 0 && newest === oldest && loads.length >= 4) {
+        stagnations.push(exercise);
+      }
+    }
+  });
+
+  // Build recommendations based on data
+  const recommendations: string[] = [];
+  
+  if (avgRpe) {
+    const rpeNum = parseFloat(avgRpe);
+    if (rpeNum > 8.5) {
+      recommendations.push("⚠️ RPE ALTO: Considerar reduzir volume em 10-15% para evitar overtraining");
+    } else if (rpeNum < 5.5) {
+      recommendations.push("📈 RPE BAIXO: Considerar aumentar intensidade/volume para maior estímulo");
+    } else if (rpeNum >= 6 && rpeNum <= 8) {
+      recommendations.push("✅ RPE ideal (6-8): Manter progressão atual");
+    }
+  }
+
+  if (completionRate) {
+    const rateNum = parseFloat(completionRate);
+    if (rateNum < 80) {
+      recommendations.push("⚠️ TAXA CONCLUSÃO BAIXA (<80%): Simplificar treino, reduzir exercícios por sessão");
+    }
+  }
+
+  if (stagnations.length > 0) {
+    recommendations.push(`🔄 ESTAGNAÇÃO DETECTADA em: ${stagnations.slice(0, 3).join(', ')} - incluir variação de estímulo`);
+  }
+
+  // Build the learning context string
+  let context = `
+## 🧠 HISTÓRICO DO USUÁRIO (APRENDIZADO DA IA)
+
+### Últimas ${sessions.length} sessões completadas:`;
+
+  if (avgRpe) {
+    context += `\n- RPE médio: ${avgRpe}/10`;
+  }
+  
+  if (completionRate) {
+    context += `\n- Taxa de conclusão: ${completionRate}%`;
+  }
+
+  if (progressions.length > 0) {
+    context += `\n\n### Progressão de Cargas Detectada:`;
+    progressions.slice(0, 5).forEach(p => {
+      context += `\n- ${p}`;
+    });
+  }
+
+  if (recommendations.length > 0) {
+    context += `\n\n### 🎯 Recomendações Baseadas em Dados:`;
+    recommendations.forEach(r => {
+      context += `\n${r}`;
+    });
+  }
+
+  context += `\n
+### ⚠️ INSTRUÇÕES DE AJUSTE:
+- Use as informações acima para AJUSTAR a prescrição
+- Se RPE está alto: PRIORIZE recuperação sobre volume
+- Se há estagnação: INCLUA variações dos exercícios estagnados
+- Se taxa de conclusão é baixa: REDUZA número de exercícios por sessão
+`;
+
+  return context;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          USER PROMPT BUILDER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[], learningContext: string = ""): string {
   // Calculate BMI
   const heightM = (userData.height || 170) / 100;
   const weight = userData.weight || 70;
@@ -2575,7 +2740,8 @@ ${userData.cardioTiming === 'post_workout' ?
   - Objetivo: ${userData.goal === 'weight_loss' ? 'pós-treino preferível para maximizar gasto calórico' : 'flexível'}
   - Duração: ${userData.sessionDuration === '30min' ? 'sessão curta = cardio em dia separado obrigatório' : 'pós-treino possível'}
   - Nível: ${userData.experienceLevel}`
-}` : ''}`;
+}` : ''}
+${learningContext}`;
 }
 
 function getGenderLabel(gender: string | null): string {
