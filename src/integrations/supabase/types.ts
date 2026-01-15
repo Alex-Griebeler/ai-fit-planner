@@ -163,6 +163,75 @@ export type Database = {
         }
         Relationships: []
       }
+      prescription_feedback: {
+        Row: {
+          completed_sets: number
+          created_at: string
+          difficulty_rating: string | null
+          exercise_name: string
+          exercise_rpe: number | null
+          id: string
+          load_used: string | null
+          notes: string | null
+          prescribed_reps: string | null
+          prescribed_sets: number
+          updated_at: string
+          user_id: string
+          workout_day: string
+          workout_plan_id: string | null
+          workout_session_id: string | null
+        }
+        Insert: {
+          completed_sets?: number
+          created_at?: string
+          difficulty_rating?: string | null
+          exercise_name: string
+          exercise_rpe?: number | null
+          id?: string
+          load_used?: string | null
+          notes?: string | null
+          prescribed_reps?: string | null
+          prescribed_sets: number
+          updated_at?: string
+          user_id: string
+          workout_day: string
+          workout_plan_id?: string | null
+          workout_session_id?: string | null
+        }
+        Update: {
+          completed_sets?: number
+          created_at?: string
+          difficulty_rating?: string | null
+          exercise_name?: string
+          exercise_rpe?: number | null
+          id?: string
+          load_used?: string | null
+          notes?: string | null
+          prescribed_reps?: string | null
+          prescribed_sets?: number
+          updated_at?: string
+          user_id?: string
+          workout_day?: string
+          workout_plan_id?: string | null
+          workout_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescription_feedback_workout_plan_id_fkey"
+            columns: ["workout_plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescription_feedback_workout_session_id_fkey"
+            columns: ["workout_session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
