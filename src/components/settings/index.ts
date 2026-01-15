@@ -4,3 +4,4 @@ export { HealthSection } from './HealthSection';
 export { WellbeingSection } from './WellbeingSection';
 export { SubscriptionSection } from './SubscriptionSection';
 export { NotificationSection } from './NotificationSection';
+export { ThemeSection } from './ThemeSection';
