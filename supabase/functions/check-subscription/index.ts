@@ -2,10 +2,27 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// CORS configuration - restrict to trusted origins
+const ALLOWED_ORIGINS = [
+  Deno.env.get("SUPABASE_URL") || "",
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "https://lovable.dev",
+  "https://www.lovable.dev",
+].filter(Boolean);
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => 
+    origin === allowed || origin.endsWith(".lovable.dev") || origin.endsWith(".lovable.app") || origin.endsWith(".lovableproject.com")
+  ) ? origin : ALLOWED_ORIGINS[0] || "";
+  
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+    "Vary": "Origin",
+  };
+}
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -13,6 +30,9 @@ const logStep = (step: string, details?: unknown) => {
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
