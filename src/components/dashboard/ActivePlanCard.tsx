@@ -88,7 +88,14 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
 
   return (
     <Card className="bg-card border-border overflow-hidden">
-      <CardHeader className="pb-3">
+      <CardHeader 
+        className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors active:scale-[0.98]"
+        onClick={() => navigate('/result')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && navigate('/result')}
+        aria-label="Ver detalhes do plano"
+      >
         <div className="flex items-center justify-between">
           <div>
             <Badge variant="default" className="mb-2 bg-primary/20 text-primary border-0">
@@ -96,14 +103,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             </Badge>
             <CardTitle className="text-xl">{plan.plan_name}</CardTitle>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => navigate('/result')}
-            aria-label="Ver detalhes do plano"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
