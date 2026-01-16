@@ -208,6 +208,24 @@ export function useWorkoutSessions() {
     },
   });
 
+  // Delete session
+  const deleteMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('workout_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
+    },
+  });
+
   return {
     sessions: sessionsQuery.data ?? [],
     currentSession: currentSessionQuery.data,
@@ -218,5 +236,7 @@ export function useWorkoutSessions() {
       updateMutation.mutateAsync({ sessionId, data }),
     completeSession: completeMutation.mutateAsync,
     abandonSession: abandonMutation.mutateAsync,
+    deleteSession: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
   };
 }

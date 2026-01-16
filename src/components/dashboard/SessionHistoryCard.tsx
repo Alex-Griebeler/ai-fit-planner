@@ -1,18 +1,31 @@
 import { motion } from 'framer-motion';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Dumbbell, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { Clock, Dumbbell, CheckCircle2, XCircle, Calendar, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { WorkoutSession } from '@/hooks/useWorkoutSessions';
 
 interface SessionHistoryCardProps {
   sessions: WorkoutSession[];
   isLoading: boolean;
+  onDeleteSession?: (sessionId: string) => Promise<void>;
 }
 
-export function SessionHistoryCard({ sessions, isLoading }: SessionHistoryCardProps) {
+export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: SessionHistoryCardProps) {
   if (isLoading) {
     return (
       <Card>
@@ -75,10 +88,10 @@ export function SessionHistoryCard({ sessions, isLoading }: SessionHistoryCardPr
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group"
           >
             <div className={`
-              w-10 h-10 rounded-full flex items-center justify-center
+              w-10 h-10 rounded-full flex items-center justify-center shrink-0
               ${session.status === 'completed' 
                 ? 'bg-green-500/20 text-green-500' 
                 : 'bg-destructive/20 text-destructive'}
@@ -102,25 +115,62 @@ export function SessionHistoryCard({ sessions, isLoading }: SessionHistoryCardPr
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-1">
-              <Badge 
-                variant={session.status === 'completed' ? 'default' : 'destructive'}
-                className="text-xs"
-              >
-                {session.status === 'completed' ? 'Completo' : 'Abandonado'}
-              </Badge>
-              
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {session.duration_minutes && (
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {session.duration_minutes}min
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end gap-1">
+                <Badge 
+                  variant={session.status === 'completed' ? 'default' : 'destructive'}
+                  className="text-xs"
+                >
+                  {session.status === 'completed' ? 'Completo' : 'Abandonado'}
+                </Badge>
+                
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {session.duration_minutes && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {session.duration_minutes}min
+                    </span>
+                  )}
+                  <span>
+                    {session.completed_sets}/{session.total_sets} séries
                   </span>
-                )}
-                <span>
-                  {session.completed_sets}/{session.total_sets} séries
-                </span>
+                </div>
               </div>
+
+              {onDeleteSession && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive focus-ring"
+                      aria-label="Excluir sessão"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir treino do histórico?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir "{session.workout_name}" do histórico? 
+                        <span className="block mt-2 font-medium text-destructive">
+                          Essa ação não poderá ser desfeita.
+                        </span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onDeleteSession(session.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </motion.div>
         ))}

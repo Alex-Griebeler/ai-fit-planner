@@ -39,7 +39,7 @@ export default function Dashboard() {
     isLoading: plansLoading, 
     deletePlan 
   } = useWorkoutPlans();
-  const { sessions, isLoading: sessionsLoading } = useWorkoutSessions();
+  const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
 
   const handleSignOut = async () => {
     await signOut();
@@ -52,6 +52,15 @@ export default function Dashboard() {
       toast.success('Plano excluído com sucesso');
     } catch {
       toast.error('Erro ao excluir plano');
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await deleteSession(sessionId);
+      toast.success('Treino excluído do histórico');
+    } catch {
+      toast.error('Erro ao excluir treino');
     }
   };
 
@@ -201,7 +210,8 @@ export default function Dashboard() {
         >
           <SessionHistoryCard 
             sessions={sessions || []} 
-            isLoading={sessionsLoading} 
+            isLoading={sessionsLoading}
+            onDeleteSession={handleDeleteSession}
           />
         </motion.div>
 
