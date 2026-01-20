@@ -2198,10 +2198,42 @@ serve(async (req) => {
     // === PARSE JSON RESPONSE ===
     let workoutPlan;
     try {
-      workoutPlan = JSON.parse(content);
+      // Clean the content - remove markdown code fences if present
+      let cleanContent = content.trim();
+      
+      // Remove markdown JSON code block wrappers
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.slice(7);
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.slice(3);
+      }
+      if (cleanContent.endsWith('```')) {
+        cleanContent = cleanContent.slice(0, -3);
+      }
+      cleanContent = cleanContent.trim();
+      
+      // Try to parse the cleaned JSON
+      workoutPlan = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error("Failed to parse AI response as JSON:", content);
-      throw new Error("AI response is not valid JSON");
+      // Log the first 500 and last 500 chars to see what's wrong
+      const contentPreview = content.length > 1000 
+        ? `${content.slice(0, 500)}...TRUNCATED...${content.slice(-500)}`
+        : content;
+      console.error("Failed to parse AI response as JSON. Content preview:", contentPreview);
+      console.error("Parse error:", parseError instanceof Error ? parseError.message : parseError);
+      
+      // Try to extract JSON from the response if it's wrapped in other text
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          workoutPlan = JSON.parse(jsonMatch[0]);
+          console.log("Successfully extracted JSON from wrapped response");
+        } catch (secondParseError) {
+          throw new Error("AI response is not valid JSON");
+        }
+      } else {
+        throw new Error("AI response is not valid JSON");
+      }
     }
 
     // === VALIDATE THE PLAN ===
