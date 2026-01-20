@@ -163,6 +163,7 @@ export default function Result() {
         { body: { userData: sanitizedUserData } }
       );
 
+      // Check for rate limit in response data (success case with rate limit info)
       if (responseData?.error?.includes('Limite de gerações') || responseData?.error === 'Rate limit exceeded' || responseData?.reset_at) {
         const resetAt = new Date(responseData.reset_at);
         setRateLimitResetAt(resetAt);
@@ -171,7 +172,50 @@ export default function Result() {
         throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
       }
 
+      // Handle function errors - check if it's a rate limit 429 error
       if (functionError) {
+        // Try to parse rate limit info from the error context
+        const errorContext = (functionError as any).context;
+        if (errorContext) {
+          try {
+            const errorBody = typeof errorContext === 'string' ? JSON.parse(errorContext) : errorContext;
+            if (errorBody?.reset_at || errorBody?.error?.includes('Limite')) {
+              const resetAt = new Date(errorBody.reset_at);
+              setRateLimitResetAt(resetAt);
+              setIsRateLimited(true);
+              const maxReq = errorBody.max_requests || 5;
+              throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
+            }
+          } catch (parseError) {
+            // Not a JSON response, continue with normal error handling
+          }
+        }
+        
+        // Check if error message contains rate limit info
+        const errorMessage = functionError.message || '';
+        if (errorMessage.includes('429') || errorMessage.includes('Limite') || errorMessage.includes('Rate limit')) {
+          // Try to extract reset_at from the error message if it contains JSON
+          const jsonMatch = errorMessage.match(/\{.*\}/);
+          if (jsonMatch) {
+            try {
+              const errorBody = JSON.parse(jsonMatch[0]);
+              if (errorBody.reset_at) {
+                const resetAt = new Date(errorBody.reset_at);
+                setRateLimitResetAt(resetAt);
+                setIsRateLimited(true);
+                const maxReq = errorBody.max_requests || 5;
+                throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
+              }
+            } catch {
+              // Fallback: set rate limited state without specific reset time
+              setIsRateLimited(true);
+              throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
+            }
+          }
+          setIsRateLimited(true);
+          throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
+        }
+        
         throw new Error(functionError.message);
       }
 
