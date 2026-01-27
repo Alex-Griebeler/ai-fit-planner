@@ -509,21 +509,47 @@ function calculateVolumeRanges(params: {
   const finalMin = adjustedMin;
   const finalMax = Math.max(adjustedMax, adjustedMin + 4);
   
-  // Proporcionar para grupos musculares
-  // Large: 100% do range (grupos principais)
-  // Medium: 75% do range (ombros - recebem trabalho indireto)
-  // Small: 50-60% do range (braços, core - menor volume necessário)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VOLUME MÍNIMO POR GRUPAMENTO - ALINHADO COM DOCUMENTO TÉCNICO
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // GRUPOS GRANDES (chest, back, quadriceps, hamstrings, glutes):
+  // - Hipertrofia: MÍNIMO 10 séries/semana (documento: "11+ prioridade máxima")
+  // - Emagrecimento: MÍNIMO 8 séries/semana
+  // - Saúde: MÍNIMO 6 séries/semana
+  // - Performance: MÍNIMO 8 séries/semana
+  //
+  // GRUPOS MÉDIOS (shoulders, scapular_belt):
+  // - Todos objetivos: MÍNIMO 6 séries/semana (documento: "8-10 prioridade média")
+  // - Cintura escapular é OBRIGATÓRIA com no mínimo 1 exercício/semana
+  //
+  // GRUPOS PEQUENOS (biceps, triceps, calves, core):
+  // - Hipertrofia/Performance: MÍNIMO 6 séries/semana 
+  // - Saúde/Emagrecimento: MÍNIMO 4 séries/semana (podem ser cobertos por compostos)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Mínimos absolutos por objetivo (não depende de cálculo proporcional)
+  const goalMinVolumes: Record<string, { large: number; medium: number; small: number }> = {
+    hypertrophy:  { large: 10, medium: 6, small: 6 },
+    weight_loss:  { large: 8,  medium: 6, small: 4 },
+    health:       { large: 6,  medium: 4, small: 4 },
+    performance:  { large: 8,  medium: 6, small: 6 },
+  };
+  
+  const minVolumes = goalMinVolumes[goal || "health"] || goalMinVolumes.health;
+  
+  // Calcular range proporcional (máximo é flexível, mínimo é rígido)
   return {
     large: { 
-      min: finalMin, 
+      min: Math.max(minVolumes.large, finalMin), 
       max: finalMax 
     },
     medium: { 
-      min: Math.round(finalMin * 0.70), 
+      min: Math.max(minVolumes.medium, Math.round(finalMin * 0.60)), 
       max: Math.round(finalMax * 0.80) 
     },
     small: { 
-      min: Math.round(finalMin * 0.50), 
+      min: Math.max(minVolumes.small, Math.round(finalMin * 0.40)), 
       max: Math.round(finalMax * 0.65) 
     },
     setsPerWorkout,
