@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, forwardRef } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,14 +33,15 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
 const queryClient = new QueryClient();
 
-// Loading fallback component
-function PageLoader() {
+// Loading fallback component with forwardRef for Suspense compatibility
+const PageLoader = forwardRef<HTMLDivElement>((_, ref) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div ref={ref} className="min-h-screen flex items-center justify-center bg-background">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
     </div>
   );
-}
+});
+PageLoader.displayName = 'PageLoader';
 
 // Page transition wrapper
 function PageTransition({ children }: { children: React.ReactNode }) {
