@@ -595,28 +595,9 @@ export default function Result() {
     return muscleLabels[normalized] || muscleLabels[normalized.toLowerCase()] || normalized;
   };
 
-  // Combina muscleGroups do plano com inferência dos exercícios
-  // Usa a função importada de workoutScheduler
+  // Usa inferência dos exercícios - retorna na ordem de prescrição
   const getMuscleGroups = (workout: Workout): string[] => {
-    const inferred = inferMuscleGroupsFromExercises(workout.exercises);
-    const original = workout.muscleGroups || [];
-    
-    // Combina os dois, priorizando os inferidos que são mais confiáveis
-    const allGroups = new Set<string>();
-    
-    inferred.forEach(g => allGroups.add(g));
-    original.forEach(g => {
-      const translated = translateMuscleGroup(g);
-      allGroups.add(translated);
-    });
-    
-    // Ordena para consistência: grupos grandes primeiro
-    const order = ['Peitoral', 'Costas', 'Ombros', 'Quadríceps', 'Glúteos', 'Posteriores', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Core', 'Cintura Escapular'];
-    return Array.from(allGroups).sort((a, b) => {
-      const idxA = order.indexOf(a);
-      const idxB = order.indexOf(b);
-      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
-    });
+    return inferMuscleGroupsFromExercises(workout.exercises);
   };
 
   return (
