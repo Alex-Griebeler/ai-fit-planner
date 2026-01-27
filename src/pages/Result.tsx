@@ -134,7 +134,8 @@ export default function Result() {
   
   const [data, setData] = useState<OnboardingData | null>(null);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Start with loading only if there's no active plan to display immediately
+  const [loading, setLoading] = useState(!activePlan);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
