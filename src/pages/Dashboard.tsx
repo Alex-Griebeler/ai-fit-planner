@@ -79,9 +79,9 @@ export default function Dashboard() {
         Pular para conteúdo principal
       </a>
 
-      {/* Header */}
+      {/* Header - h-14 padronizado */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
             {activePlan && (

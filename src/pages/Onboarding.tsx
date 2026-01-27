@@ -154,8 +154,13 @@ export default function Onboarding() {
         return <StepExperience {...stepProps} />;
       case 9:
         // Will be skipped by useEffect if conditions not met
+        // Show loader briefly while transitioning to prevent null flash
         if (!shouldShowSplitStep) {
-          return null;
+          return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          );
         }
         return <StepSplitPreference {...stepProps} />;
       case 10:

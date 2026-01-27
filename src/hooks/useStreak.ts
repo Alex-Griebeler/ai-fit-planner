@@ -123,15 +123,18 @@ export function useStreak() {
   });
 
   // Calculate if streak is at risk (last workout was yesterday)
+  // Normalized to UTC to avoid timezone issues
   const isStreakAtRisk = () => {
     if (!streakQuery.data?.last_workout_date) return false;
     
-    const lastDate = new Date(streakQuery.data.last_workout_date);
+    // Normalize dates to YYYY-MM-DD format for comparison
+    const lastDateStr = streakQuery.data.last_workout_date.split('T')[0];
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    return lastDate.toDateString() === yesterday.toDateString();
+    return lastDateStr === yesterdayStr;
   };
 
   // Calculate days since last workout
