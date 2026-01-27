@@ -245,3 +245,105 @@ export function reorderWorkoutsWithSuggestion(
   const filtered = workoutIndices.filter(i => i !== suggestedIndex);
   return [suggestedIndex, ...filtered];
 }
+
+interface WorkoutExercise {
+  name: string;
+  equipment?: string;
+}
+
+/**
+ * Infere os grupos musculares a partir dos exercícios do treino
+ * Isso garante que os grupos estejam corretos mesmo se a IA não preencher muscleGroups corretamente
+ */
+export function inferMuscleGroupsFromExercises(exercises: WorkoutExercise[]): string[] {
+  const groupsSet = new Set<string>();
+  
+  exercises.forEach(exercise => {
+    const name = exercise.name.toLowerCase();
+    
+    // Costas
+    if (name.includes('remada') || name.includes('puxada') || name.includes('pulldown') || 
+        name.includes('pull-up') || name.includes('barra fixa') || name.includes('pull up') ||
+        name.includes('serrote') || name.includes('row') || name.includes('lat ') ||
+        name.includes('dorsal') || name.includes('trapézio') || name.includes('trap')) {
+      groupsSet.add('Costas');
+    }
+    
+    // Peitoral
+    if ((name.includes('supino') || (name.includes('press') && !name.includes('leg press'))) ||
+        name.includes('flexão') || name.includes('peck') || name.includes('fly') ||
+        name.includes('crucifixo') || name.includes('peito') || name.includes('chest')) {
+      groupsSet.add('Peitoral');
+    }
+    
+    // Ombros
+    if (name.includes('desenvolvimento') || name.includes('elevação lateral') ||
+        name.includes('elevação frontal') || name.includes('ombro') || name.includes('shoulder') ||
+        name.includes('deltóide') || name.includes('militar') || name.includes('arnold')) {
+      groupsSet.add('Ombros');
+    }
+    
+    // Bíceps
+    if ((name.includes('rosca') && !name.includes('rosca punho')) ||
+        name.includes('biceps') || name.includes('bíceps') || name.includes('curl') ||
+        name.includes('scott') || name.includes('martelo')) {
+      groupsSet.add('Bíceps');
+    }
+    
+    // Tríceps
+    if (name.includes('tríceps') || name.includes('triceps') || name.includes('paralela') ||
+        name.includes('testa') || name.includes('francês') || name.includes('pushdown') ||
+        name.includes('extensão de tríceps') || name.includes('coice')) {
+      groupsSet.add('Tríceps');
+    }
+    
+    // Quadríceps
+    if (name.includes('agachamento') || name.includes('leg press') || name.includes('extensora') ||
+        name.includes('hack') || name.includes('squat') || name.includes('avanço') ||
+        name.includes('passada') || name.includes('búlgaro') || name.includes('afundo')) {
+      groupsSet.add('Quadríceps');
+    }
+    
+    // Posteriores (Hamstrings)
+    if (name.includes('flexora') || name.includes('stiff') || name.includes('romeno') ||
+        name.includes('hamstring') || name.includes('posterior') || name.includes('leg curl') ||
+        name.includes('mesa flexora')) {
+      groupsSet.add('Posteriores');
+    }
+    
+    // Glúteos
+    if (name.includes('glúteo') || name.includes('gluteo') || name.includes('hip thrust') ||
+        name.includes('elevação pélvica') || name.includes('abdução') ||
+        name.includes('glute')) {
+      groupsSet.add('Glúteos');
+    }
+    
+    // Panturrilhas
+    if (name.includes('panturrilha') || name.includes('gêmeos') || name.includes('calf') ||
+        name.includes('sóleo') || name.includes('elevação de calcanhar')) {
+      groupsSet.add('Panturrilhas');
+    }
+    
+    // Core
+    if (name.includes('abdominal') || name.includes('prancha') || name.includes('crunch') ||
+        name.includes('oblíquo') || name.includes('plank') || name.includes('core') ||
+        name.includes('lombar') || name.includes('hiperextensão') || name.includes('reto abdominal')) {
+      groupsSet.add('Core');
+    }
+    
+    // Cintura Escapular
+    if (name.includes('face pull') || name.includes('rotação externa') ||
+        name.includes('encolhimento') || name.includes('shrug') || name.includes('escapular') ||
+        name.includes('manguito')) {
+      groupsSet.add('Cintura Escapular');
+    }
+  });
+  
+  // Ordena para consistência: grupos grandes primeiro
+  const order = ['Peitoral', 'Costas', 'Ombros', 'Quadríceps', 'Glúteos', 'Posteriores', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Core', 'Cintura Escapular'];
+  return Array.from(groupsSet).sort((a, b) => {
+    const idxA = order.indexOf(a);
+    const idxB = order.indexOf(b);
+    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+  });
+}
