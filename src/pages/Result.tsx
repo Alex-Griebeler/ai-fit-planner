@@ -702,9 +702,8 @@ export default function Result() {
           transition={{ delay: 0.2 }}
           className="space-y-3 mb-8"
         >
-          {/* Use reordered indices if available, otherwise original order */}
-          {(reorderedIndices.length > 0 ? reorderedIndices : plan.workouts.map((_, i) => i)).map((workoutIndex, displayIndex) => {
-            const workout = plan.workouts[workoutIndex];
+          {/* Display workouts in original prescribed order */}
+          {plan.workouts.map((workout, workoutIndex) => {
             if (!workout) return null;
             
             const isSuggested = workoutIndex === suggestedWorkoutIndex;
