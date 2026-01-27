@@ -147,8 +147,6 @@ export default function Result() {
   // Collapsible states
   const [expandedWorkouts, setExpandedWorkouts] = useState<Record<number, boolean>>({});
   const [showWarnings, setShowWarnings] = useState(false);
-  const [showVolume, setShowVolume] = useState(false);
-  const [showProgression, setShowProgression] = useState(false);
 
   const formatTimeRemaining = (resetAt: Date): string => {
     const now = new Date();
@@ -884,100 +882,6 @@ export default function Result() {
           </motion.div>
         )}
 
-        {/* Volume - Collapsible */}
-        {plan.weeklyVolume && Object.values(plan.weeklyVolume).some(v => v > 0) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
-            className="mb-4"
-          >
-            <button
-              onClick={() => setShowVolume(!showVolume)}
-              aria-expanded={showVolume}
-              className="w-full flex items-center justify-between py-3 text-left"
-            >
-              <span className="text-sm font-medium text-foreground">Volume Semanal</span>
-              <ChevronDown 
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  showVolume ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            <AnimatePresence>
-              {showVolume && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-2 gap-2 pb-4">
-                    {Object.entries(plan.weeklyVolume)
-                      .filter(([_, value]) => value > 0)
-                      .map(([muscle, volume]) => (
-                        <div key={muscle} className="flex justify-between p-3 bg-muted/50 rounded-xl">
-                          <span className="text-xs text-muted-foreground">
-                            {muscleLabels[muscle] || muscle}
-                          </span>
-                          <span className="text-xs font-medium text-foreground">{volume} séries</span>
-                        </div>
-                      ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-
-        {/* Progression - Collapsible */}
-        {plan.progressionPlan && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mb-8"
-          >
-            <button
-              onClick={() => setShowProgression(!showProgression)}
-              aria-expanded={showProgression}
-              className="w-full flex items-center justify-between py-3 text-left"
-            >
-              <span className="text-sm font-medium text-foreground">Progressão</span>
-              <ChevronDown 
-                className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                  showProgression ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            <AnimatePresence>
-              {showProgression && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="text-xs text-muted-foreground pb-4 space-y-2">
-                    {typeof plan.progressionPlan === 'string' ? (
-                      <p>{plan.progressionPlan}</p>
-                    ) : (
-                      <>
-                        {plan.progressionPlan.week1 && <p><span className="text-foreground">Sem 1:</span> {plan.progressionPlan.week1}</p>}
-                        {plan.progressionPlan.week2 && <p><span className="text-foreground">Sem 2:</span> {plan.progressionPlan.week2}</p>}
-                        {plan.progressionPlan.week3 && <p><span className="text-foreground">Sem 3:</span> {plan.progressionPlan.week3}</p>}
-                        {plan.progressionPlan.week4 && <p><span className="text-foreground">Sem 4:</span> {plan.progressionPlan.week4}</p>}
-                        {plan.progressionPlan.deloadWeek && <p><span className="text-foreground">Deload:</span> {plan.progressionPlan.deloadWeek}</p>}
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
 
         {/* CTA - Apple minimal */}
         <motion.div
