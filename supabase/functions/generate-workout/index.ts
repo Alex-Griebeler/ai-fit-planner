@@ -1026,7 +1026,7 @@ function validateWorkoutPlan(
     small: ["biceps", "triceps", "calves", "core"],
   };
   
-  // 5b. VALIDATE BACK vs CHEST RATIO (Pull/Push balance)
+  // 5b. VALIDATE BACK vs CHEST RATIO (Pull/Push balance) - REGRA: 1.1:1 a 1.25:1
   const backVolume = weeklyVolume["back"] || 0;
   const chestVolume = weeklyVolume["chest"] || 0;
   
@@ -1035,13 +1035,49 @@ function validateWorkoutPlan(
     ["peitoral", "peito", "chest"].includes(area.toLowerCase())
   );
   
-  // If chest is NOT priority, back should be >= chest
-  if (!chestIsPriority && backVolume > 0 && chestVolume > 0) {
-    if (backVolume < chestVolume) {
-      warnings.push(
-        `Volume de Costas (${backVolume}) deve ser >= Peitoral (${chestVolume}) para equilíbrio postural`
-      );
+  // Definir proporções alvo conforme documento técnico
+  // - Se Peitoral é prioridade: proporção 1:1 é aceitável
+  // - Caso contrário: Costas deve ter 1.1x a 1.25x o volume de Peitoral
+  const MIN_BACK_TO_CHEST_RATIO = 1.10;
+  const MAX_BACK_TO_CHEST_RATIO = 1.25;
+  const PRIORITY_RATIO = 1.00; // Quando peitoral é prioridade, 1:1 é OK
+  
+  if (backVolume > 0 && chestVolume > 0) {
+    const actualRatio = backVolume / chestVolume;
+    
+    if (chestIsPriority) {
+      // Se peitoral é prioridade, proporção 1:1 é aceitável (com tolerância)
+      if (actualRatio < PRIORITY_RATIO * 0.9) {
+        warnings.push(
+          `Proporção Costas/Peitoral (${actualRatio.toFixed(2)}:1) abaixo do mínimo. ` +
+          `Costas: ${backVolume} | Peitoral: ${chestVolume}. Mínimo esperado: 1:1`
+        );
+      }
+    } else {
+      // Se peitoral NÃO é prioridade, aplicar regra 1.1:1 a 1.25:1
+      if (actualRatio < MIN_BACK_TO_CHEST_RATIO) {
+        const minBackNeeded = Math.ceil(chestVolume * MIN_BACK_TO_CHEST_RATIO);
+        warnings.push(
+          `Proporção Costas/Peitoral (${actualRatio.toFixed(2)}:1) abaixo do mínimo (1.1:1). ` +
+          `Costas: ${backVolume} séries | Peitoral: ${chestVolume} séries. ` +
+          `Aumentar Costas para pelo menos ${minBackNeeded} séries.`
+        );
+      } else if (actualRatio > MAX_BACK_TO_CHEST_RATIO * 1.15) {
+        // Tolerância de 15% acima do máximo
+        warnings.push(
+          `Proporção Costas/Peitoral (${actualRatio.toFixed(2)}:1) muito alta (máximo: 1.25:1). ` +
+          `Costas: ${backVolume} séries | Peitoral: ${chestVolume} séries. ` +
+          `Considerar equilibrar volumes.`
+        );
+      }
     }
+    
+    // Log para debug
+    console.log(`Back/Chest ratio validation - Back: ${backVolume}, Chest: ${chestVolume}, Ratio: ${actualRatio.toFixed(2)}:1, ChestPriority: ${chestIsPriority}`);
+  } else if (backVolume === 0 && chestVolume > 0) {
+    errors.push(`Volume de Costas não pode ser zero quando Peitoral tem ${chestVolume} séries`);
+  } else if (chestVolume === 0 && backVolume > 0) {
+    errors.push(`Volume de Peitoral não pode ser zero quando Costas tem ${backVolume} séries`);
   }
   
   // Check if muscle is a priority area (allow +30% volume)
