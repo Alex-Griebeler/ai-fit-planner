@@ -2247,9 +2247,24 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // 3. Build Learning Context V2 if we have data
+      // 3. Fetch last rated plan (if exists)
+      const { data: lastRatedPlan } = await supabase
+        .from('workout_plans')
+        .select('plan_name, user_rating, rating_notes, rated_at')
+        .eq('user_id', userId)
+        .not('user_rating', 'is', null)
+        .order('rated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 4. Build Learning Context V2 if we have data
       if (recentSessions && recentSessions.length > 0) {
-        learningContextV2 = buildLearningContextV2(recentSessions, loadHistory || [], plannedFrequency);
+        learningContextV2 = buildLearningContextV2(
+          recentSessions, 
+          loadHistory || [], 
+          plannedFrequency, 
+          lastRatedPlan
+        );
         learningContext = learningContextV2.promptContext;
         
         console.log(`Learning Context V2 built:`, {
@@ -2622,10 +2637,19 @@ function calculateVolumeAdjustment(metrics: LearningContextV2Metrics): LearningC
   };
 }
 
+// Type for last rated plan
+interface LastRatedPlan {
+  plan_name: string;
+  user_rating: number;
+  rating_notes: string | null;
+  rated_at: string;
+}
+
 function buildLearningContextV2(
   sessions: SessionData[], 
   loadHistory: LoadData[],
-  plannedFrequency: number
+  plannedFrequency: number,
+  lastRatedPlan?: LastRatedPlan | null
 ): LearningContextV2 {
   // Calculate metrics
   const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
@@ -2712,7 +2736,8 @@ function buildLearningContextV2(
   }
   
   // Build prompt context
-  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations);
+  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations, lastRatedPlan);
+  
   
   return {
     metrics,
@@ -2728,11 +2753,36 @@ function buildPromptContext(
   adjustments: LearningContextV2Adjustments,
   guardrails: LearningContextV2Guardrails,
   progressions: string[],
-  stagnations: string[]
+  stagnations: string[],
+  lastRatedPlan?: LastRatedPlan | null
 ): string {
   let context = `
 ## 🧠 HISTÓRICO DO USUÁRIO (LEARNING CONTEXT V2)
+`;
 
+  // Add last plan rating if available
+  if (lastRatedPlan) {
+    const ratingLabels: Record<number, string> = {
+      1: 'Ruim',
+      2: 'Regular',
+      3: 'Bom',
+      4: 'Muito bom',
+      5: 'Excelente'
+    };
+    context += `
+### ⭐ Avaliação do Plano Anterior:
+- Plano: "${lastRatedPlan.plan_name}"
+- Nota: ${lastRatedPlan.user_rating}/5 (${ratingLabels[lastRatedPlan.user_rating] || ''})
+${lastRatedPlan.rating_notes ? `- Feedback do usuário: "${lastRatedPlan.rating_notes}"` : ''}
+
+**INSTRUÇÃO**: Use esta avaliação para ajustar o novo plano:
+${lastRatedPlan.user_rating <= 2 ? `- ⚠️ Avaliação BAIXA: Fazer mudanças SIGNIFICATIVAS na estrutura, exercícios e/ou volume` : ''}
+${lastRatedPlan.user_rating === 3 ? `- Avaliação MÉDIA: Fazer ajustes MODERADOS, manter o que funcionou` : ''}
+${lastRatedPlan.user_rating >= 4 ? `- ✅ Avaliação ALTA: Manter estrutura similar, fazer ajustes finos` : ''}
+`;
+  }
+
+  context += `
 ### Últimas ${metrics.sessionsAnalyzed} sessões analisadas:`;
 
   if (metrics.avgRpe !== null) {

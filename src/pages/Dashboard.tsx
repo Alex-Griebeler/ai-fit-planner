@@ -14,6 +14,7 @@ import {
   SessionHistoryCard,
   ProgressPreviewCard 
 } from '@/components/dashboard';
+import { PlanRatingDialog } from '@/components/dashboard/PlanRatingDialog';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
@@ -32,7 +33,8 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const { signOut } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const { 
@@ -40,7 +42,8 @@ export default function Dashboard() {
     activePlan, 
     isLoading: plansLoading, 
     deletePlan,
-    deactivatePlan
+    deactivatePlan,
+    isDeactivating
   } = useWorkoutPlans();
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
 
@@ -105,28 +108,45 @@ export default function Dashboard() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction 
-                      onClick={async () => {
-                        try {
-                          setIsDeactivating(true);
-                          // Desativa o plano atual para que o Result.tsx gere um novo
-                          if (activePlan) {
-                            await deactivatePlan(activePlan.id);
-                          }
-                          navigate('/onboarding');
-                        } catch (error) {
-                          toast.error('Erro ao preparar novo plano');
-                          setIsDeactivating(false);
-                        }
-                      }}
-                      disabled={isDeactivating}
+                      onClick={() => setShowRatingDialog(true)}
                       className="press-scale"
                     >
-                      {isDeactivating ? 'Preparando...' : 'Continuar'}
+                      Continuar
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
             )}
+
+            {/* Rating Dialog */}
+            <PlanRatingDialog
+              open={showRatingDialog}
+              onOpenChange={(open) => {
+                if (!open && !isSubmittingRating) {
+                  setShowRatingDialog(false);
+                }
+              }}
+              planName={activePlan?.plan_name || 'Plano atual'}
+              isSubmitting={isSubmittingRating}
+              onSubmit={async (rating, notes) => {
+                try {
+                  setIsSubmittingRating(true);
+                  if (activePlan) {
+                    await deactivatePlan({ 
+                      planId: activePlan.id, 
+                      rating, 
+                      ratingNotes: notes 
+                    });
+                  }
+                  setShowRatingDialog(false);
+                  navigate('/onboarding');
+                } catch (error) {
+                  toast.error('Erro ao salvar avaliação');
+                } finally {
+                  setIsSubmittingRating(false);
+                }
+              }}
+            />
             <Button 
               variant="ghost" 
               size="icon"
