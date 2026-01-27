@@ -1,26 +1,5 @@
 import jsPDF from 'jspdf';
-
-interface Exercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  method?: string;
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: Exercise[];
-}
+import type { WorkoutExercise, Workout } from '@/types/workout';
 
 interface GeneratePdfOptions {
   planName: string;
