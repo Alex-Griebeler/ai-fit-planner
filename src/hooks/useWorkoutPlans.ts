@@ -112,14 +112,29 @@ export function useWorkoutPlans() {
     },
   });
 
-  // Desativar plano
+  // Desativar plano (com rating opcional)
   const deactivateMutation = useMutation({
-    mutationFn: async (planId: string) => {
+    mutationFn: async ({ planId, rating, ratingNotes }: { 
+      planId: string; 
+      rating?: number; 
+      ratingNotes?: string;
+    }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+
+      const updateData: Record<string, unknown> = { is_active: false };
+      
+      // Add rating data if provided
+      if (rating) {
+        updateData.user_rating = rating;
+        updateData.rated_at = new Date().toISOString();
+        if (ratingNotes) {
+          updateData.rating_notes = ratingNotes;
+        }
+      }
 
       const { error } = await supabase
         .from("workout_plans")
-        .update({ is_active: false })
+        .update(updateData)
         .eq("id", planId)
         .eq("user_id", user.id);
 
@@ -153,6 +168,32 @@ export function useWorkoutPlans() {
     await queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
   };
 
+  // Rate an existing plan (without deactivating)
+  const ratePlanMutation = useMutation({
+    mutationFn: async ({ planId, rating, ratingNotes }: { 
+      planId: string; 
+      rating: number; 
+      ratingNotes?: string;
+    }) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("workout_plans")
+        .update({
+          user_rating: rating,
+          rating_notes: ratingNotes ?? null,
+          rated_at: new Date().toISOString(),
+        })
+        .eq("id", planId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
+    },
+  });
+
   return {
     plans: allPlansQuery.data ?? [],
     activePlan: activePlanQuery.data,
@@ -161,6 +202,9 @@ export function useWorkoutPlans() {
     createPlan: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
     deactivatePlan: deactivateMutation.mutateAsync,
+    isDeactivating: deactivateMutation.isPending,
+    ratePlan: ratePlanMutation.mutateAsync,
+    isRating: ratePlanMutation.isPending,
     deletePlan: deleteMutation.mutateAsync,
     refetchPlans,
   };

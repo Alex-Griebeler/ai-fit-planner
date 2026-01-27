@@ -607,8 +607,11 @@ export type Database = {
           periodization: string | null
           plan_data: Json
           plan_name: string
+          rated_at: string | null
+          rating_notes: string | null
           session_duration: string
           user_id: string
+          user_rating: number | null
           weekly_frequency: number
         }
         Insert: {
@@ -620,8 +623,11 @@ export type Database = {
           periodization?: string | null
           plan_data: Json
           plan_name: string
+          rated_at?: string | null
+          rating_notes?: string | null
           session_duration: string
           user_id: string
+          user_rating?: number | null
           weekly_frequency: number
         }
         Update: {
@@ -633,8 +639,11 @@ export type Database = {
           periodization?: string | null
           plan_data?: Json
           plan_name?: string
+          rated_at?: string | null
+          rating_notes?: string | null
           session_duration?: string
           user_id?: string
+          user_rating?: number | null
           weekly_frequency?: number
         }
         Relationships: []
