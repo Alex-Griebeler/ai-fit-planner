@@ -9,6 +9,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useExerciseLoads } from '@/hooks/useExerciseLoads';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useWorkoutSchedule } from '@/hooks/useWorkoutSchedule';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
   Dumbbell, 
@@ -128,6 +130,14 @@ export default function Result() {
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
   const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans } = useWorkoutPlans();
   const { isPremium } = useSubscription();
+  
+  // Workout schedule - for reordering workouts based on suggestion
+  const { 
+    suggestedWorkoutIndex, 
+    reorderedIndices, 
+    reason: scheduleReason,
+    isLoading: isLoadingSchedule 
+  } = useWorkoutSchedule();
   
   // Get the plan ID for loading exercise loads
   const currentPlanId = activePlan?.id || null;
@@ -646,46 +656,68 @@ export default function Result() {
           </div>
         </motion.div>
 
-        {/* Workouts - Ultra-minimal Apple style */}
+        {/* Workouts - Ultra-minimal Apple style with smart reordering */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="space-y-3 mb-8"
         >
-          {plan.workouts.map((workout, index) => (
-            <div
-              key={index}
-              className="bg-card rounded-2xl border border-border overflow-hidden"
-            >
-              {/* Workout Header - Clean & Minimal */}
-              <button
-                onClick={() => toggleWorkout(index)}
-                aria-expanded={expandedWorkouts[index]}
-                className="w-full p-5 flex items-center justify-between text-left active:scale-[0.98] transition-transform"
+          {/* Use reordered indices if available, otherwise original order */}
+          {(reorderedIndices.length > 0 ? reorderedIndices : plan.workouts.map((_, i) => i)).map((workoutIndex, displayIndex) => {
+            const workout = plan.workouts[workoutIndex];
+            if (!workout) return null;
+            
+            const isSuggested = workoutIndex === suggestedWorkoutIndex;
+            
+            return (
+              <div
+                key={workoutIndex}
+                className={`bg-card rounded-2xl border overflow-hidden transition-all ${
+                  isSuggested 
+                    ? 'border-primary/50 ring-1 ring-primary/20' 
+                    : 'border-border'
+                }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <Dumbbell className="w-6 h-6 text-primary" />
+                {/* Suggested Badge */}
+                {isSuggested && scheduleReason && (
+                  <div className="px-5 pt-3 pb-0">
+                    <Badge variant="default" className="bg-primary/15 text-primary border-0 text-xs font-medium">
+                      ✨ Sugerido
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground text-base">
-                      {(workout.name || workout.day).replace(/\s*\([^)]*\)\s*$/, '').trim()}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {workout.exercises.length} exercícios · {workout.estimatedDuration || plan.sessionDuration}
-                    </p>
+                )}
+                
+                {/* Workout Header - Clean & Minimal */}
+                <button
+                  onClick={() => toggleWorkout(workoutIndex)}
+                  aria-expanded={expandedWorkouts[workoutIndex]}
+                  className="w-full p-5 flex items-center justify-between text-left active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                      isSuggested ? 'bg-primary/20' : 'bg-primary/10'
+                    }`}>
+                      <Dumbbell className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-base">
+                        {(workout.name || workout.day).replace(/\s*\([^)]*\)\s*$/, '').trim()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {workout.exercises.length} exercícios · {workout.estimatedDuration || plan.sessionDuration}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <ChevronDown 
-                  className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
-                    expandedWorkouts[index] ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+                      expandedWorkouts[workoutIndex] ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
               
-              <AnimatePresence>
-                {expandedWorkouts[index] && (
+                <AnimatePresence>
+                {expandedWorkouts[workoutIndex] && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
@@ -871,7 +903,8 @@ export default function Result() {
                 )}
               </AnimatePresence>
             </div>
-          ))}
+          );
+          })}
         </motion.div>
 
         {/* Warnings - Collapsible */}
