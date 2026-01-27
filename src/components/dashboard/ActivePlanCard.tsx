@@ -126,27 +126,33 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Próximos treinos:</p>
             <div className="grid gap-2">
-              {workouts.slice(0, 3).map((workout, index) => (
-                <button 
-                  key={index}
-                  onClick={() => navigate(`/workout-preview?day=${encodeURIComponent(workout.day)}`)}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  aria-label={`Iniciar treino ${workout.name}`}
-                >
-                  <div>
-                    <p className="font-medium text-foreground">{workout.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {workout.muscleGroups?.slice(0, 3).join(' • ') || workout.focus}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {workout.exercises?.length ?? 0} exercícios
-                    </Badge>
-                    <Play className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </button>
-              ))}
+              {workouts.slice(0, 3).map((workout, index) => {
+                // Remove parenthetical suffixes like (força), (hipertrofia), (metabólico)
+                const cleanName = workout.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                const cleanFocus = workout.focus?.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                
+                return (
+                  <button 
+                    key={index}
+                    onClick={() => navigate(`/workout-preview?day=${encodeURIComponent(workout.day)}`)}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label={`Iniciar treino ${cleanName}`}
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{cleanName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {workout.muscleGroups?.slice(0, 3).join(' • ') || cleanFocus}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {workout.exercises?.length ?? 0} exercícios
+                      </Badge>
+                      <Play className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
