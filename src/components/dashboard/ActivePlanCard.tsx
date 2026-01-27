@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Clock, Dumbbell, ChevronRight, Sparkles, Play } from 'lucide-react';
+import { Calendar, Clock, Dumbbell, ArrowRight, Sparkles, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-
+import { motion } from 'framer-motion';
 interface ActivePlanCardProps {
   plan: WorkoutPlan | null;
   isLoading: boolean;
@@ -89,7 +89,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
   return (
     <Card className="bg-card border-border overflow-hidden">
       <CardHeader 
-        className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors active:scale-[0.98]"
+        className="pb-3 cursor-pointer group"
         onClick={() => navigate('/result')}
         role="button"
         tabIndex={0}
@@ -103,7 +103,14 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             </Badge>
             <CardTitle className="text-xl">{plan.plan_name}</CardTitle>
           </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          <motion.div 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span className="text-xs font-medium">Ver treinos</span>
+            <ArrowRight className="w-4 h-4" />
+          </motion.div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
