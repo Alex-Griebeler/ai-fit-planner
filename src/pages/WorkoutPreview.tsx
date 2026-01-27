@@ -14,28 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { inferMuscleGroupsFromExercises } from '@/lib/workoutScheduler';
-
-interface Exercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  method?: string;
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: Exercise[];
-}
+import type { Workout } from '@/types/workout';
 
 export default function WorkoutPreview() {
   const navigate = useNavigate();

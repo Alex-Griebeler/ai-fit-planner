@@ -34,30 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-
-interface WorkoutExercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  isCompound?: boolean;
-  method?: string;
-  muscleGroup?: string;
-}
-
-interface WorkoutCardio {
-  type: string;
-  duration: string;
-  intensity?: string;
-  description?: string;
-  notes?: string;
-}
+import type { Workout, WorkoutPlan, WorkoutCardio, ProgressionPlan } from '@/types/workout';
 
 // Descrições dos tipos de cardio para exibição
 const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
@@ -93,37 +70,6 @@ function parseCardioType(cardioType: string): { type: string; duration: string; 
   }
   
   return { type: cardioType, duration: '', info: null };
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: WorkoutExercise[];
-  cardio?: WorkoutCardio | null;
-}
-
-interface ProgressionPlan {
-  week1?: string;
-  week2?: string;
-  week3?: string;
-  week4?: string;
-  deloadWeek?: string;
-}
-
-interface WorkoutPlan {
-  planName: string;
-  description: string;
-  weeklyFrequency: number;
-  sessionDuration: string;
-  periodization: string;
-  workouts: Workout[];
-  weeklyVolume: Record<string, number>;
-  progressionPlan: string | ProgressionPlan;
-  warnings: string[];
-  motivationalMessage: string;
 }
 
 export default function Result() {
@@ -767,7 +713,10 @@ export default function Result() {
                         return (
                           <Popover key={i}>
                             <PopoverTrigger asChild>
-                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left group">
+                              <Button 
+                                variant="ghost" 
+                                className="w-full flex items-center justify-between py-3 px-3 -mx-3 h-auto rounded-xl hover:bg-muted/50 transition-colors text-left group"
+                              >
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <span className="text-xs text-muted-foreground/60 font-mono w-5 shrink-0">
                                     {exercise.order || i + 1}
@@ -779,7 +728,7 @@ export default function Result() {
                                 <span className="text-sm text-muted-foreground font-mono shrink-0 ml-3">
                                   {exercise.sets}×{exercise.reps}
                                 </span>
-                              </button>
+                              </Button>
                             </PopoverTrigger>
                             <PopoverContent side="top" align="center" className="w-72 p-4">
                               <div className="space-y-3">
@@ -863,7 +812,10 @@ export default function Result() {
                         return (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left mt-2 border-t border-border/50 pt-4">
+                              <Button 
+                                variant="ghost" 
+                                className="w-full flex items-center justify-between py-3 px-3 -mx-3 h-auto rounded-xl hover:bg-muted/50 transition-colors text-left mt-2 border-t border-border/50 pt-4"
+                              >
                                 <div className="flex items-center gap-3">
                                   <span className="text-base">{displayInfo.icon}</span>
                                   <span className="text-sm text-foreground">
@@ -873,7 +825,7 @@ export default function Result() {
                                 <span className="text-sm text-muted-foreground">
                                   {workout.cardio.duration || cardioInfo.duration}
                                 </span>
-                              </button>
+                              </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-72 p-4" side="top">
                               <div className="space-y-3">
