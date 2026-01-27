@@ -48,6 +48,7 @@ interface WorkoutExercise {
   notes?: string;
   isCompound?: boolean;
   method?: string;
+  muscleGroup?: string;
 }
 
 interface WorkoutCardio {
