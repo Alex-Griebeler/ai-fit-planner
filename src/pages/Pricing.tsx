@@ -44,7 +44,14 @@ export default function Pricing() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // Try to go back, but if there's no history, go to dashboard
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/dashboard');
+              }
+            }}
             className="mr-4 press-scale"
             aria-label="Voltar"
           >
