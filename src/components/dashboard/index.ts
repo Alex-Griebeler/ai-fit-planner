@@ -4,4 +4,3 @@ export { WorkoutHistoryCard } from './WorkoutHistoryCard';
 export { ProfileCard } from './ProfileCard';
 export { SessionHistoryCard } from './SessionHistoryCard';
 export { ProgressPreviewCard } from './ProgressPreviewCard';
-export { NextWorkoutCard } from './NextWorkoutCard';

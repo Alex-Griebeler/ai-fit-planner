@@ -958,17 +958,13 @@ export default function Result() {
           )}
           <Button
             variant="ghost"
-            size="sm"
-            className="w-full text-muted-foreground text-sm"
+            size="lg"
+            className="w-full text-muted-foreground"
             onClick={() => navigate('/onboarding')}
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Refazer questionário
           </Button>
         </motion.div>
-
-        {/* Spacer for bottom nav */}
-        <div className="h-8" aria-hidden="true" />
 
       </div>
     </div>
