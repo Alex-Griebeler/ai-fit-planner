@@ -1,220 +1,108 @@
 
-# Sprint 2: Unificação de Interfaces, Correções de useEffect e Feedback de Erros
+## Plano: Sistema de Sugestão de Treinos (Opção B - Revisada)
 
-## Resumo Executivo
+### Objetivo
+Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, **reordenando a lista de treinos na tela do plano** (Result.tsx).
 
-Este sprint foca em melhorar a qualidade técnica do código através de três ações principais:
-1. Criar uma interface TypeScript única para exercícios, eliminando duplicações
-2. Corrigir o warning de `forwardRef` no `Result.tsx`
-3. Adicionar feedback visual quando `startSession` falha no `WorkoutExecution.tsx`
+### Abordagem Escolhida
+**Reordenação da lista** - O treino sugerido sobe automaticamente para o topo da lista, com destaque visual sutil (badge + borda).
 
----
+### Arquivos Criados
 
-## Problema 1: Interfaces TypeScript Duplicadas
+**1. `src/lib/workoutScheduler.ts`** - Lógica de agendamento
 
-### Diagnóstico
-Atualmente existem **5 definições diferentes** da interface de exercício espalhadas pelo código:
+Funções principais:
+- `getDayLabel(dayCode)` - Converte 'mon' para 'Segunda-feira'
+- `sortDaysByWeekOrder(days)` - Ordena dias na sequência da semana
+- `getTodayDayCode()` - Retorna o código do dia atual
+- `getWeeklySchedule(totalWorkouts, trainingDays, sessions)` - Calcula o cronograma
+- `reorderWorkoutsWithSuggestion(indices, suggestedIndex)` - Reordena a lista
 
-| Arquivo | Interface | Campos Extras |
-|---------|-----------|---------------|
-| `Result.tsx` | `WorkoutExercise` | `isCompound`, `muscleGroup` |
-| `WorkoutExecution.tsx` | `Exercise` | - |
-| `WorkoutPreview.tsx` | `Exercise` | - |
-| `ExerciseCard.tsx` | `Exercise` | - |
-| `generateWorkoutPdf.ts` | `Exercise` | - |
+**2. `src/hooks/useWorkoutSchedule.ts`** - Hook de agendamento
 
-### Solução
-Criar um arquivo `src/types/workout.ts` com interfaces centralizadas e exportadas.
+Combina dados de:
+- `useWorkoutPlans` (treinos do plano ativo)
+- `useOnboardingData` (dias selecionados)
+- `useWorkoutSessions` (sessões da semana)
 
-### Código Proposto
-
+Retorna:
 ```typescript
-// src/types/workout.ts (NOVO ARQUIVO)
-
-export interface WorkoutExercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  method?: string;
-  isCompound?: boolean;
-  muscleGroup?: string;
-}
-
-export interface WorkoutCardio {
-  type: string;
-  duration: string;
-  intensity?: string;
-  description?: string;
-  notes?: string;
-}
-
-export interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: WorkoutExercise[];
-  cardio?: WorkoutCardio | null;
-}
-
-export interface ProgressionPlan {
-  week1?: string;
-  week2?: string;
-  week3?: string;
-  week4?: string;
-  deloadWeek?: string;
-}
-
-export interface WorkoutPlan {
-  planName: string;
-  description: string;
-  weeklyFrequency: number;
-  sessionDuration: string;
-  periodization: string;
-  workouts: Workout[];
-  weeklyVolume: Record<string, number>;
-  progressionPlan: string | ProgressionPlan;
-  warnings: string[];
-  motivationalMessage: string;
+{
+  suggestedWorkoutIndex: number | null,
+  todayWorkoutIndex: number | null,
+  pendingWorkoutIndex: number | null,
+  completedIndices: number[],
+  isWeekComplete: boolean,
+  isRestDay: boolean,
+  reason: string,
+  reorderedIndices: number[],
+  trainingDays: string[],
+  isLoading: boolean,
 }
 ```
 
-### Arquivos a Atualizar
-- `src/pages/Result.tsx` - Remover interfaces locais, importar de `types/workout`
-- `src/pages/WorkoutExecution.tsx` - Remover `Exercise`, importar `WorkoutExercise`
-- `src/pages/WorkoutPreview.tsx` - Remover `Exercise`, importar `WorkoutExercise`
-- `src/components/workout/ExerciseCard.tsx` - Remover `Exercise`, importar `WorkoutExercise`
-- `src/lib/generateWorkoutPdf.ts` - Remover `Exercise`, importar `WorkoutExercise`
-- `src/lib/workoutScheduler.ts` - Atualizar `WorkoutExercise` para usar o tipo compartilhado
+### Arquivos Modificados
 
----
+**3. `src/pages/Result.tsx`**
 
-## Problema 2: Warning de forwardRef no Result.tsx
+- Importou `useWorkoutSchedule` e `Badge`
+- Loop de workouts agora usa `reorderedIndices` para ordem inteligente
+- Treino sugerido exibe badge "✨ Sugerido" e borda destacada
+- Mantém compatibilidade com planos sem dados de onboarding
 
-### Diagnóstico
-O console mostra:
+### Comportamento Visual
+
 ```
-Warning: Function components cannot be given refs.
-Check the render method of `Result`.
-at Popover
-```
-
-O problema está na linha ~768 onde um `<button>` é passado como `asChild` para `PopoverTrigger`. Quando o Radix tenta anexar uma ref ao botão, o componente não suporta.
-
-### Solução
-Usar o `Button` do shadcn (que já tem `forwardRef`) em vez de `<button>` nativo, ou envolver com `React.forwardRef`.
-
-### Código Proposto
-
-```tsx
-// Antes (linha 770 de Result.tsx)
-<PopoverTrigger asChild>
-  <button className="w-full flex items-center...">
-
-// Depois
-<PopoverTrigger asChild>
-  <Button variant="ghost" className="w-full flex items-center justify-between py-3 px-3 h-auto rounded-xl hover:bg-muted/50 transition-colors text-left group">
-```
-
----
-
-## Problema 3: Falta de Feedback em startSession
-
-### Diagnóstico
-Em `WorkoutExecution.tsx` (linha 98-104), quando `startSession` falha, o erro é apenas logado no console:
-
-```tsx
-startSession({...}).catch(console.error);
+┌─────────────────────────────────────────────────────────────────┐
+│                    TELA PLANO PRONTO                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ ✨ Sugerido                                               │  │
+│  │ ─────────────────────────────────────────────────────────│  │
+│  │ 🏋️ Upper A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Lower A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Upper B                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-O usuário não recebe nenhum feedback visual.
+### Lógica de Detecção
 
-### Solução
-Adicionar toast de erro e estado de loading para o usuário.
+1. Ordenar `trainingDays` pela sequência da semana (dom=0, seg=1...)
+2. Mapear cada treino do plano para um dia específico
+3. Verificar quais treinos da semana já foram completados
+4. Identificar se hoje é dia de treino
+5. Identificar se há treino pendente de dias anteriores
+6. Reordenar lista colocando sugerido no topo
 
-### Código Proposto
+### Tratamento de Edge Cases
 
-```tsx
-// WorkoutExecution.tsx - linhas 94-105
+- Usuário sem plano ativo: Hook retorna valores default
+- Usuário sem dados de onboarding: Fallback para ordem original
+- Semana completa: Nenhum treino sugerido
+- Dia de descanso: Próximo treino futuro é sugerido
 
-const [isStartingSession, setIsStartingSession] = useState(false);
+### Impacto no Código Existente
 
-useEffect(() => {
-  if (workout && activePlan && !currentSession && !isStartingSession) {
-    setIsStartingSession(true);
-    const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-    startSession({
-      workoutPlanId: activePlan.id,
-      workoutDay: workout.day,
-      workoutName: workout.name,
-      totalSets,
-    })
-    .catch((error) => {
-      console.error('Erro ao iniciar sessão:', error);
-      toast.error('Erro ao iniciar sessão. Seu progresso pode não ser salvo.');
-    })
-    .finally(() => setIsStartingSession(false));
-  }
-}, [workout, activePlan, currentSession, isStartingSession, startSession]);
-```
+| Componente | Mudança | Risco |
+|------------|---------|-------|
+| `Result.tsx` | Loop usa reorderedIndices | Baixo |
+| `useOnboardingData.ts` | Apenas consumido | Nenhum |
+| `useWorkoutSessions.ts` | Apenas consumido | Nenhum |
+| `useWorkoutPlans.ts` | Apenas consumido | Nenhum |
+| `Dashboard.tsx` | Nenhuma mudança | Nenhum |
+| `ActivePlanCard.tsx` | Nenhuma mudança | Nenhum |
 
----
-
-## Problema 4: Dependências do useEffect em Result.tsx
-
-### Diagnóstico
-O useEffect principal (linhas 339-437) usa `generatePlan` dentro do corpo, mas `generatePlan` não está nas dependências. Isso pode causar comportamento inconsistente.
-
-### Solução
-Envolver `generatePlan` em `useCallback` com as dependências corretas.
-
-### Código Proposto
-
-```tsx
-const generatePlan = useCallback(async (userData: OnboardingData) => {
-  setLoading(true);
-  setError(null);
-  // ... resto da implementação
-}, [isPremium, navigate, plans.length]);
-```
-
-E adicionar `generatePlan` ao array de dependências do useEffect principal.
-
----
-
-## Resumo das Alterações
-
-| Arquivo | Tipo de Alteração |
-|---------|-------------------|
-| `src/types/workout.ts` | **NOVO** - Interfaces centralizadas |
-| `src/pages/Result.tsx` | Remover interfaces, importar, corrigir Popover, useCallback |
-| `src/pages/WorkoutExecution.tsx` | Importar tipos, adicionar feedback startSession |
-| `src/pages/WorkoutPreview.tsx` | Remover interface, importar |
-| `src/components/workout/ExerciseCard.tsx` | Remover interface, importar |
-| `src/lib/generateWorkoutPdf.ts` | Remover interfaces, importar |
-| `src/lib/workoutScheduler.ts` | Atualizar interface |
-
----
-
-## Benefícios
-
-- Código mais DRY (Don't Repeat Yourself)
-- Manutenção simplificada de tipos
-- Eliminação de warnings no console
-- Melhor experiência do usuário com feedback de erros
-- Menor risco de bugs por inconsistência de tipos
-
----
-
-## Risco
-
-- **Baixo**: Alterações de tipagem e refatoração sem mudança de lógica
-- **Teste sugerido**: Navegar pelo fluxo completo (Result → Preview → Execution) para validar
+### Status: ✅ Implementado
 

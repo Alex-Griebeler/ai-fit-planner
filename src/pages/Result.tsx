@@ -34,7 +34,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Workout, WorkoutPlan, WorkoutCardio, ProgressionPlan } from '@/types/workout';
+
+
+interface WorkoutExercise {
+  order: number;
+  name: string;
+  equipment: string;
+  sets: number;
+  reps: string;
+  rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
+  isCompound?: boolean;
+  method?: string;
+  muscleGroup?: string;
+}
+
+interface WorkoutCardio {
+  type: string;
+  duration: string;
+  intensity?: string;
+  description?: string;
+  notes?: string;
+}
 
 // Descrições dos tipos de cardio para exibição
 const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
@@ -70,6 +93,37 @@ function parseCardioType(cardioType: string): { type: string; duration: string; 
   }
   
   return { type: cardioType, duration: '', info: null };
+}
+
+interface Workout {
+  day: string;
+  name: string;
+  focus: string;
+  muscleGroups: string[];
+  estimatedDuration: string;
+  exercises: WorkoutExercise[];
+  cardio?: WorkoutCardio | null;
+}
+
+interface ProgressionPlan {
+  week1?: string;
+  week2?: string;
+  week3?: string;
+  week4?: string;
+  deloadWeek?: string;
+}
+
+interface WorkoutPlan {
+  planName: string;
+  description: string;
+  weeklyFrequency: number;
+  sessionDuration: string;
+  periodization: string;
+  workouts: Workout[];
+  weeklyVolume: Record<string, number>;
+  progressionPlan: string | ProgressionPlan;
+  warnings: string[];
+  motivationalMessage: string;
 }
 
 export default function Result() {
@@ -144,7 +198,7 @@ export default function Result() {
     return [...new Set(days)].filter(day => validDays.includes(day));
   };
 
-  const generatePlan = useCallback(async (userData: OnboardingData) => {
+  const generatePlan = async (userData: OnboardingData) => {
     setLoading(true);
     setError(null);
     setRateLimitResetAt(null);
@@ -173,44 +227,44 @@ export default function Result() {
 
       // Handle function errors - check if it's a rate limit 429 error
       if (functionError) {
-        const errorMessage = functionError.message || '';
-        
-        // Helper to extract rate limit info from any object/string
-        const extractRateLimitInfo = (source: unknown): { resetAt: Date | null; found: boolean } => {
+        // Try to parse rate limit info from the error context
+        const errorContext = (functionError as any).context;
+        if (errorContext) {
           try {
-            const obj = typeof source === 'string' ? JSON.parse(source) : source;
-            if (obj?.reset_at) {
-              return { resetAt: new Date(obj.reset_at), found: true };
-            }
-            if (obj?.error?.includes?.('Limite')) {
-              return { resetAt: null, found: true };
-            }
-          } catch {
-            // Not parseable
-          }
-          return { resetAt: null, found: false };
-        };
-        
-        // Check multiple potential sources for rate limit info
-        const sources = [
-          (functionError as any).context,
-          (functionError as any).body,
-          errorMessage.match(/\{.*\}/)?.[0],
-        ];
-        
-        for (const source of sources) {
-          if (source) {
-            const { resetAt, found } = extractRateLimitInfo(source);
-            if (found) {
-              if (resetAt) setRateLimitResetAt(resetAt);
+            const errorBody = typeof errorContext === 'string' ? JSON.parse(errorContext) : errorContext;
+            if (errorBody?.reset_at || errorBody?.error?.includes('Limite')) {
+              const resetAt = new Date(errorBody.reset_at);
+              setRateLimitResetAt(resetAt);
               setIsRateLimited(true);
-              throw new Error('Limite de 5 gerações por hora atingido.');
+              const maxReq = errorBody.max_requests || 5;
+              throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
             }
+          } catch (parseError) {
+            // Not a JSON response, continue with normal error handling
           }
         }
         
-        // Fallback: check error message for rate limit keywords
+        // Check if error message contains rate limit info
+        const errorMessage = functionError.message || '';
         if (errorMessage.includes('429') || errorMessage.includes('Limite') || errorMessage.includes('Rate limit')) {
+          // Try to extract reset_at from the error message if it contains JSON
+          const jsonMatch = errorMessage.match(/\{.*\}/);
+          if (jsonMatch) {
+            try {
+              const errorBody = JSON.parse(jsonMatch[0]);
+              if (errorBody.reset_at) {
+                const resetAt = new Date(errorBody.reset_at);
+                setRateLimitResetAt(resetAt);
+                setIsRateLimited(true);
+                const maxReq = errorBody.max_requests || 5;
+                throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
+              }
+            } catch {
+              // Fallback: set rate limited state without specific reset time
+              setIsRateLimited(true);
+              throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
+            }
+          }
           setIsRateLimited(true);
           throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
         }
@@ -243,7 +297,7 @@ export default function Result() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   const savePlanToDatabase = async () => {
     if (!plan) return;
@@ -380,7 +434,7 @@ export default function Result() {
     if (!savedOnboardingData) {
       navigate('/onboarding');
     }
-  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan, generatePlan]);
+  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan]);
 
   const handleRetry = () => {
     if (data) {
@@ -713,10 +767,7 @@ export default function Result() {
                         return (
                           <Popover key={i}>
                             <PopoverTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                className="w-full flex items-center justify-between py-3 px-3 -mx-3 h-auto rounded-xl hover:bg-muted/50 transition-colors text-left group"
-                              >
+                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left group">
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <span className="text-xs text-muted-foreground/60 font-mono w-5 shrink-0">
                                     {exercise.order || i + 1}
@@ -728,7 +779,7 @@ export default function Result() {
                                 <span className="text-sm text-muted-foreground font-mono shrink-0 ml-3">
                                   {exercise.sets}×{exercise.reps}
                                 </span>
-                              </Button>
+                              </button>
                             </PopoverTrigger>
                             <PopoverContent side="top" align="center" className="w-72 p-4">
                               <div className="space-y-3">
@@ -812,10 +863,7 @@ export default function Result() {
                         return (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                className="w-full flex items-center justify-between py-3 px-3 -mx-3 h-auto rounded-xl hover:bg-muted/50 transition-colors text-left mt-2 border-t border-border/50 pt-4"
-                              >
+                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left mt-2 border-t border-border/50 pt-4">
                                 <div className="flex items-center gap-3">
                                   <span className="text-base">{displayInfo.icon}</span>
                                   <span className="text-sm text-foreground">
@@ -825,7 +873,7 @@ export default function Result() {
                                 <span className="text-sm text-muted-foreground">
                                   {workout.cardio.duration || cardioInfo.duration}
                                 </span>
-                              </Button>
+                              </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-72 p-4" side="top">
                               <div className="space-y-3">

@@ -1,4 +1,3 @@
-import { forwardRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -44,11 +43,11 @@ const stats = [
   { value: '4.9', label: 'Avaliação média' },
 ];
 
-const Index = forwardRef<HTMLDivElement>((_, ref) => {
+export default function Index() {
   const navigate = useNavigate();
 
   return (
-    <div ref={ref} className="min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-hidden">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center">
         {/* Background Effects */}
@@ -323,7 +322,4 @@ const Index = forwardRef<HTMLDivElement>((_, ref) => {
       </footer>
     </div>
   );
-});
-Index.displayName = 'Index';
-
-export default Index;
+}

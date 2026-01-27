@@ -14,10 +14,22 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { WorkoutExercise } from '@/types/workout';
+
+interface Exercise {
+  order: number;
+  name: string;
+  equipment: string;
+  sets: number;
+  reps: string;
+  rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
+  method?: string;
+}
 
 interface ExerciseCardProps {
-  exercise: WorkoutExercise;
+  exercise: Exercise;
   completedSets: number;
   onSetComplete: (setNumber: number) => void;
   onSetUndo: (setNumber: number) => void;

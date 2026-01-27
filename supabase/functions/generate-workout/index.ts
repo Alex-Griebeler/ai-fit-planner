@@ -2151,7 +2151,7 @@ serve(async (req) => {
       .rpc('check_rate_limit', {
         p_user_id: userId,
         p_endpoint: 'generate-workout',
-        p_max_requests: 999, // TEMP: Desabilitado para testes - REVERTER para 5 em produção
+        p_max_requests: 5,
         p_window_hours: 1
       });
 
@@ -2322,7 +2322,7 @@ serve(async (req) => {
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 65536,
+        max_tokens: 32000,
       }),
     });
 

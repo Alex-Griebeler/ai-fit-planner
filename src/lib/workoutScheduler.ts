@@ -246,7 +246,7 @@ export function reorderWorkoutsWithSuggestion(
   return [suggestedIndex, ...filtered];
 }
 
-interface InferExercise {
+interface WorkoutExercise {
   name: string;
   equipment?: string;
   muscleGroup?: string;
@@ -256,7 +256,7 @@ interface InferExercise {
  * Extrai os grupos musculares dos exercícios do treino na ordem de prescrição
  * Prioriza o campo muscleGroup do exercício, com fallback para inferência por nome
  */
-export function inferMuscleGroupsFromExercises(exercises: InferExercise[]): string[] {
+export function inferMuscleGroupsFromExercises(exercises: WorkoutExercise[]): string[] {
   const groupsSet = new Set<string>();
   
   // Mapeamento para traduzir grupos em inglês para português

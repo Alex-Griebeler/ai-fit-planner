@@ -21,7 +21,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Workout } from '@/types/workout';
+
+interface Exercise {
+  order: number;
+  name: string;
+  equipment: string;
+  sets: number;
+  reps: string;
+  rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
+  method?: string;
+}
+
+interface Workout {
+  day: string;
+  name: string;
+  focus: string;
+  muscleGroups: string[];
+  estimatedDuration: string;
+  exercises: Exercise[];
+}
 
 export default function WorkoutExecution() {
   const navigate = useNavigate();
@@ -46,7 +67,6 @@ export default function WorkoutExecution() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [localLoads, setLocalLoads] = useState<Record<string, string>>({});
   const [workoutStartTime] = useState(new Date());
-  const [isStartingSession, setIsStartingSession] = useState(false);
 
   // Get workout data
   const workout = useMemo(() => {
@@ -73,22 +93,16 @@ export default function WorkoutExecution() {
 
   // Start session when workout loads
   useEffect(() => {
-    if (workout && activePlan && !currentSession && !isStartingSession) {
-      setIsStartingSession(true);
+    if (workout && activePlan && !currentSession) {
       const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
       startSession({
         workoutPlanId: activePlan.id,
         workoutDay: workout.day,
         workoutName: workout.name,
         totalSets,
-      })
-        .catch((error) => {
-          console.error('Erro ao iniciar sessão:', error);
-          toast.error('Erro ao iniciar sessão. Seu progresso pode não ser salvo.');
-        })
-        .finally(() => setIsStartingSession(false));
+      }).catch(console.error);
     }
-  }, [workout, activePlan, currentSession, isStartingSession, startSession]);
+  }, [workout, activePlan, currentSession, startSession]);
 
   // Parse rest time from string like "60s" or "2min"
   const parseRestTime = useCallback((rest: string): number => {
