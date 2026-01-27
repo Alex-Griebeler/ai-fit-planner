@@ -1,108 +1,75 @@
 
-## Plano: Sistema de Sugestão de Treinos (Opção B - Revisada)
+# Desabilitar Rate Limit para Testes
 
-### Objetivo
-Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, **reordenando a lista de treinos na tela do plano** (Result.tsx).
+## Diagnóstico
 
-### Abordagem Escolhida
-**Reordenação da lista** - O treino sugerido sobe automaticamente para o topo da lista, com destaque visual sutil (badge + borda).
+O rate limit está implementado nas linhas 2149-2176 da Edge Function `generate-workout/index.ts`. A verificação chama a função `check_rate_limit` do banco de dados com os parâmetros:
+- `p_max_requests: 5` (máximo 5 gerações)
+- `p_window_hours: 1` (por hora)
 
-### Arquivos Criados
+## Opções de Desabilitação
 
-**1. `src/lib/workoutScheduler.ts`** - Lógica de agendamento
-
-Funções principais:
-- `getDayLabel(dayCode)` - Converte 'mon' para 'Segunda-feira'
-- `sortDaysByWeekOrder(days)` - Ordena dias na sequência da semana
-- `getTodayDayCode()` - Retorna o código do dia atual
-- `getWeeklySchedule(totalWorkouts, trainingDays, sessions)` - Calcula o cronograma
-- `reorderWorkoutsWithSuggestion(indices, suggestedIndex)` - Reordena a lista
-
-**2. `src/hooks/useWorkoutSchedule.ts`** - Hook de agendamento
-
-Combina dados de:
-- `useWorkoutPlans` (treinos do plano ativo)
-- `useOnboardingData` (dias selecionados)
-- `useWorkoutSessions` (sessões da semana)
-
-Retorna:
+### Opção A: Aumentar Limite Temporariamente (Recomendado)
+Alterar os parâmetros para valores muito altos:
 ```typescript
-{
-  suggestedWorkoutIndex: number | null,
-  todayWorkoutIndex: number | null,
-  pendingWorkoutIndex: number | null,
-  completedIndices: number[],
-  isWeekComplete: boolean,
-  isRestDay: boolean,
-  reason: string,
-  reorderedIndices: number[],
-  trainingDays: string[],
-  isLoading: boolean,
-}
+p_max_requests: 999,  // Praticamente ilimitado
+p_window_hours: 1
 ```
 
-### Arquivos Modificados
+**Vantagens:**
+- Mantém a estrutura de rate limiting intacta
+- Fácil de reverter para produção
+- Logs continuam funcionando normalmente
 
-**3. `src/pages/Result.tsx`**
+### Opção B: Bypass Completo do Rate Limit
+Comentar ou remover o bloco de verificação (linhas 2149-2176).
 
-- Importou `useWorkoutSchedule` e `Badge`
-- Loop de workouts agora usa `reorderedIndices` para ordem inteligente
-- Treino sugerido exibe badge "✨ Sugerido" e borda destacada
-- Mantém compatibilidade com planos sem dados de onboarding
+**Desvantagens:**
+- Mais invasivo
+- Maior risco de esquecer de reativar
 
-### Comportamento Visual
+## Plano de Execução
 
+1. **Alterar Edge Function** (`supabase/functions/generate-workout/index.ts`)
+   - Linha 2154: `p_max_requests: 5` → `p_max_requests: 999`
+   - Adicionar comentário `// TEMP: Rate limit desabilitado para testes`
+
+2. **Deploy automático** da Edge Function
+
+3. **Testar geração de plano de 6 dias** para validar `max_tokens: 65536`
+
+4. **Após validação, reverter** para `p_max_requests: 5`
+
+## Código da Alteração
+
+```text
+Arquivo: supabase/functions/generate-workout/index.ts
+Linha 2154
+
+Antes:
+  p_max_requests: 5,
+
+Depois:
+  p_max_requests: 999, // TEMP: Desabilitado para testes - REVERTER para 5 em produção
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    TELA PLANO PRONTO                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ ✨ Sugerido                                               │  │
-│  │ ─────────────────────────────────────────────────────────│  │
-│  │ 🏋️ Upper A                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Lower A                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Upper B                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+
+## Risco
+
+- **Zero impacto funcional**: Apenas permite mais gerações
+- **Segurança mantida**: Autenticação JWT continua ativa
+- **Reversível**: Basta alterar o número de volta
+
+## Detalhes Técnicos
+
+A função `check_rate_limit` no banco de dados (PostgreSQL) registra cada chamada em uma tabela `rate_limits`. Com `p_max_requests: 999`, o usuário precisaria fazer 999 gerações em 1 hora para ser bloqueado.
+
+A estrutura completa do rate limiting:
+```text
+supabase/functions/generate-workout/index.ts (linhas 2149-2176)
+│
+└── Chama: supabase.rpc('check_rate_limit', {...})
+    │
+    └── Função PostgreSQL: public.check_rate_limit()
+        │
+        └── Tabela: public.rate_limits
 ```
-
-### Lógica de Detecção
-
-1. Ordenar `trainingDays` pela sequência da semana (dom=0, seg=1...)
-2. Mapear cada treino do plano para um dia específico
-3. Verificar quais treinos da semana já foram completados
-4. Identificar se hoje é dia de treino
-5. Identificar se há treino pendente de dias anteriores
-6. Reordenar lista colocando sugerido no topo
-
-### Tratamento de Edge Cases
-
-- Usuário sem plano ativo: Hook retorna valores default
-- Usuário sem dados de onboarding: Fallback para ordem original
-- Semana completa: Nenhum treino sugerido
-- Dia de descanso: Próximo treino futuro é sugerido
-
-### Impacto no Código Existente
-
-| Componente | Mudança | Risco |
-|------------|---------|-------|
-| `Result.tsx` | Loop usa reorderedIndices | Baixo |
-| `useOnboardingData.ts` | Apenas consumido | Nenhum |
-| `useWorkoutSessions.ts` | Apenas consumido | Nenhum |
-| `useWorkoutPlans.ts` | Apenas consumido | Nenhum |
-| `Dashboard.tsx` | Nenhuma mudança | Nenhum |
-| `ActivePlanCard.tsx` | Nenhuma mudança | Nenhum |
-
-### Status: ✅ Implementado
-
