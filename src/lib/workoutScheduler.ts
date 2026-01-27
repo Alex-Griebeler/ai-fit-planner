@@ -249,16 +249,46 @@ export function reorderWorkoutsWithSuggestion(
 interface WorkoutExercise {
   name: string;
   equipment?: string;
+  muscleGroup?: string;
 }
 
 /**
- * Infere os grupos musculares a partir dos exercícios do treino
- * Isso garante que os grupos estejam corretos mesmo se a IA não preencher muscleGroups corretamente
+ * Extrai os grupos musculares dos exercícios do treino na ordem de prescrição
+ * Prioriza o campo muscleGroup do exercício, com fallback para inferência por nome
  */
 export function inferMuscleGroupsFromExercises(exercises: WorkoutExercise[]): string[] {
   const groupsSet = new Set<string>();
   
+  // Mapeamento para traduzir grupos em inglês para português
+  const translations: Record<string, string> = {
+    'chest': 'Peitoral',
+    'back': 'Costas',
+    'shoulders': 'Ombros',
+    'biceps': 'Bíceps',
+    'triceps': 'Tríceps',
+    'quadriceps': 'Quadríceps',
+    'quads': 'Quadríceps',
+    'hamstrings': 'Posteriores',
+    'glutes': 'Glúteos',
+    'calves': 'Panturrilhas',
+    'core': 'Core',
+    'abs': 'Core',
+  };
+  
+  const translateGroup = (group: string): string => {
+    const lower = group.toLowerCase().trim();
+    return translations[lower] || group;
+  };
+  
   exercises.forEach(exercise => {
+    // PRIORIDADE 1: Usa o muscleGroup definido no exercício (mais preciso)
+    if (exercise.muscleGroup) {
+      const translated = translateGroup(exercise.muscleGroup);
+      groupsSet.add(translated);
+      return; // Pula a inferência se já tem muscleGroup
+    }
+    
+    // PRIORIDADE 2: Inferência por nome do exercício (fallback)
     const name = exercise.name.toLowerCase();
     
     // Costas
@@ -270,71 +300,73 @@ export function inferMuscleGroupsFromExercises(exercises: WorkoutExercise[]): st
     }
     
     // Peitoral
-    if ((name.includes('supino') || (name.includes('press') && !name.includes('leg press'))) ||
+    else if ((name.includes('supino') || (name.includes('press') && !name.includes('leg press'))) ||
         name.includes('flexão') || name.includes('peck') || name.includes('fly') ||
-        name.includes('crucifixo') || name.includes('peito') || name.includes('chest')) {
+        name.includes('crucifixo') || name.includes('peito') || name.includes('chest') ||
+        name.includes('voador')) {
       groupsSet.add('Peitoral');
     }
     
     // Ombros
-    if (name.includes('desenvolvimento') || name.includes('elevação lateral') ||
+    else if (name.includes('desenvolvimento') || name.includes('desenv') || name.includes('elevação lateral') ||
         name.includes('elevação frontal') || name.includes('ombro') || name.includes('shoulder') ||
-        name.includes('deltóide') || name.includes('militar') || name.includes('arnold')) {
+        name.includes('deltóide') || name.includes('militar') || name.includes('arnold') ||
+        name.includes('abdução dos ombros')) {
       groupsSet.add('Ombros');
     }
     
     // Bíceps
-    if ((name.includes('rosca') && !name.includes('rosca punho')) ||
+    else if ((name.includes('rosca') && !name.includes('rosca punho')) ||
         name.includes('biceps') || name.includes('bíceps') || name.includes('curl') ||
         name.includes('scott') || name.includes('martelo')) {
       groupsSet.add('Bíceps');
     }
     
     // Tríceps
-    if (name.includes('tríceps') || name.includes('triceps') || name.includes('paralela') ||
-        name.includes('testa') || name.includes('francês') || name.includes('pushdown') ||
+    else if (name.includes('tríceps') || name.includes('triceps') || name.includes('paralela') ||
+        name.includes('testa') || name.includes('francês') || name.includes('francesa') || name.includes('pushdown') ||
         name.includes('extensão de tríceps') || name.includes('coice')) {
       groupsSet.add('Tríceps');
     }
     
     // Quadríceps
-    if (name.includes('agachamento') || name.includes('leg press') || name.includes('extensora') ||
+    else if (name.includes('agachamento') || name.includes('leg press') || name.includes('extensora') ||
         name.includes('hack') || name.includes('squat') || name.includes('avanço') ||
         name.includes('passada') || name.includes('búlgaro') || name.includes('afundo')) {
       groupsSet.add('Quadríceps');
     }
     
     // Posteriores (Hamstrings)
-    if (name.includes('flexora') || name.includes('stiff') || name.includes('romeno') ||
+    else if (name.includes('flexora') || name.includes('stiff') || name.includes('romeno') ||
         name.includes('hamstring') || name.includes('posterior') || name.includes('leg curl') ||
         name.includes('mesa flexora')) {
       groupsSet.add('Posteriores');
     }
     
     // Glúteos
-    if (name.includes('glúteo') || name.includes('gluteo') || name.includes('hip thrust') ||
-        name.includes('elevação pélvica') || name.includes('abdução') ||
+    else if (name.includes('glúteo') || name.includes('gluteo') || name.includes('hip thrust') ||
+        name.includes('elevação pélvica') || name.includes('elevação pelvica') || name.includes('abdução') ||
         name.includes('glute')) {
       groupsSet.add('Glúteos');
     }
     
     // Panturrilhas
-    if (name.includes('panturrilha') || name.includes('gêmeos') || name.includes('calf') ||
-        name.includes('sóleo') || name.includes('elevação de calcanhar')) {
+    else if (name.includes('panturrilha') || name.includes('gêmeos') || name.includes('calf') ||
+        name.includes('sóleo') || name.includes('elevação de calcanhar') || name.includes('flex. plantar')) {
       groupsSet.add('Panturrilhas');
     }
     
     // Core
-    if (name.includes('abdominal') || name.includes('prancha') || name.includes('crunch') ||
+    else if (name.includes('abdominal') || name.includes('abd.') || name.includes('prancha') || name.includes('crunch') ||
         name.includes('oblíquo') || name.includes('plank') || name.includes('core') ||
         name.includes('lombar') || name.includes('hiperextensão') || name.includes('reto abdominal')) {
       groupsSet.add('Core');
     }
     
     // Cintura Escapular
-    if (name.includes('face pull') || name.includes('rotação externa') ||
+    else if (name.includes('face pull') || name.includes('rotação externa') ||
         name.includes('encolhimento') || name.includes('shrug') || name.includes('escapular') ||
-        name.includes('manguito')) {
+        name.includes('manguito') || name.includes('crucifixo inverso')) {
       groupsSet.add('Cintura Escapular');
     }
   });
