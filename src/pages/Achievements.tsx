@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
+import { ChevronLeft, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AchievementBadge } from '@/components/gamification/AchievementBadge';
 import { useAchievements } from '@/hooks/useAchievements';
+import { ACHIEVEMENTS } from '@/lib/achievements';
 
 const categoryLabels: Record<string, string> = {
   consistency: 'Consistência',
@@ -31,9 +32,9 @@ export default function Achievements() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - h-14 padronizado */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
+        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -41,7 +42,7 @@ export default function Achievements() {
             className="shrink-0 press-scale"
             aria-label="Voltar"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ChevronLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1 flex items-center justify-between">
             <h1 className="text-xl font-bold text-foreground">Conquistas</h1>

@@ -302,9 +302,12 @@ export default function Result() {
   const savePlanToDatabase = async () => {
     if (!plan) return;
 
-    // Free users can only have 1 active plan at a time
-    // The createPlan mutation already deactivates old plans, so this is allowed
-    // The limit is enforced by the database trigger for truly preventing multiple active plans
+    // Check limit for Free users: max 1 plan
+    if (!isPremium && plans.length >= 1) {
+      toast.error('Limite de 1 plano atingido. Faça upgrade para Premium para planos ilimitados!');
+      navigate('/pricing');
+      return;
+    }
 
     try {
       await createPlan({
@@ -371,11 +374,6 @@ export default function Result() {
     }
 
     // PRIORITY 2: No active plan - check if we should generate a new one
-    
-    // If we already have a plan in state (generated but not saved yet), don't regenerate
-    if (plan) {
-      return;
-    }
     
     // Prevent duplicate generation attempts
     if (hasStartedGeneration.current && retryCount === 0) {
@@ -553,7 +551,52 @@ export default function Result() {
 
   if (!plan) return null;
 
-  // Usa inferência dos exercícios - retorna grupos musculares em PT-BR
+  const muscleLabels: Record<string, string> = {
+    // English keys (lowercase)
+    chest: 'Peitoral',
+    back: 'Costas',
+    shoulders: 'Ombros',
+    biceps: 'Bíceps',
+    triceps: 'Tríceps',
+    quadriceps: 'Quadríceps',
+    hamstrings: 'Posteriores',
+    glutes: 'Glúteos',
+    calves: 'Panturrilhas',
+    core: 'Core',
+    scapular_belt: 'Cintura Escapular',
+    // Additional variations
+    lats: 'Costas',
+    traps: 'Costas',
+    upper_back: 'Costas',
+    lower_back: 'Lombar',
+    abs: 'Core',
+    abdominals: 'Core',
+    quads: 'Quadríceps',
+    legs: 'Pernas',
+    arms: 'Braços',
+    // Portuguese keys (caso IA já retorne PT)
+    'Peitoral': 'Peitoral',
+    'Costas': 'Costas',
+    'Ombros': 'Ombros',
+    'Bíceps': 'Bíceps',
+    'Tríceps': 'Tríceps',
+    'Quadríceps': 'Quadríceps',
+    'Posteriores': 'Posteriores',
+    'Glúteos': 'Glúteos',
+    'Panturrilhas': 'Panturrilhas',
+    'Core': 'Core',
+    'Cintura Escapular': 'Cintura Escapular',
+    'Lombar': 'Lombar',
+    'Pernas': 'Pernas',
+    'Braços': 'Braços',
+  };
+
+  const translateMuscleGroup = (group: string): string => {
+    const normalized = group.trim();
+    return muscleLabels[normalized] || muscleLabels[normalized.toLowerCase()] || normalized;
+  };
+
+  // Usa inferência dos exercícios - retorna na ordem de prescrição
   const getMuscleGroups = (workout: Workout): string[] => {
     return inferMuscleGroupsFromExercises(workout.exercises);
   };

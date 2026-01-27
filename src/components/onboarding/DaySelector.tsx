@@ -43,7 +43,6 @@ export function DaySelector({ selectedDays, onChange }: DaySelectorProps) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => toggleDay(day.key)}
-              aria-label={`${day.fullLabel}${isSelected ? ' - selecionado' : ''}`}
               className={cn(
                 'w-11 h-11 md:w-12 md:h-12 rounded-xl font-bold text-sm transition-all duration-200',
                 isSelected
@@ -56,6 +55,25 @@ export function DaySelector({ selectedDays, onChange }: DaySelectorProps) {
           );
         })}
       </div>
+
+      {selectedDays.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap gap-2"
+        >
+          {days
+            .filter((d) => selectedDays.includes(d.key))
+            .map((day) => (
+              <span
+                key={day.key}
+                className="px-3 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium"
+              >
+                {day.fullLabel}
+              </span>
+            ))}
+        </motion.div>
+      )}
 
       <p className="text-center text-muted-foreground text-sm">
         {selectedDays.length} {selectedDays.length === 1 ? 'dia selecionado' : 'dias selecionados'}

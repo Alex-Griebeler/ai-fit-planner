@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +13,6 @@ import {
   SessionHistoryCard,
   ProgressPreviewCard 
 } from '@/components/dashboard';
-import { PlanRatingDialog } from '@/components/dashboard/PlanRatingDialog';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
@@ -33,17 +31,13 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [showRatingDialog, setShowRatingDialog] = useState(false);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const { signOut } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const { 
     plans, 
     activePlan, 
     isLoading: plansLoading, 
-    deletePlan,
-    deactivatePlan,
-    isDeactivating
+    deletePlan 
   } = useWorkoutPlans();
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
 
@@ -85,9 +79,9 @@ export default function Dashboard() {
         Pular para conteúdo principal
       </a>
 
-      {/* Header - h-14 padronizado */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
             {activePlan && (
@@ -108,7 +102,7 @@ export default function Dashboard() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction 
-                      onClick={() => setShowRatingDialog(true)}
+                      onClick={() => navigate('/onboarding')}
                       className="press-scale"
                     >
                       Continuar
@@ -117,36 +111,6 @@ export default function Dashboard() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-
-            {/* Rating Dialog */}
-            <PlanRatingDialog
-              open={showRatingDialog}
-              onOpenChange={(open) => {
-                if (!open && !isSubmittingRating) {
-                  setShowRatingDialog(false);
-                }
-              }}
-              planName={activePlan?.plan_name || 'Plano atual'}
-              isSubmitting={isSubmittingRating}
-              onSubmit={async (rating, notes) => {
-                try {
-                  setIsSubmittingRating(true);
-                  if (activePlan) {
-                    await deactivatePlan({ 
-                      planId: activePlan.id, 
-                      rating, 
-                      ratingNotes: notes 
-                    });
-                  }
-                  setShowRatingDialog(false);
-                  navigate('/onboarding');
-                } catch (error) {
-                  toast.error('Erro ao salvar avaliação');
-                } finally {
-                  setIsSubmittingRating(false);
-                }
-              }}
-            />
             <Button 
               variant="ghost" 
               size="icon"

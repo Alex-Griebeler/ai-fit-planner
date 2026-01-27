@@ -1,7 +1,6 @@
-export { ProfileCard } from './ProfileCard';
+export { StatsCard } from './StatsCard';
 export { ActivePlanCard } from './ActivePlanCard';
 export { WorkoutHistoryCard } from './WorkoutHistoryCard';
-export { StatsCard } from './StatsCard';
+export { ProfileCard } from './ProfileCard';
 export { SessionHistoryCard } from './SessionHistoryCard';
 export { ProgressPreviewCard } from './ProgressPreviewCard';
-export { PlanRatingDialog } from './PlanRatingDialog';

@@ -1,93 +1,108 @@
 
-# Plano: Simplificar DaySelector - Remover Nomes por Extenso
+## Plano: Sistema de Sugestão de Treinos (Opção B - Revisada)
 
-## Análise de Impacto
+### Objetivo
+Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, **reordenando a lista de treinos na tela do plano** (Result.tsx).
 
-### Verificação de Dependências
-| Local | Uso | Impacto da Remoção |
-|-------|-----|-------------------|
-| `DaySelector.tsx` | `fullLabel` apenas para badges visuais | ✅ Seguro remover |
-| `workoutScheduler.ts` | `DAY_LABELS` independente | ✅ Não afetado |
-| Banco de dados | Salva apenas keys (`mon`, `tue`, etc.) | ✅ Não afetado |
+### Abordagem Escolhida
+**Reordenação da lista** - O treino sugerido sobe automaticamente para o topo da lista, com destaque visual sutil (badge + borda).
 
-**Conclusão:** A remoção é segura e não corrompe nenhuma lógica.
+### Arquivos Criados
 
----
+**1. `src/lib/workoutScheduler.ts`** - Lógica de agendamento
 
-## Mudanças Propostas
+Funções principais:
+- `getDayLabel(dayCode)` - Converte 'mon' para 'Segunda-feira'
+- `sortDaysByWeekOrder(days)` - Ordena dias na sequência da semana
+- `getTodayDayCode()` - Retorna o código do dia atual
+- `getWeeklySchedule(totalWorkouts, trainingDays, sessions)` - Calcula o cronograma
+- `reorderWorkoutsWithSuggestion(indices, suggestedIndex)` - Reordena a lista
 
-### Arquivo: `src/components/onboarding/DaySelector.tsx`
+**2. `src/hooks/useWorkoutSchedule.ts`** - Hook de agendamento
 
-**Remover:**
-- Bloco de badges (linhas 59-75) que exibe nomes por extenso
+Combina dados de:
+- `useWorkoutPlans` (treinos do plano ativo)
+- `useOnboardingData` (dias selecionados)
+- `useWorkoutSessions` (sessões da semana)
 
-**Manter:**
-- Calendário com iniciais (botões circulares)
-- Contador de dias selecionados
-- Propriedade `fullLabel` no array (útil para acessibilidade via `aria-label`)
-
----
-
-## Resultado Visual
-
-```text
-Antes:
-┌─────────────────────────────────────┐
-│  [S] [T] [Q] [Q] [S] [S] [D]        │  ← Botões com iniciais
-│                                     │
-│  Segunda  Terça  Quarta  Quinta     │  ← Badges (REMOVER)
-│  Sexta    Sábado                    │
-│                                     │
-│        6 dias selecionados          │  ← Contador
-└─────────────────────────────────────┘
-
-Depois:
-┌─────────────────────────────────────┐
-│  [S] [T] [Q] [Q] [S] [S] [D]        │  ← Botões com iniciais
-│                                     │
-│        6 dias selecionados          │  ← Contador
-└─────────────────────────────────────┘
+Retorna:
+```typescript
+{
+  suggestedWorkoutIndex: number | null,
+  todayWorkoutIndex: number | null,
+  pendingWorkoutIndex: number | null,
+  completedIndices: number[],
+  isWeekComplete: boolean,
+  isRestDay: boolean,
+  reason: string,
+  reorderedIndices: number[],
+  trainingDays: string[],
+  isLoading: boolean,
+}
 ```
 
----
+### Arquivos Modificados
 
-## Melhoria de Acessibilidade
+**3. `src/pages/Result.tsx`**
 
-Adicionar `aria-label` aos botões para leitores de tela:
+- Importou `useWorkoutSchedule` e `Badge`
+- Loop de workouts agora usa `reorderedIndices` para ordem inteligente
+- Treino sugerido exibe badge "✨ Sugerido" e borda destacada
+- Mantém compatibilidade com planos sem dados de onboarding
 
-```tsx
-<motion.button
-  aria-label={`${day.fullLabel}${isSelected ? ' - selecionado' : ''}`}
-  // ...
->
+### Comportamento Visual
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TELA PLANO PRONTO                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ ✨ Sugerido                                               │  │
+│  │ ─────────────────────────────────────────────────────────│  │
+│  │ 🏋️ Upper A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Lower A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Upper B                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Lógica de Detecção
 
-## Detalhes Técnicos
+1. Ordenar `trainingDays` pela sequência da semana (dom=0, seg=1...)
+2. Mapear cada treino do plano para um dia específico
+3. Verificar quais treinos da semana já foram completados
+4. Identificar se hoje é dia de treino
+5. Identificar se há treino pendente de dias anteriores
+6. Reordenar lista colocando sugerido no topo
 
-### Código a Remover (linhas 59-76)
-```tsx
-{selectedDays.length > 0 && (
-  <motion.div
-    initial={{ opacity: 0, y: -10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="flex flex-wrap gap-2"
-  >
-    {days
-      .filter((d) => selectedDays.includes(d.key))
-      .map((day) => (
-        <span
-          key={day.key}
-          className="px-3 py-1 bg-primary/20 text-primary rounded-full text-sm font-medium"
-        >
-          {day.fullLabel}
-        </span>
-      ))}
-  </motion.div>
-)}
-```
+### Tratamento de Edge Cases
 
-### Risco
-- **Baixo**: Mudança puramente visual
-- **Nenhuma lógica afetada**: Dados continuam usando keys (`mon`, `tue`, etc.)
+- Usuário sem plano ativo: Hook retorna valores default
+- Usuário sem dados de onboarding: Fallback para ordem original
+- Semana completa: Nenhum treino sugerido
+- Dia de descanso: Próximo treino futuro é sugerido
+
+### Impacto no Código Existente
+
+| Componente | Mudança | Risco |
+|------------|---------|-------|
+| `Result.tsx` | Loop usa reorderedIndices | Baixo |
+| `useOnboardingData.ts` | Apenas consumido | Nenhum |
+| `useWorkoutSessions.ts` | Apenas consumido | Nenhum |
+| `useWorkoutPlans.ts` | Apenas consumido | Nenhum |
+| `Dashboard.tsx` | Nenhuma mudança | Nenhum |
+| `ActivePlanCard.tsx` | Nenhuma mudança | Nenhum |
+
+### Status: ✅ Implementado
+

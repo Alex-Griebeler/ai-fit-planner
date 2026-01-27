@@ -1,7 +1,6 @@
-import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Calendar, Dumbbell, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { TrendingUp, Calendar, Dumbbell } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { PremiumGate } from '@/components/PremiumGate';
 import { LoadProgressChart } from '@/components/progress/LoadProgressChart';
 import { VolumeStats } from '@/components/progress/VolumeStats';
@@ -10,7 +9,6 @@ import { PeriodComparisonCard } from '@/components/progress/PeriodComparisonCard
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 
 export default function Progress() {
-  const navigate = useNavigate();
   const { sessions } = useWorkoutSessions();
 
   // Calculate stats
@@ -25,25 +23,20 @@ export default function Progress() {
         Pular para conteúdo principal
       </a>
 
-      {/* Header - h-14 padronizado */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="shrink-0 press-scale"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
           <h1 className="text-xl font-bold">Meu Progresso</h1>
         </div>
       </header>
 
       <main id="progress-content" className="container mx-auto px-4 py-6 pb-24 max-w-4xl">
         <PremiumGate feature="Análises de progresso" showPreview>
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-4">
               <Card>
@@ -98,7 +91,7 @@ export default function Progress() {
 
             {/* Volume Stats */}
             <VolumeStats sessions={completedSessions} />
-          </div>
+          </motion.div>
         </PremiumGate>
       </main>
     </div>

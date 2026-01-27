@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield, Bell, Palette, ArrowLeft } from 'lucide-react';
+import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield, Bell, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -35,21 +34,10 @@ export default function Settings() {
         Pular para conteúdo principal
       </a>
 
-      {/* Header - h-14 padronizado */}
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="shrink-0 press-scale"
-              aria-label="Voltar"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-xl font-bold text-foreground">Configurações</h1>
-          </div>
+        <div className="container max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-foreground">Configurações</h1>
           {isAdmin && (
             <Button
               variant="outline"
@@ -66,86 +54,88 @@ export default function Settings() {
 
       {/* Content */}
       <main id="settings-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Scroll horizontal para tabs em mobile */}
-          <ScrollArea className="w-full mb-6">
-            <TabsList className="inline-flex w-max min-w-full">
-              <TabsTrigger value="profile" className="flex items-center gap-2 px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-7 mb-6">
+              <TabsTrigger value="profile" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                <span>Perfil</span>
+                <span className="hidden sm:inline">Perfil</span>
               </TabsTrigger>
-              <TabsTrigger value="training" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="training" className="flex items-center gap-2">
                 <Dumbbell className="w-4 h-4" />
-                <span>Treino</span>
+                <span className="hidden sm:inline">Treino</span>
               </TabsTrigger>
-              <TabsTrigger value="health" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="health" className="flex items-center gap-2">
                 <Heart className="w-4 h-4" />
-                <span>Saúde</span>
+                <span className="hidden sm:inline">Saúde</span>
               </TabsTrigger>
-              <TabsTrigger value="wellbeing" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="wellbeing" className="flex items-center gap-2">
                 <Moon className="w-4 h-4" />
-                <span>Bem-estar</span>
+                <span className="hidden sm:inline">Bem-estar</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
                 <Bell className="w-4 h-4" />
-                <span>Notificações</span>
+                <span className="hidden sm:inline">Notificações</span>
               </TabsTrigger>
-              <TabsTrigger value="appearance" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="appearance" className="flex items-center gap-2">
                 <Palette className="w-4 h-4" />
-                <span>Aparência</span>
+                <span className="hidden sm:inline">Aparência</span>
               </TabsTrigger>
-              <TabsTrigger value="subscription" className="flex items-center gap-2 px-4">
+              <TabsTrigger value="subscription" className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
-                <span>Assinatura</span>
+                <span className="hidden sm:inline">Assinatura</span>
               </TabsTrigger>
             </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
 
-          <TabsContent value="profile">
-            <ProfileSection 
-              profile={profile} 
-              onSave={updateProfile}
-              isSaving={isUpdating}
-            />
-          </TabsContent>
+            <TabsContent value="profile">
+              <ProfileSection 
+                profile={profile} 
+                onSave={updateProfile}
+                isSaving={isUpdating}
+              />
+            </TabsContent>
 
-          <TabsContent value="training">
-            <TrainingSection 
-              data={onboardingData} 
-              onSave={updateOnboardingData}
-              isSaving={isSaving}
-            />
-          </TabsContent>
+            <TabsContent value="training">
+              <TrainingSection 
+                data={onboardingData} 
+                onSave={updateOnboardingData}
+                isSaving={isSaving}
+              />
+            </TabsContent>
 
-          <TabsContent value="health">
-            <HealthSection 
-              data={onboardingData} 
-              onSave={updateOnboardingData}
-              isSaving={isSaving}
-            />
-          </TabsContent>
+            <TabsContent value="health">
+              <HealthSection 
+                data={onboardingData} 
+                onSave={updateOnboardingData}
+                isSaving={isSaving}
+              />
+            </TabsContent>
 
-          <TabsContent value="wellbeing">
-            <WellbeingSection 
-              data={onboardingData} 
-              onSave={updateOnboardingData}
-              isSaving={isSaving}
-            />
-          </TabsContent>
+            <TabsContent value="wellbeing">
+              <WellbeingSection 
+                data={onboardingData} 
+                onSave={updateOnboardingData}
+                isSaving={isSaving}
+              />
+            </TabsContent>
 
-          <TabsContent value="notifications">
-            <NotificationSection />
-          </TabsContent>
+            <TabsContent value="notifications">
+              <NotificationSection />
+            </TabsContent>
 
-          <TabsContent value="appearance">
-            <ThemeSection />
-          </TabsContent>
+            <TabsContent value="appearance">
+              <ThemeSection />
+            </TabsContent>
 
-          <TabsContent value="subscription">
-            <SubscriptionSection />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="subscription">
+              <SubscriptionSection />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
       </main>
     </div>
   );

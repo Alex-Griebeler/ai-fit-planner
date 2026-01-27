@@ -2247,24 +2247,9 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // 3. Fetch last rated plan (if exists)
-      const { data: lastRatedPlan } = await supabase
-        .from('workout_plans')
-        .select('plan_name, user_rating, rating_notes, rated_at')
-        .eq('user_id', userId)
-        .not('user_rating', 'is', null)
-        .order('rated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // 4. Build Learning Context V2 if we have data
+      // 3. Build Learning Context V2 if we have data
       if (recentSessions && recentSessions.length > 0) {
-        learningContextV2 = buildLearningContextV2(
-          recentSessions, 
-          loadHistory || [], 
-          plannedFrequency, 
-          lastRatedPlan
-        );
+        learningContextV2 = buildLearningContextV2(recentSessions, loadHistory || [], plannedFrequency);
         learningContext = learningContextV2.promptContext;
         
         console.log(`Learning Context V2 built:`, {
@@ -2320,118 +2305,79 @@ serve(async (req) => {
     // === BUILD USER PROMPT ===
     const userPrompt = buildUserPrompt(validatedData, filteredExercises, learningContext);
 
-    // === CALL AI WITH RETRY ===
-    const MAX_RETRIES = 2;
-    let workoutPlan;
-    let lastError;
+    // === CALL AI ===
+    console.log("Calling Lovable AI for user:", userId);
     
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      console.log(`Calling Lovable AI for user: ${userId} (attempt ${attempt}/${MAX_RETRIES})`);
-      
-      try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7,
-            max_tokens: 32000,
-          }),
-        });
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 32000,
+      }),
+    });
 
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error(`AI API error (attempt ${attempt}):`, errorText);
-          throw new Error(`AI request failed: ${aiResponse.status}`);
-        }
-
-        const aiData = await aiResponse.json();
-        const content = aiData.choices?.[0]?.message?.content;
-        
-        if (!content) {
-          throw new Error("No content in AI response");
-        }
-        
-        // Check for truncation - valid JSON must end with } and have reasonable length
-        const trimmedContent = content.trim();
-        const minExpectedLength = 5000; // A valid workout plan should be at least 5KB
-        
-        if (trimmedContent.length < minExpectedLength) {
-          console.warn(`AI response seems truncated (${trimmedContent.length} chars, expected >${minExpectedLength})`);
-          console.warn("Content preview:", trimmedContent.slice(0, 200));
-          throw new Error("AI response appears truncated");
-        }
-        
-        if (!trimmedContent.endsWith('}')) {
-          console.warn("AI response doesn't end with '}' - likely truncated");
-          console.warn("Last 100 chars:", trimmedContent.slice(-100));
-          throw new Error("AI response appears truncated (missing closing brace)");
-        }
-
-        // === PARSE JSON RESPONSE ===
-        let cleanContent = trimmedContent;
-        
-        // Remove markdown JSON code block wrappers
-        if (cleanContent.startsWith('```json')) {
-          cleanContent = cleanContent.slice(7);
-        } else if (cleanContent.startsWith('```')) {
-          cleanContent = cleanContent.slice(3);
-        }
-        if (cleanContent.endsWith('```')) {
-          cleanContent = cleanContent.slice(0, -3);
-        }
-        cleanContent = cleanContent.trim();
-        
-        // Try to parse the cleaned JSON
-        try {
-          workoutPlan = JSON.parse(cleanContent);
-          // Success! Exit the retry loop
-          break;
-        } catch (parseError) {
-          // Log the first 100 and last 100 chars to see what's wrong
-          const contentPreview = cleanContent.length > 200 
-            ? `${cleanContent.slice(0, 100)}...TRUNCATED...${cleanContent.slice(-100)}`
-            : cleanContent;
-          console.error("Failed to parse AI response as JSON. Content preview:", contentPreview);
-          console.error("Parse error:", parseError instanceof Error ? parseError.message : parseError);
-          
-          // Try to extract JSON from the response if it's wrapped in other text
-          const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            try {
-              workoutPlan = JSON.parse(jsonMatch[0]);
-              console.log("Successfully extracted JSON from wrapped response");
-              break; // Success! Exit the retry loop
-            } catch (secondParseError) {
-              throw new Error("AI response is not valid JSON");
-            }
-          } else {
-            throw new Error("AI response is not valid JSON");
-          }
-        }
-      } catch (attemptError) {
-        lastError = attemptError;
-        console.warn(`Attempt ${attempt} failed:`, attemptError instanceof Error ? attemptError.message : attemptError);
-        
-        if (attempt < MAX_RETRIES) {
-          // Wait a bit before retrying (exponential backoff)
-          const waitMs = 1000 * attempt;
-          console.log(`Waiting ${waitMs}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-        }
-      }
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI API error:", errorText);
+      throw new Error(`AI request failed: ${aiResponse.status}`);
     }
+
+    const aiData = await aiResponse.json();
+    const content = aiData.choices?.[0]?.message?.content;
     
-    if (!workoutPlan) {
-      throw lastError || new Error("Failed to generate workout plan after all retries");
+    if (!content) {
+      throw new Error("No content in AI response");
+    }
+
+    // === PARSE JSON RESPONSE ===
+    let workoutPlan;
+    try {
+      // Clean the content - remove markdown code fences if present
+      let cleanContent = content.trim();
+      
+      // Remove markdown JSON code block wrappers
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.slice(7);
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.slice(3);
+      }
+      if (cleanContent.endsWith('```')) {
+        cleanContent = cleanContent.slice(0, -3);
+      }
+      cleanContent = cleanContent.trim();
+      
+      // Try to parse the cleaned JSON
+      workoutPlan = JSON.parse(cleanContent);
+    } catch (parseError) {
+      // Log the first 500 and last 500 chars to see what's wrong
+      const contentPreview = content.length > 1000 
+        ? `${content.slice(0, 500)}...TRUNCATED...${content.slice(-500)}`
+        : content;
+      console.error("Failed to parse AI response as JSON. Content preview:", contentPreview);
+      console.error("Parse error:", parseError instanceof Error ? parseError.message : parseError);
+      
+      // Try to extract JSON from the response if it's wrapped in other text
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          workoutPlan = JSON.parse(jsonMatch[0]);
+          console.log("Successfully extracted JSON from wrapped response");
+        } catch (secondParseError) {
+          throw new Error("AI response is not valid JSON");
+        }
+      } else {
+        throw new Error("AI response is not valid JSON");
+      }
     }
 
     // === VALIDATE THE PLAN ===
@@ -2676,19 +2622,10 @@ function calculateVolumeAdjustment(metrics: LearningContextV2Metrics): LearningC
   };
 }
 
-// Type for last rated plan
-interface LastRatedPlan {
-  plan_name: string;
-  user_rating: number;
-  rating_notes: string | null;
-  rated_at: string;
-}
-
 function buildLearningContextV2(
   sessions: SessionData[], 
   loadHistory: LoadData[],
-  plannedFrequency: number,
-  lastRatedPlan?: LastRatedPlan | null
+  plannedFrequency: number
 ): LearningContextV2 {
   // Calculate metrics
   const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
@@ -2775,8 +2712,7 @@ function buildLearningContextV2(
   }
   
   // Build prompt context
-  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations, lastRatedPlan);
-  
+  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations);
   
   return {
     metrics,
@@ -2792,36 +2728,11 @@ function buildPromptContext(
   adjustments: LearningContextV2Adjustments,
   guardrails: LearningContextV2Guardrails,
   progressions: string[],
-  stagnations: string[],
-  lastRatedPlan?: LastRatedPlan | null
+  stagnations: string[]
 ): string {
   let context = `
 ## 🧠 HISTÓRICO DO USUÁRIO (LEARNING CONTEXT V2)
-`;
 
-  // Add last plan rating if available
-  if (lastRatedPlan) {
-    const ratingLabels: Record<number, string> = {
-      1: 'Ruim',
-      2: 'Regular',
-      3: 'Bom',
-      4: 'Muito bom',
-      5: 'Excelente'
-    };
-    context += `
-### ⭐ Avaliação do Plano Anterior:
-- Plano: "${lastRatedPlan.plan_name}"
-- Nota: ${lastRatedPlan.user_rating}/5 (${ratingLabels[lastRatedPlan.user_rating] || ''})
-${lastRatedPlan.rating_notes ? `- Feedback do usuário: "${lastRatedPlan.rating_notes}"` : ''}
-
-**INSTRUÇÃO**: Use esta avaliação para ajustar o novo plano:
-${lastRatedPlan.user_rating <= 2 ? `- ⚠️ Avaliação BAIXA: Fazer mudanças SIGNIFICATIVAS na estrutura, exercícios e/ou volume` : ''}
-${lastRatedPlan.user_rating === 3 ? `- Avaliação MÉDIA: Fazer ajustes MODERADOS, manter o que funcionou` : ''}
-${lastRatedPlan.user_rating >= 4 ? `- ✅ Avaliação ALTA: Manter estrutura similar, fazer ajustes finos` : ''}
-`;
-  }
-
-  context += `
 ### Últimas ${metrics.sessionsAnalyzed} sessões analisadas:`;
 
   if (metrics.avgRpe !== null) {

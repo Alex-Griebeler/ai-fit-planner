@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calendar, Trash2, History, Star } from 'lucide-react';
+import { Calendar, Trash2, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,42 +18,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
-// Extend WorkoutPlan type to include new rating fields
-interface ExtendedWorkoutPlan extends WorkoutPlan {
-  user_rating?: number | null;
-  rating_notes?: string | null;
-  rated_at?: string | null;
-}
 
 interface WorkoutHistoryCardProps {
-  plans: ExtendedWorkoutPlan[];
+  plans: WorkoutPlan[];
   isLoading: boolean;
   onDeletePlan: (planId: string) => Promise<void>;
-}
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={cn(
-            'w-3 h-3',
-            star <= rating
-              ? 'fill-yellow-400 text-yellow-400'
-              : 'text-muted-foreground/30'
-          )}
-        />
-      ))}
-    </div>
-  );
 }
 
 export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHistoryCardProps) {
@@ -113,7 +81,7 @@ export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHi
                     <p className="font-medium text-foreground truncate">
                       {plan.plan_name}
                     </p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-xs">
                         {plan.weekly_frequency}x/sem
                       </Badge>
@@ -121,27 +89,6 @@ export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHi
                         <Calendar className="w-3 h-3" />
                         {format(new Date(plan.created_at), "dd/MM/yy", { locale: ptBR })}
                       </span>
-                      
-                      {/* Show rating if exists */}
-                      {plan.user_rating && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1">
-                                <StarRating rating={plan.user_rating} />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p className="font-medium">Sua avaliação: {plan.user_rating}/5</p>
-                              {plan.rating_notes && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  "{plan.rating_notes}"
-                                </p>
-                              )}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
                     </div>
                   </div>
                   

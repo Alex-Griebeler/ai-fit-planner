@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Crown, Sparkles, Zap, BarChart3, History, HeadphonesIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,6 @@ const premiumPlanFeatures = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const { isPremium, isLoading, createCheckout } = useSubscription();
 
@@ -37,18 +36,6 @@ export default function Pricing() {
     createCheckout();
   };
 
-  const handleBack = () => {
-    // Check if we came from somewhere in the app (state passed via navigate)
-    const from = (location.state as { from?: string })?.from;
-    if (from) {
-      navigate(from);
-    } else if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/');
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -57,7 +44,7 @@ export default function Pricing() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleBack}
+            onClick={() => navigate(-1)}
             className="mr-4 press-scale"
             aria-label="Voltar"
           >
