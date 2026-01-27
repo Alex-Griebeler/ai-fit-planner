@@ -59,7 +59,16 @@ export default function Login() {
         : await signUp(email, password);
 
       if (error) {
-        toast.error(error.message);
+        // Traduzir mensagens de erro comuns do Supabase Auth
+        let errorMessage = error.message;
+        if (error.message.toLowerCase().includes('user already registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+        } else if (error.message.toLowerCase().includes('invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos.';
+        } else if (error.message.toLowerCase().includes('email not confirmed')) {
+          errorMessage = 'Confirme seu email antes de fazer login.';
+        }
+        toast.error(errorMessage);
       } else {
         if (!isLogin) {
           toast.success('Conta criada com sucesso!');
