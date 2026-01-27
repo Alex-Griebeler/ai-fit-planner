@@ -138,12 +138,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     aria-label={`Iniciar treino ${cleanName}`}
                   >
-                    <div>
-                      <p className="font-medium text-foreground">{cleanName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {workout.muscleGroups?.slice(0, 3).join(' • ') || cleanFocus}
-                      </p>
-                    </div>
+                    <p className="font-medium text-foreground">{cleanName}</p>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
                         {workout.exercises?.length ?? 0} exercícios
