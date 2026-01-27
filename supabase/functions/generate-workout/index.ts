@@ -1938,15 +1938,45 @@ O campo progressionPlan DEVE refletir a estratégia de variação:
                          SEÇÃO 9: CARDIO
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Tipos:
-- LISS: 20-40min, FC 50-65% máxima (caminhada, bike leve)
-- MICT: 15-30min, FC 65-75% máxima (corrida moderada)
-- HIIT: 10-20min, apenas intermediários/avançados
+## Tipos de Cardio (SEMPRE usar estes nomes):
+- LISS: Cardio de baixa intensidade e longa duração
+  - Duração: 20-40min
+  - Intensidade: FC 50-65% da máxima
+  - Exemplos: Caminhada, bike leve, elíptico leve
+  - Indicação: Todos os níveis, ideal para hipertrofia
 
-## Por Objetivo:
-- EMAGRECIMENTO: 2-4x/semana, LISS/MICT preferencial
-- HIPERTROFIA: máx 2x/semana, apenas LISS
-- SAÚDE: 2-3x/semana, MICT
+- MICT: Cardio de intensidade moderada contínuo  
+  - Duração: 15-30min
+  - Intensidade: FC 65-75% da máxima
+  - Exemplos: Corrida leve, bike moderada, natação
+  - Indicação: Intermediários+, saúde geral
+
+- HIIT: Cardio intervalado de alta intensidade
+  - Duração: 10-20min
+  - Intensidade: Séries intensas com descanso
+  - Exemplos: Sprints, burpees, battle ropes
+  - Indicação: APENAS intermediários/avançados
+
+## Prescrição por Objetivo:
+- EMAGRECIMENTO: 2-4x/semana, LISS ou MICT preferencial
+- HIPERTROFIA: máx 2x/semana, APENAS LISS (não interfere na recuperação)
+- SAÚDE: 2-3x/semana, MICT ideal
+- PERFORMANCE: conforme esporte específico
+
+## Estrutura do campo "cardio" no JSON:
+"cardio": {
+  "type": "LISS" | "MICT" | "HIIT",
+  "duration": "20 min",
+  "intensity": "FC 50-65% máx" | "Leve" | "Moderado" | "Intenso",
+  "description": "Caminhada em esteira ou bike ergométrica em ritmo confortável",
+  "notes": "Mantenha uma conversa leve durante o exercício para garantir intensidade correta"
+}
+
+## IMPORTANTE para cardio:
+- O campo "description" DEVE explicar claramente o que fazer
+- Use linguagem simples e acessível
+- Inclua exemplos práticos de execução
+- Se não houver cardio, use: "cardio": null
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 10: FORMATO DE SAÍDA JSON
@@ -1992,7 +2022,13 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
         }
       ],
       "finisher": null,
-      "cardio": null
+      "cardio": {
+        "type": "LISS",
+        "duration": "20 min",
+        "intensity": "FC 50-65% máx",
+        "description": "Caminhada em esteira ou bike em ritmo leve e constante",
+        "notes": "Você deve conseguir conversar normalmente durante o exercício"
+      }
     }
   ],
   "weeklyVolume": {

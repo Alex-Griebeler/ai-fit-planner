@@ -49,7 +49,45 @@ interface WorkoutExercise {
 interface WorkoutCardio {
   type: string;
   duration: string;
+  intensity?: string;
+  description?: string;
   notes?: string;
+}
+
+// Descrições dos tipos de cardio para exibição
+const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
+  'LISS': {
+    name: 'Cardio Leve (LISS)',
+    description: 'Baixa intensidade, longa duração. Caminhada, bike leve. FC 50-65% máxima.',
+    icon: '🚶'
+  },
+  'MICT': {
+    name: 'Cardio Moderado (MICT)',
+    description: 'Intensidade moderada. Corrida leve, elíptico. FC 65-75% máxima.',
+    icon: '🏃'
+  },
+  'HIIT': {
+    name: 'Cardio Intenso (HIIT)',
+    description: 'Alta intensidade intervalada. Sprints, burpees. Séries curtas com descanso.',
+    icon: '⚡'
+  }
+};
+
+// Função para parsear o tipo de cardio e extrair informações
+function parseCardioType(cardioType: string): { type: string; duration: string; info: typeof CARDIO_DESCRIPTIONS[string] | null } {
+  const normalizedType = cardioType.toUpperCase().trim();
+  
+  // Verifica se contém algum dos tipos conhecidos
+  for (const [key, info] of Object.entries(CARDIO_DESCRIPTIONS)) {
+    if (normalizedType.includes(key)) {
+      // Extrai a duração se estiver junto (ex: "LISS 20 min")
+      const durationMatch = normalizedType.match(/(\d+)\s*(min|minutos?)?/i);
+      const duration = durationMatch ? `${durationMatch[1]} min` : '';
+      return { type: key, duration, info };
+    }
+  }
+  
+  return { type: cardioType, duration: '', info: null };
 }
 
 interface Workout {
@@ -711,22 +749,56 @@ export default function Result() {
                         );
                       })}
                       
-                      {/* Cardio Row */}
-                      {workout.cardio && (
-                        <div className="grid grid-cols-12 gap-2 items-center py-2.5 border-t border-border/50 mt-2">
-                          <div className="col-span-5 flex items-center gap-2">
-                            <Flame className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-sm text-foreground">{workout.cardio.type}</span>
-                          </div>
-                          <span className="col-span-3 text-center text-sm text-muted-foreground">
-                            {workout.cardio.duration}
-                          </span>
-                          <span className="col-span-2 text-center text-xs text-muted-foreground">—</span>
-                          <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
-                            Cardio
-                          </span>
-                        </div>
-                      )}
+                      {/* Cardio Row - Enhanced Display */}
+                      {workout.cardio && (() => {
+                        const cardioInfo = parseCardioType(workout.cardio.type);
+                        const displayInfo = cardioInfo.info || {
+                          name: workout.cardio.type,
+                          description: workout.cardio.description || 'Exercício cardiovascular',
+                          icon: '❤️'
+                        };
+                        
+                        return (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <div className="grid grid-cols-12 gap-2 items-center py-2.5 border-t border-border/50 mt-2 cursor-pointer hover:bg-muted/30 rounded-lg transition-colors -mx-2 px-2">
+                                <div className="col-span-5 flex items-center gap-2">
+                                  <span className="text-sm">{displayInfo.icon}</span>
+                                  <span className="text-sm text-foreground font-medium">
+                                    {cardioInfo.info ? cardioInfo.type : displayInfo.name}
+                                  </span>
+                                  <Info className="w-3 h-3 text-muted-foreground" />
+                                </div>
+                                <span className="col-span-3 text-center text-sm text-muted-foreground">
+                                  {workout.cardio.duration || cardioInfo.duration}
+                                </span>
+                                <span className="col-span-2 text-center text-xs text-muted-foreground">
+                                  {workout.cardio.intensity || 'Leve'}
+                                </span>
+                                <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
+                                  Cardio
+                                </span>
+                              </div>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 p-3" side="top">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{displayInfo.icon}</span>
+                                  <h4 className="font-medium text-sm">{displayInfo.name}</h4>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  {displayInfo.description}
+                                </p>
+                                {workout.cardio.notes && (
+                                  <p className="text-xs text-foreground pt-1 border-t border-border/50">
+                                    💡 {workout.cardio.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 )}
