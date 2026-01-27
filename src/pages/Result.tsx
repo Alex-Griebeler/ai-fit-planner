@@ -426,11 +426,16 @@ export default function Result() {
 
   const userName = profile?.name || data?.name || 'Atleta';
 
+  // Determine if we're generating a new plan (vs just loading an existing one)
+  const isCreatingNewPlan = loading && !activePlan && !plan;
+  
+  // Show loading only when: 
+  // 1. Generating a new plan, OR
+  // 2. Initial data loading AND no plan to display yet
+  const shouldShowLoading = isCreatingNewPlan || (isInitialLoading && !plan && !activePlan);
+
   // Loading State - Apple minimal with progress indicator
-  if (loading || isInitialLoading) {
-    // If we have an active plan and are just loading initial data, don't show "Criando"
-    const isCreatingNewPlan = loading && !activePlan && !plan;
-    
+  if (shouldShowLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
