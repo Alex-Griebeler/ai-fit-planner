@@ -659,7 +659,9 @@ export default function Result() {
                     <Dumbbell className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground text-base">{workout.name || workout.day}</p>
+                    <p className="font-semibold text-foreground text-base">
+                      {(workout.name || workout.day).replace(/\s*\([^)]*\)\s*$/, '').trim()}
+                    </p>
                     <p className="text-sm text-muted-foreground mt-0.5">
                       {workout.exercises.length} exercícios · {workout.estimatedDuration || plan.sessionDuration}
                     </p>
