@@ -248,11 +248,8 @@ export default function Result() {
   const savePlanToDatabase = async () => {
     if (!plan) return;
 
-    // Check limit for Free users: max 1 ACTIVE plan
-    // Note: The database trigger enforce_workout_plan_limit already handles this,
-    // but we check here for better UX (avoid unnecessary API call)
-    const activePlansCount = plans.filter(p => p.is_active).length;
-    if (!isPremium && activePlansCount >= 1) {
+    // Check limit for Free users: max 1 plan
+    if (!isPremium && plans.length >= 1) {
       toast.error('Limite de 1 plano atingido. Faça upgrade para Premium para planos ilimitados!');
       navigate('/pricing');
       return;
