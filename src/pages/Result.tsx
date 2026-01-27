@@ -551,52 +551,7 @@ export default function Result() {
 
   if (!plan) return null;
 
-  const muscleLabels: Record<string, string> = {
-    // English keys (lowercase)
-    chest: 'Peitoral',
-    back: 'Costas',
-    shoulders: 'Ombros',
-    biceps: 'Bíceps',
-    triceps: 'Tríceps',
-    quadriceps: 'Quadríceps',
-    hamstrings: 'Posteriores',
-    glutes: 'Glúteos',
-    calves: 'Panturrilhas',
-    core: 'Core',
-    scapular_belt: 'Cintura Escapular',
-    // Additional variations
-    lats: 'Costas',
-    traps: 'Costas',
-    upper_back: 'Costas',
-    lower_back: 'Lombar',
-    abs: 'Core',
-    abdominals: 'Core',
-    quads: 'Quadríceps',
-    legs: 'Pernas',
-    arms: 'Braços',
-    // Portuguese keys (caso IA já retorne PT)
-    'Peitoral': 'Peitoral',
-    'Costas': 'Costas',
-    'Ombros': 'Ombros',
-    'Bíceps': 'Bíceps',
-    'Tríceps': 'Tríceps',
-    'Quadríceps': 'Quadríceps',
-    'Posteriores': 'Posteriores',
-    'Glúteos': 'Glúteos',
-    'Panturrilhas': 'Panturrilhas',
-    'Core': 'Core',
-    'Cintura Escapular': 'Cintura Escapular',
-    'Lombar': 'Lombar',
-    'Pernas': 'Pernas',
-    'Braços': 'Braços',
-  };
-
-  const translateMuscleGroup = (group: string): string => {
-    const normalized = group.trim();
-    return muscleLabels[normalized] || muscleLabels[normalized.toLowerCase()] || normalized;
-  };
-
-  // Usa inferência dos exercícios - retorna na ordem de prescrição
+  // Usa inferência dos exercícios - retorna grupos musculares em PT-BR
   const getMuscleGroups = (workout: Workout): string[] => {
     return inferMuscleGroupsFromExercises(workout.exercises);
   };

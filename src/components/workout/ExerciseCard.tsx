@@ -290,6 +290,7 @@ export function ExerciseCard({
                             e.stopPropagation();
                             handleSetClick(index);
                           }}
+                          aria-label={`Série ${index + 1} ${isCompleted ? 'completa' : isCurrent ? 'atual' : 'pendente'}`}
                           className={cn(
                             "h-12 w-12 rounded-xl font-semibold text-sm transition-all duration-200",
                             isCompleted
