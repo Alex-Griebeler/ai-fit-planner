@@ -612,7 +612,7 @@ export default function Result() {
           </div>
         </motion.div>
 
-        {/* Workouts - Collapsible Apple style */}
+        {/* Workouts - Ultra-minimal Apple style */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -624,29 +624,28 @@ export default function Result() {
               key={index}
               className="bg-card rounded-2xl border border-border overflow-hidden"
             >
-              {/* Workout Header */}
+              {/* Workout Header - Clean & Minimal */}
               <button
                 onClick={() => toggleWorkout(index)}
                 aria-expanded={expandedWorkouts[index]}
-                className="w-full p-4 flex items-center justify-between text-left"
+                className="w-full p-5 flex items-center justify-between text-left active:scale-[0.98] transition-transform"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                    <Dumbbell className="w-5 h-5 text-primary-foreground" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Dumbbell className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{workout.day}</p>
-                    <p className="text-xs text-muted-foreground">{workout.muscleGroups.map(g => translateMuscleGroup(g)).join(' · ')}</p>
+                    <p className="font-semibold text-foreground text-base">{workout.name || workout.day}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {workout.exercises.length} exercícios · {workout.estimatedDuration || plan.sessionDuration}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{workout.exercises.length} ex</span>
-                  <ChevronDown 
-                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
-                      expandedWorkouts[index] ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
+                <ChevronDown 
+                  className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${
+                    expandedWorkouts[index] ? 'rotate-180' : ''
+                  }`}
+                />
               </button>
               
               <AnimatePresence>
@@ -655,101 +654,115 @@ export default function Result() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
                     className="overflow-hidden"
                   >
-                    {/* Table Header - BTB Style */}
-                    <div className="px-4 pb-1">
-                      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border pb-2">
-                        <span className="col-span-5">Exercício</span>
-                        <span className="col-span-3 text-center">Sets×Reps / Int</span>
-                        <span className="col-span-2 text-center">Carga</span>
-                        <span className="col-span-2 text-right">Método</span>
-                      </div>
+                    {/* Muscle Groups Pills */}
+                    <div className="px-5 pb-3 flex flex-wrap gap-2">
+                      {workout.muscleGroups.map((group, i) => (
+                        <span 
+                          key={i} 
+                          className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground"
+                        >
+                          {translateMuscleGroup(group)}
+                        </span>
+                      ))}
                     </div>
                     
-                    {/* Exercise Rows */}
-                    <div className="px-4 pb-4">
+                    {/* Exercise List - Clean rows */}
+                    <div className="px-5 pb-5 space-y-1">
                       {workout.exercises.map((exercise, i) => {
                         const loadKey = `${workout.day}|${exercise.name}`;
                         const savedLoad = loads[loadKey] || '';
+                        
                         return (
-                          <div
-                            key={i}
-                            className="grid grid-cols-12 gap-2 items-start py-2.5 border-b border-border/30 last:border-0"
-                          >
-                            {/* Exercise Name + Intensity Badge */}
-                            <div className="col-span-5">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <button className="text-left w-full">
-                                    <span className="text-sm text-foreground block truncate">
-                                      {exercise.name}
-                                    </span>
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent side="top" align="start" className="w-64 p-3">
-                                  <p className="font-medium text-sm text-foreground">{exercise.name}</p>
+                          <Popover key={i}>
+                            <PopoverTrigger asChild>
+                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left group">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <span className="text-xs text-muted-foreground/60 font-mono w-5 shrink-0">
+                                    {exercise.order || i + 1}
+                                  </span>
+                                  <span className="text-sm text-foreground truncate">
+                                    {exercise.name}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground font-mono shrink-0 ml-3">
+                                  {exercise.sets}×{exercise.reps}
+                                </span>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent side="top" align="center" className="w-72 p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-foreground">{exercise.name}</h4>
                                   {exercise.equipment && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Equipamento: {exercise.equipment}
-                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{exercise.equipment}</p>
                                   )}
-                                  {exercise.notes && (
-                                    <p className="text-xs text-muted-foreground mt-2 italic">{exercise.notes}</p>
-                                  )}
-                                </PopoverContent>
-                              </Popover>
-                              {exercise.intensity && (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button className="text-[9px] text-muted-foreground/70 font-medium inline-flex items-center gap-0.5">
-                                      {exercise.intensity}
-                                      <Info className="w-2.5 h-2.5" />
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent side="top" className="w-56 p-3">
-                                    <p className="font-medium text-sm">RR = Repetições de Reserva</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Quantas repetições você ainda conseguiria fazer antes de falhar completamente.
-                                    </p>
-                                  </PopoverContent>
-                                </Popover>
-                              )}
-                            </div>
-                            
-                            {/* Sets × Reps / Rest */}
-                            <span className="col-span-3 text-center text-sm text-foreground font-mono">
-                              {exercise.sets}×{exercise.reps} / {exercise.rest || '60s'}
-                            </span>
-                            
-                            {/* Editable Load */}
-                            <div className="col-span-2 flex justify-center">
-                              <input
-                                type="text"
-                                placeholder="—"
-                                defaultValue={savedLoad}
-                                aria-label={`Carga para ${exercise.name}`}
-                                className="w-full max-w-[60px] text-center text-xs bg-transparent border-b border-dashed border-muted-foreground/30 focus:border-primary focus:outline-none py-0.5 text-foreground placeholder:text-muted-foreground/50"
-                                onBlur={(e) => {
-                                  const value = e.target.value.trim();
-                                  if (value && value !== savedLoad && isSaved) {
-                                    saveLoad(workout.day, exercise.name, value);
-                                    toast.success('Carga salva', { duration: 1500 });
-                                  }
-                                }}
-                              />
-                            </div>
-                            
-                            {/* Method */}
-                            <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
-                              {exercise.method || '—'}
-                            </span>
-                          </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-2 text-center">
+                                  <div className="p-2 rounded-lg bg-muted/50">
+                                    <p className="text-lg font-semibold text-foreground">{exercise.sets}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">Séries</p>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-muted/50">
+                                    <p className="text-lg font-semibold text-foreground">{exercise.reps}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">Reps</p>
+                                  </div>
+                                  <div className="p-2 rounded-lg bg-muted/50">
+                                    <p className="text-lg font-semibold text-foreground">{exercise.rest || '60s'}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">Descanso</p>
+                                  </div>
+                                </div>
+                                
+                                {(exercise.intensity || exercise.method) && (
+                                  <div className="flex gap-2 flex-wrap">
+                                    {exercise.intensity && (
+                                      <span className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary">
+                                        {exercise.intensity}
+                                      </span>
+                                    )}
+                                    {exercise.method && (
+                                      <span className="text-xs px-2 py-1 rounded-md bg-accent/10 text-accent-foreground">
+                                        {exercise.method}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {isSaved && (
+                                  <div className="pt-2 border-t border-border">
+                                    <label className="text-xs text-muted-foreground block mb-1">Carga utilizada</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Ex: 20kg"
+                                      defaultValue={savedLoad}
+                                      aria-label={`Carga para ${exercise.name}`}
+                                      className="w-full text-sm bg-muted/50 border border-border rounded-lg px-3 py-2 focus:border-primary focus:outline-none text-foreground placeholder:text-muted-foreground/50"
+                                      onBlur={(e) => {
+                                        const value = e.target.value.trim();
+                                        if (value && value !== savedLoad) {
+                                          saveLoad(workout.day, exercise.name, value);
+                                          toast.success('Carga salva', { duration: 1500 });
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                
+                                {exercise.notes && (
+                                  <p className="text-xs text-muted-foreground italic pt-2 border-t border-border">
+                                    💡 {exercise.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         );
                       })}
                       
-                      {/* Cardio Row - Enhanced Display */}
+                      {/* Cardio Row - Minimal */}
                       {workout.cardio && (() => {
                         const cardioInfo = parseCardioType(workout.cardio.type);
                         const displayInfo = cardioInfo.info || {
@@ -761,36 +774,39 @@ export default function Result() {
                         return (
                           <Popover>
                             <PopoverTrigger asChild>
-                              <div className="grid grid-cols-12 gap-2 items-center py-2.5 border-t border-border/50 mt-2 cursor-pointer hover:bg-muted/30 rounded-lg transition-colors -mx-2 px-2">
-                                <div className="col-span-5 flex items-center gap-2">
-                                  <span className="text-sm">{displayInfo.icon}</span>
-                                  <span className="text-sm text-foreground font-medium">
-                                    {cardioInfo.info ? cardioInfo.type : displayInfo.name}
+                              <button className="w-full flex items-center justify-between py-3 px-3 -mx-3 rounded-xl hover:bg-muted/50 transition-colors text-left mt-2 border-t border-border/50 pt-4">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-base">{displayInfo.icon}</span>
+                                  <span className="text-sm text-foreground">
+                                    {displayInfo.name}
                                   </span>
-                                  <Info className="w-3 h-3 text-muted-foreground" />
                                 </div>
-                                <span className="col-span-3 text-center text-sm text-muted-foreground">
+                                <span className="text-sm text-muted-foreground">
                                   {workout.cardio.duration || cardioInfo.duration}
                                 </span>
-                                <span className="col-span-2 text-center text-xs text-muted-foreground">
-                                  {workout.cardio.intensity || 'Leve'}
-                                </span>
-                                <span className="col-span-2 text-right text-[10px] text-primary font-medium uppercase">
-                                  Cardio
-                                </span>
-                              </div>
+                              </button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-72 p-3" side="top">
-                              <div className="space-y-2">
+                            <PopoverContent className="w-72 p-4" side="top">
+                              <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-lg">{displayInfo.icon}</span>
-                                  <h4 className="font-medium text-sm">{displayInfo.name}</h4>
+                                  <span className="text-2xl">{displayInfo.icon}</span>
+                                  <h4 className="font-semibold text-foreground">{displayInfo.name}</h4>
                                 </div>
-                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                   {displayInfo.description}
                                 </p>
+                                <div className="flex gap-4 text-center">
+                                  <div>
+                                    <p className="text-lg font-semibold text-foreground">{workout.cardio.duration || cardioInfo.duration}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">Duração</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-lg font-semibold text-foreground">{workout.cardio.intensity || 'Leve'}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase">Intensidade</p>
+                                  </div>
+                                </div>
                                 {workout.cardio.notes && (
-                                  <p className="text-xs text-foreground pt-1 border-t border-border/50">
+                                  <p className="text-xs text-foreground pt-2 border-t border-border">
                                     💡 {workout.cardio.notes}
                                   </p>
                                 )}
@@ -799,6 +815,21 @@ export default function Result() {
                           </Popover>
                         );
                       })()}
+                    </div>
+                    
+                    {/* Quick Action - Start Workout */}
+                    <div className="px-5 pb-5">
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-xl h-11"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/workout-preview?day=${encodeURIComponent(workout.day)}`);
+                        }}
+                      >
+                        <Flame className="w-4 h-4 mr-2" />
+                        Iniciar Treino
+                      </Button>
                     </div>
                   </motion.div>
                 )}
