@@ -134,12 +134,15 @@ export default function Result() {
   
   const [data, setData] = useState<OnboardingData | null>(null);
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
-  // Start with loading only if there's no active plan to display immediately
-  const [loading, setLoading] = useState(!activePlan);
+  // Start with loading false - we'll set it true only when generating a new plan
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const hasStartedGeneration = useRef(false);
+  
+  // Show loading only while fetching plans data initially
+  const isInitialLoading = isLoadingProfile || isLoadingOnboarding || isLoadingPlans;
 
   const [rateLimitResetAt, setRateLimitResetAt] = useState<Date | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
@@ -424,7 +427,10 @@ export default function Result() {
   const userName = profile?.name || data?.name || 'Atleta';
 
   // Loading State - Apple minimal with progress indicator
-  if (loading) {
+  if (loading || isInitialLoading) {
+    // If we have an active plan and are just loading initial data, don't show "Criando"
+    const isCreatingNewPlan = loading && !activePlan && !plan;
+    
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div
@@ -440,11 +446,13 @@ export default function Result() {
             aria-label="Carregando"
           />
           <p className="text-foreground text-base font-medium mb-2">
-            Criando seu plano
+            {isCreatingNewPlan ? 'Criando seu plano' : 'Carregando...'}
           </p>
-          <p className="text-muted-foreground text-sm tracking-wide">
-            Isso pode levar alguns segundos...
-          </p>
+          {isCreatingNewPlan && (
+            <p className="text-muted-foreground text-sm tracking-wide">
+              Isso pode levar alguns segundos...
+            </p>
+          )}
         </motion.div>
       </div>
     );
