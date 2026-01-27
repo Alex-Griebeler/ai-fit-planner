@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       sessionsResult,
       subscriptionsResult,
       streaksResult,
+      learningLogsResult,
     ] = await Promise.all([
       supabaseAdmin.from("profiles").select("id, user_id, created_at"),
       supabaseAdmin.from("user_onboarding_data").select("id, user_id, goal, created_at"),
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
       supabaseAdmin.from("workout_sessions").select("id, user_id, status, duration_minutes, perceived_effort, created_at, completed_at"),
       supabaseAdmin.from("subscriptions").select("id, user_id, plan_type, status, created_at"),
       supabaseAdmin.from("user_streaks").select("id, user_id, current_streak, longest_streak"),
+      supabaseAdmin.from("learning_context_logs").select("id, volume_multiplier, completion_rate, avg_rpe, confidence_score, deload_recommended, intensity_shift, blocked_reason, created_at"),
     ]);
 
     const profiles = profilesResult.data || [];
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
     const sessions = sessionsResult.data || [];
     const subscriptions = subscriptionsResult.data || [];
     const streaks = streaksResult.data || [];
-
+    const learningLogs = learningLogsResult.data || [];
     // Calculate summary metrics
     const totalUsers = profiles.length;
     const newUsersInPeriod = profiles.filter(p => {
@@ -151,6 +153,37 @@ Deno.serve(async (req) => {
         .sort((a, b) => a.date.localeCompare(b.date));
     };
 
+    // Learning Context V2 metrics
+    const logsInPeriod = learningLogs.filter(l => {
+      const createdAt = new Date(l.created_at);
+      return createdAt >= start && createdAt <= end;
+    });
+
+    const avgVolumeMultiplier = logsInPeriod.length > 0
+      ? logsInPeriod.reduce((acc, l) => acc + (l.volume_multiplier || 1), 0) / logsInPeriod.length
+      : 1;
+
+    const avgLcCompletionRate = logsInPeriod.length > 0
+      ? logsInPeriod.reduce((acc, l) => acc + (l.completion_rate || 0), 0) / logsInPeriod.length / 100
+      : 0;
+
+    const avgLcRpe = logsInPeriod.length > 0
+      ? logsInPeriod.reduce((acc, l) => acc + (l.avg_rpe || 0), 0) / logsInPeriod.length
+      : 0;
+
+    const avgConfidenceScore = logsInPeriod.length > 0
+      ? logsInPeriod.reduce((acc, l) => acc + (l.confidence_score || 0), 0) / logsInPeriod.length
+      : 0;
+
+    const deloadRecommendedCount = logsInPeriod.filter(l => l.deload_recommended).length;
+    const blockedCount = logsInPeriod.filter(l => l.blocked_reason !== null).length;
+
+    const intensityShiftDistribution = {
+      maintain: logsInPeriod.filter(l => l.intensity_shift === 'maintain').length,
+      increase: logsInPeriod.filter(l => l.intensity_shift === 'increase').length,
+      decrease: logsInPeriod.filter(l => l.intensity_shift === 'decrease').length,
+    };
+
     const response = {
       summary: {
         totalUsers,
@@ -178,6 +211,16 @@ Deno.serve(async (req) => {
         signups: formatTimeSeries(dailySignups),
         sessions: formatTimeSeries(dailySessions),
         conversions: formatTimeSeries(dailyConversions),
+      },
+      learningContext: {
+        totalLogs: logsInPeriod.length,
+        avgVolumeMultiplier: Math.round(avgVolumeMultiplier * 1000) / 1000,
+        avgCompletionRate: Math.round(avgLcCompletionRate * 1000) / 1000,
+        avgRpe: Math.round(avgLcRpe * 10) / 10,
+        avgConfidenceScore: Math.round(avgConfidenceScore * 100) / 100,
+        deloadRecommendedCount,
+        blockedCount,
+        intensityShiftDistribution,
       },
     };
 
