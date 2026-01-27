@@ -4,6 +4,21 @@ import { subDays, format } from 'date-fns';
 
 export type Period = '7d' | '30d' | '90d';
 
+export interface LearningContextMetrics {
+  totalLogs: number;
+  avgVolumeMultiplier: number;
+  avgCompletionRate: number;
+  avgRpe: number;
+  avgConfidenceScore: number;
+  deloadRecommendedCount: number;
+  blockedCount: number;
+  intensityShiftDistribution: {
+    maintain: number;
+    increase: number;
+    decrease: number;
+  };
+}
+
 export interface AdminMetrics {
   summary: {
     totalUsers: number;
@@ -32,6 +47,7 @@ export interface AdminMetrics {
     sessions: { date: string; count: number }[];
     conversions: { date: string; count: number }[];
   };
+  learningContext: LearningContextMetrics;
 }
 
 const defaultMetrics: AdminMetrics = {
@@ -61,6 +77,20 @@ const defaultMetrics: AdminMetrics = {
     signups: [],
     sessions: [],
     conversions: [],
+  },
+  learningContext: {
+    totalLogs: 0,
+    avgVolumeMultiplier: 1,
+    avgCompletionRate: 0,
+    avgRpe: 0,
+    avgConfidenceScore: 0,
+    deloadRecommendedCount: 0,
+    blockedCount: 0,
+    intensityShiftDistribution: {
+      maintain: 0,
+      increase: 0,
+      decrease: 0,
+    },
   },
 };
 

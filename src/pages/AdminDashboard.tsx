@@ -10,6 +10,7 @@ import {
   ConversionFunnel,
   PeriodSelector,
   EngagementCard,
+  LearningContextCard,
 } from '@/components/admin';
 
 export default function AdminDashboard() {
@@ -128,8 +129,8 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* Engagement & Funnel */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Engagement, Funnel & Learning Context */}
+        <div className="grid gap-6 lg:grid-cols-3">
           <EngagementCard
             completionRate={metrics.engagement.completionRate}
             avgDuration={metrics.engagement.avgDuration}
@@ -142,6 +143,7 @@ export default function AdminDashboard() {
             withPlan={metrics.funnel.withPlan}
             premium={metrics.funnel.premium}
           />
+          <LearningContextCard metrics={metrics.learningContext} />
         </div>
       </div>
     </div>
