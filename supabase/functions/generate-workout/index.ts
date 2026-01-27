@@ -2224,8 +2224,11 @@ serve(async (req) => {
       console.log(`Injury filtering: Excluded ${injuryResult.excludedCount} exercises. By area:`, injuryResult.excludedByArea);
     }
 
-    // === FETCH USER HISTORY FOR LEARNING (Phase 1 - Read Only) ===
+    // === FETCH USER HISTORY FOR LEARNING CONTEXT V2 ===
     let learningContext = "";
+    let learningContextV2: LearningContextV2 | null = null;
+    const plannedFrequency = validatedData.trainingDays?.length || 3;
+    
     try {
       // 1. Fetch last 10 completed sessions for RPE and completion analysis
       const { data: recentSessions } = await supabase
@@ -2244,10 +2247,53 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      // 3. Build learning context if we have data
+      // 3. Build Learning Context V2 if we have data
       if (recentSessions && recentSessions.length > 0) {
-        learningContext = buildLearningContext(recentSessions, loadHistory || []);
-        console.log(`Learning context built from ${recentSessions.length} sessions and ${loadHistory?.length || 0} load records`);
+        learningContextV2 = buildLearningContextV2(recentSessions, loadHistory || [], plannedFrequency);
+        learningContext = learningContextV2.promptContext;
+        
+        console.log(`Learning Context V2 built:`, {
+          sessions: learningContextV2.metrics.sessionsAnalyzed,
+          avgRpe: learningContextV2.metrics.avgRpe,
+          completionRate: learningContextV2.metrics.completionRate,
+          actualFrequency: learningContextV2.metrics.actualFrequency,
+          volumeMultiplier: learningContextV2.adjustments.volumeMultiplier,
+          confidence: learningContextV2.adjustments.confidenceScore,
+          canApply: learningContextV2.guardrails.canApplyAdjustments,
+        });
+        
+        // Log to database for analysis (async, non-blocking)
+        supabase
+          .from('learning_context_logs')
+          .insert({
+            user_id: userId,
+            sessions_analyzed: learningContextV2.metrics.sessionsAnalyzed,
+            avg_rpe: learningContextV2.metrics.avgRpe,
+            rpe_std_dev: learningContextV2.metrics.rpeStdDev,
+            completion_rate: learningContextV2.metrics.completionRate ? learningContextV2.metrics.completionRate * 100 : null,
+            avg_session_duration: learningContextV2.metrics.avgSessionDuration,
+            actual_frequency: learningContextV2.metrics.actualFrequency,
+            planned_frequency: learningContextV2.metrics.plannedFrequency,
+            volume_multiplier: learningContextV2.adjustments.volumeMultiplier,
+            intensity_shift: learningContextV2.adjustments.intensityShift,
+            deload_recommended: learningContextV2.adjustments.deloadRecommended,
+            confidence_score: learningContextV2.adjustments.confidenceScore,
+            adjustments_applied: learningContextV2.guardrails.canApplyAdjustments && !LEARNING_CONTEXT_V2_FLAGS.loggingOnly,
+            blocked_reason: learningContextV2.guardrails.blockedReason,
+            cooldown_active: learningContextV2.guardrails.cooldownActive,
+            raw_context: {
+              progressions: learningContextV2.rawData.progressions,
+              stagnations: learningContextV2.rawData.stagnations,
+            },
+            prompt_context: learningContextV2.promptContext,
+          })
+          .then(({ error }) => {
+            if (error) {
+              console.warn("Failed to log learning context:", error.message);
+            } else {
+              console.log("Learning Context V2 logged successfully");
+            }
+          });
       } else {
         console.log("No workout history found for user - skipping learning context");
       }
@@ -2410,8 +2456,16 @@ function getAllowedLevels(userLevel: string): string[] {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//                          LEARNING CONTEXT BUILDER
+//                          LEARNING CONTEXT V2 - FASE 2 (LOGGING ONLY)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Feature flags for gradual rollout
+const LEARNING_CONTEXT_V2_FLAGS = {
+  enabled: true,           // Master switch
+  loggingOnly: true,       // Log but don't apply adjustments yet
+  maxAdjustment: 0.15,     // Max ±15% adjustment
+  minSessions: 5,          // Minimum sessions before applying adjustments
+};
 
 interface SessionData {
   perceived_effort: number | null;
@@ -2427,21 +2481,188 @@ interface LoadData {
   created_at: string;
 }
 
-function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]): string {
-  // Calculate average RPE from sessions with valid RPE
-  const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
-  const avgRpe = sessionsWithRpe.length > 0
-    ? (sessionsWithRpe.reduce((sum, s) => sum + (s.perceived_effort || 0), 0) / sessionsWithRpe.length).toFixed(1)
-    : null;
+interface LearningContextV2Metrics {
+  sessionsAnalyzed: number;
+  avgRpe: number | null;
+  rpeStdDev: number | null;
+  completionRate: number | null;
+  avgSessionDuration: number | null;
+  actualFrequency: number | null;
+  plannedFrequency: number;
+}
 
-  // Calculate completion rate
+interface LearningContextV2Adjustments {
+  volumeMultiplier: number;
+  intensityShift: 'maintain' | 'increase' | 'decrease';
+  deloadRecommended: boolean;
+  confidenceScore: number;
+}
+
+interface LearningContextV2Guardrails {
+  canApplyAdjustments: boolean;
+  blockedReason?: string;
+  cooldownActive: boolean;
+}
+
+interface LearningContextV2 {
+  metrics: LearningContextV2Metrics;
+  adjustments: LearningContextV2Adjustments;
+  guardrails: LearningContextV2Guardrails;
+  promptContext: string;
+  rawData: {
+    sessions: SessionData[];
+    loads: LoadData[];
+    progressions: string[];
+    stagnations: string[];
+  };
+}
+
+function calculateStdDev(values: number[]): number {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const squareDiffs = values.map(v => Math.pow(v - mean, 2));
+  return Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / values.length);
+}
+
+function calculateActualFrequency(sessions: SessionData[]): number | null {
+  if (sessions.length < 2) return null;
+  
+  const dates = sessions
+    .filter(s => s.completed_at)
+    .map(s => new Date(s.completed_at!).getTime())
+    .sort((a, b) => a - b);
+  
+  if (dates.length < 2) return null;
+  
+  const daySpan = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
+  if (daySpan < 7) return null; // Need at least a week of data
+  
+  const weeks = daySpan / 7;
+  return parseFloat((sessions.length / weeks).toFixed(1));
+}
+
+function calculateVolumeAdjustment(metrics: LearningContextV2Metrics): LearningContextV2Adjustments {
+  let multiplier = 1.0;
+  let intensityShift: 'maintain' | 'increase' | 'decrease' = 'maintain';
+  let deloadRecommended = false;
+  let confidenceScore = 0;
+  
+  // Only calculate if we have enough data
+  if (metrics.sessionsAnalyzed < LEARNING_CONTEXT_V2_FLAGS.minSessions) {
+    return {
+      volumeMultiplier: 1.0,
+      intensityShift: 'maintain',
+      deloadRecommended: false,
+      confidenceScore: 0,
+    };
+  }
+  
+  // Confidence based on data quantity
+  confidenceScore = Math.min(1, metrics.sessionsAnalyzed / 10) * 0.5;
+  
+  // Adjust by frequency ratio
+  if (metrics.actualFrequency !== null && metrics.plannedFrequency > 0) {
+    const frequencyRatio = metrics.actualFrequency / metrics.plannedFrequency;
+    confidenceScore += 0.2;
+    
+    if (frequencyRatio < 0.7) {
+      // Training much less - slight compensation per session
+      multiplier += 0.05;
+    } else if (frequencyRatio > 1.2) {
+      // Training much more - distribute volume
+      multiplier -= 0.08;
+    }
+  }
+  
+  // Adjust by RPE
+  if (metrics.avgRpe !== null) {
+    confidenceScore += 0.2;
+    
+    if (metrics.avgRpe >= 9.0) {
+      // Very high RPE - deload recommended
+      multiplier -= 0.15;
+      intensityShift = 'decrease';
+      deloadRecommended = true;
+    } else if (metrics.avgRpe >= 8.5) {
+      // High RPE - reduce volume
+      multiplier -= 0.10;
+      intensityShift = 'decrease';
+    } else if (metrics.avgRpe <= 5.5) {
+      // Low RPE - can increase
+      multiplier += 0.05;
+      intensityShift = 'increase';
+    }
+  }
+  
+  // Adjust by completion rate
+  if (metrics.completionRate !== null) {
+    confidenceScore += 0.1;
+    
+    if (metrics.completionRate < 0.70) {
+      // Very low completion - significantly reduce
+      multiplier -= 0.15;
+    } else if (metrics.completionRate < 0.80) {
+      // Low completion - reduce
+      multiplier -= 0.05;
+    } else if (metrics.completionRate >= 0.95 && metrics.avgRpe !== null && metrics.avgRpe < 7) {
+      // High completion + low RPE - can increase
+      multiplier += 0.05;
+    }
+  }
+  
+  // Apply guardrails: limit to ±15%
+  const maxAdj = LEARNING_CONTEXT_V2_FLAGS.maxAdjustment;
+  multiplier = Math.max(1 - maxAdj, Math.min(1 + maxAdj, multiplier));
+  
+  return {
+    volumeMultiplier: parseFloat(multiplier.toFixed(2)),
+    intensityShift,
+    deloadRecommended,
+    confidenceScore: parseFloat(confidenceScore.toFixed(2)),
+  };
+}
+
+function buildLearningContextV2(
+  sessions: SessionData[], 
+  loadHistory: LoadData[],
+  plannedFrequency: number
+): LearningContextV2 {
+  // Calculate metrics
+  const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
+  const rpeValues = sessionsWithRpe.map(s => s.perceived_effort!);
+  
+  const avgRpe = rpeValues.length > 0
+    ? parseFloat((rpeValues.reduce((a, b) => a + b, 0) / rpeValues.length).toFixed(1))
+    : null;
+  
+  const rpeStdDev = rpeValues.length >= 2
+    ? parseFloat(calculateStdDev(rpeValues).toFixed(2))
+    : null;
+  
   const totalPrescribed = sessions.reduce((sum, s) => sum + s.total_sets, 0);
   const totalCompleted = sessions.reduce((sum, s) => sum + s.completed_sets, 0);
   const completionRate = totalPrescribed > 0 
-    ? ((totalCompleted / totalPrescribed) * 100).toFixed(0)
+    ? parseFloat((totalCompleted / totalPrescribed).toFixed(2))
     : null;
-
-  // Analyze load progression (group by exercise, check if loads are increasing)
+  
+  const durations = sessions.filter(s => s.duration_minutes).map(s => s.duration_minutes!);
+  const avgSessionDuration = durations.length > 0
+    ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+    : null;
+  
+  const actualFrequency = calculateActualFrequency(sessions);
+  
+  const metrics: LearningContextV2Metrics = {
+    sessionsAnalyzed: sessions.length,
+    avgRpe,
+    rpeStdDev,
+    completionRate,
+    avgSessionDuration,
+    actualFrequency,
+    plannedFrequency,
+  };
+  
+  // Analyze load progressions
   const loadsByExercise: Record<string, { value: string; date: string }[]> = {};
   loadHistory.forEach(load => {
     if (!loadsByExercise[load.exercise_name]) {
@@ -2452,8 +2673,7 @@ function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]):
       date: load.created_at
     });
   });
-
-  // Find exercises with progression (at least 2 records, latest > oldest)
+  
   const progressions: string[] = [];
   const stagnations: string[] = [];
   
@@ -2473,44 +2693,65 @@ function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]):
       }
     }
   });
-
-  // Build recommendations based on data
-  const recommendations: string[] = [];
   
-  if (avgRpe) {
-    const rpeNum = parseFloat(avgRpe);
-    if (rpeNum > 8.5) {
-      recommendations.push("⚠️ RPE ALTO: Considerar reduzir volume em 10-15% para evitar overtraining");
-    } else if (rpeNum < 5.5) {
-      recommendations.push("📈 RPE BAIXO: Considerar aumentar intensidade/volume para maior estímulo");
-    } else if (rpeNum >= 6 && rpeNum <= 8) {
-      recommendations.push("✅ RPE ideal (6-8): Manter progressão atual");
-    }
+  // Calculate adjustments
+  const adjustments = calculateVolumeAdjustment(metrics);
+  
+  // Check guardrails
+  const guardrails: LearningContextV2Guardrails = {
+    canApplyAdjustments: false,
+    cooldownActive: false,
+  };
+  
+  if (sessions.length < LEARNING_CONTEXT_V2_FLAGS.minSessions) {
+    guardrails.blockedReason = `Dados insuficientes (${sessions.length}/${LEARNING_CONTEXT_V2_FLAGS.minSessions} sessões)`;
+  } else if (LEARNING_CONTEXT_V2_FLAGS.loggingOnly) {
+    guardrails.blockedReason = 'Modo logging only ativo (Fase 2 Alpha)';
+  } else {
+    guardrails.canApplyAdjustments = true;
   }
+  
+  // Build prompt context
+  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations);
+  
+  return {
+    metrics,
+    adjustments,
+    guardrails,
+    promptContext,
+    rawData: { sessions, loads: loadHistory, progressions, stagnations },
+  };
+}
 
-  if (completionRate) {
-    const rateNum = parseFloat(completionRate);
-    if (rateNum < 80) {
-      recommendations.push("⚠️ TAXA CONCLUSÃO BAIXA (<80%): Simplificar treino, reduzir exercícios por sessão");
-    }
-  }
-
-  if (stagnations.length > 0) {
-    recommendations.push(`🔄 ESTAGNAÇÃO DETECTADA em: ${stagnations.slice(0, 3).join(', ')} - incluir variação de estímulo`);
-  }
-
-  // Build the learning context string
+function buildPromptContext(
+  metrics: LearningContextV2Metrics,
+  adjustments: LearningContextV2Adjustments,
+  guardrails: LearningContextV2Guardrails,
+  progressions: string[],
+  stagnations: string[]
+): string {
   let context = `
-## 🧠 HISTÓRICO DO USUÁRIO (APRENDIZADO DA IA)
+## 🧠 HISTÓRICO DO USUÁRIO (LEARNING CONTEXT V2)
 
-### Últimas ${sessions.length} sessões completadas:`;
+### Últimas ${metrics.sessionsAnalyzed} sessões analisadas:`;
 
-  if (avgRpe) {
-    context += `\n- RPE médio: ${avgRpe}/10`;
+  if (metrics.avgRpe !== null) {
+    context += `\n- RPE médio: ${metrics.avgRpe}/10`;
+    if (metrics.rpeStdDev !== null) {
+      context += ` (desvio: ±${metrics.rpeStdDev})`;
+    }
   }
   
-  if (completionRate) {
-    context += `\n- Taxa de conclusão: ${completionRate}%`;
+  if (metrics.completionRate !== null) {
+    context += `\n- Taxa de conclusão: ${(metrics.completionRate * 100).toFixed(0)}%`;
+  }
+  
+  if (metrics.actualFrequency !== null) {
+    context += `\n- Frequência real: ${metrics.actualFrequency} dias/semana (planejado: ${metrics.plannedFrequency})`;
+  }
+  
+  if (metrics.avgSessionDuration !== null) {
+    context += `\n- Duração média: ${metrics.avgSessionDuration} min`;
   }
 
   if (progressions.length > 0) {
@@ -2519,6 +2760,38 @@ function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]):
       context += `\n- ${p}`;
     });
   }
+  
+  if (stagnations.length > 0) {
+    context += `\n\n### ⚠️ Estagnação Detectada:`;
+    stagnations.slice(0, 3).forEach(s => {
+      context += `\n- ${s}`;
+    });
+  }
+
+  // Build recommendations based on data
+  const recommendations: string[] = [];
+  
+  if (metrics.avgRpe !== null) {
+    if (metrics.avgRpe > 8.5) {
+      recommendations.push("⚠️ RPE ALTO: Considerar reduzir volume em 10-15% para evitar overtraining");
+    } else if (metrics.avgRpe < 5.5) {
+      recommendations.push("📈 RPE BAIXO: Considerar aumentar intensidade/volume para maior estímulo");
+    } else if (metrics.avgRpe >= 6 && metrics.avgRpe <= 8) {
+      recommendations.push("✅ RPE ideal (6-8): Manter progressão atual");
+    }
+  }
+
+  if (metrics.completionRate !== null && metrics.completionRate < 0.80) {
+    recommendations.push("⚠️ TAXA CONCLUSÃO BAIXA (<80%): Simplificar treino, reduzir exercícios por sessão");
+  }
+
+  if (stagnations.length > 0) {
+    recommendations.push(`🔄 ESTAGNAÇÃO: Incluir variação de estímulo para: ${stagnations.slice(0, 3).join(', ')}`);
+  }
+  
+  if (adjustments.deloadRecommended) {
+    recommendations.push("🛑 DELOAD RECOMENDADO: Alta fadiga acumulada detectada");
+  }
 
   if (recommendations.length > 0) {
     context += `\n\n### 🎯 Recomendações Baseadas em Dados:`;
@@ -2526,16 +2799,29 @@ function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]):
       context += `\n${r}`;
     });
   }
-
+  
+  // V2: Show calculated adjustments (logging mode - informational only)
   context += `\n
+### 📊 Ajuste Calculado (V2 - Logging Only):
+- Multiplicador de volume: ${adjustments.volumeMultiplier}x
+- Direção de intensidade: ${adjustments.intensityShift}
+- Confiança: ${(adjustments.confidenceScore * 100).toFixed(0)}%
+- Status: ${guardrails.canApplyAdjustments ? '✅ Ativo' : `⏸️ ${guardrails.blockedReason}`}
+
 ### ⚠️ INSTRUÇÕES DE AJUSTE:
-- Use as informações acima para AJUSTAR a prescrição
+- Use as informações acima para INFORMAR a prescrição
 - Se RPE está alto: PRIORIZE recuperação sobre volume
 - Se há estagnação: INCLUA variações dos exercícios estagnados
 - Se taxa de conclusão é baixa: REDUZA número de exercícios por sessão
 `;
 
   return context;
+}
+
+// Legacy function for backwards compatibility
+function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]): string {
+  const context = buildLearningContextV2(sessions, loadHistory, 3);
+  return context.promptContext;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
