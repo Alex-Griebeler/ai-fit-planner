@@ -217,8 +217,8 @@ export default function Index() {
               </div>
               
               <blockquote className="text-xl sm:text-2xl font-display text-foreground mb-8 leading-relaxed">
-                "Finalmente encontrei um app que entende minhas limitações e cria
-                treinos que eu realmente consigo fazer. <span className="text-primary font-semibold">Perdi 12kg em 4 meses</span> sem precisar de personal!"
+                "Finalmente encontrei um app que entende o meu corpo e cria
+                treinos que eu realmente consigo fazer. <span className="text-primary font-semibold">Perdi 12kg em 4 meses!</span>"
               </blockquote>
               
               <div className="flex items-center gap-4">

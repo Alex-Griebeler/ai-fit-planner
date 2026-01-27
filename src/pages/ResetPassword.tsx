@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle, Dumbbell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePasswordValidation } from '@/hooks/usePasswordValidation';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { toast } from 'sonner';
-import evolveLogo from '@/assets/evolve-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function ResetPassword() {
@@ -87,7 +86,9 @@ export default function ResetPassword() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-sm text-center relative"
         >
-          <img src={evolveLogo} alt="Evolve" className="h-16 mx-auto mb-6" />
+          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-6">
+            <Dumbbell className="w-8 h-8 text-primary-foreground" />
+          </div>
           <h1 className="text-xl font-bold mb-4">Link inválido ou expirado</h1>
           <p className="text-muted-foreground mb-6">
             Este link de recuperação de senha não é mais válido. 
@@ -137,7 +138,9 @@ export default function ResetPassword() {
           className="w-full max-w-sm"
         >
           <div className="text-center mb-10">
-            <img src={evolveLogo} alt="Evolve" className="h-16 mx-auto mb-4" />
+            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+              <Dumbbell className="w-8 h-8 text-primary-foreground" />
+            </div>
             <h1 className="text-xl font-bold">Nova senha</h1>
             <p className="text-muted-foreground mt-2">
               Digite sua nova senha abaixo
