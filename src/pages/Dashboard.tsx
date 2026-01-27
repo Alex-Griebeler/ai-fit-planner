@@ -11,7 +11,8 @@ import {
   WorkoutHistoryCard, 
   StatsCard,
   SessionHistoryCard,
-  ProgressPreviewCard 
+  ProgressPreviewCard,
+  NextWorkoutCard,
 } from '@/components/dashboard';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
@@ -162,6 +163,15 @@ export default function Dashboard() {
           <Card className="p-4">
             <WeeklyProgress />
           </Card>
+        </motion.div>
+
+        {/* Next Workout Suggestion */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.14 }}
+        >
+          <NextWorkoutCard />
         </motion.div>
 
         {/* Stats Grid */}
