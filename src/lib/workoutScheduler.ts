@@ -339,11 +339,6 @@ export function inferMuscleGroupsFromExercises(exercises: WorkoutExercise[]): st
     }
   });
   
-  // Ordena para consistência: grupos grandes primeiro
-  const order = ['Peitoral', 'Costas', 'Ombros', 'Quadríceps', 'Glúteos', 'Posteriores', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Core', 'Cintura Escapular'];
-  return Array.from(groupsSet).sort((a, b) => {
-    const idxA = order.indexOf(a);
-    const idxB = order.indexOf(b);
-    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
-  });
+  // Retorna na ordem em que aparecem nos exercícios (preserva ordem de inserção do Set)
+  return Array.from(groupsSet);
 }
