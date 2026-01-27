@@ -324,50 +324,60 @@ export default function Result() {
   };
 
   useEffect(() => {
+    // Wait for all data to load before making decisions
     if (isLoadingProfile || isLoadingOnboarding || isLoadingPlans) {
       return;
     }
 
-    if (activePlan && !plan) {
-      const savedPlanData = activePlan.plan_data as unknown as {
-        workouts: Workout[];
-        weeklyVolume: Record<string, number>;
-        progressionPlan: string | ProgressionPlan;
-        warnings: string[];
-        motivationalMessage: string;
-      };
+    // PRIORITY 1: If there's an active plan, display it and DON'T generate a new one
+    if (activePlan) {
+      // Only set plan state if not already set (avoid re-renders)
+      if (!plan) {
+        const savedPlanData = activePlan.plan_data as unknown as {
+          workouts: Workout[];
+          weeklyVolume: Record<string, number>;
+          progressionPlan: string | ProgressionPlan;
+          warnings: string[];
+          motivationalMessage: string;
+        };
 
-      setPlan({
-        planName: activePlan.plan_name,
-        description: activePlan.description || '',
-        weeklyFrequency: activePlan.weekly_frequency,
-        sessionDuration: activePlan.session_duration,
-        periodization: activePlan.periodization || 'linear',
-        workouts: savedPlanData.workouts,
-        weeklyVolume: savedPlanData.weeklyVolume,
-        progressionPlan: savedPlanData.progressionPlan,
-        warnings: savedPlanData.warnings || [],
-        motivationalMessage: savedPlanData.motivationalMessage || '',
-      });
-      setIsSaved(true);
-      setLoading(false);
-      return;
+        setPlan({
+          planName: activePlan.plan_name,
+          description: activePlan.description || '',
+          weeklyFrequency: activePlan.weekly_frequency,
+          sessionDuration: activePlan.session_duration,
+          periodization: activePlan.periodization || 'linear',
+          workouts: savedPlanData.workouts,
+          weeklyVolume: savedPlanData.weeklyVolume,
+          progressionPlan: savedPlanData.progressionPlan,
+          warnings: savedPlanData.warnings || [],
+          motivationalMessage: savedPlanData.motivationalMessage || '',
+        });
+        setIsSaved(true);
+      }
+      // Clear any pending onboarding data since we already have a plan
+      sessionStorage.removeItem('onboardingData');
+      return; // Don't proceed to generation logic
     }
 
+    // PRIORITY 2: No active plan - check if we should generate a new one
+    
+    // Prevent duplicate generation attempts
     if (hasStartedGeneration.current && retryCount === 0) {
       return;
     }
 
+    // Check for pending onboarding data in sessionStorage (from onboarding flow)
     const savedSessionData = sessionStorage.getItem('onboardingData');
     if (savedSessionData) {
       hasStartedGeneration.current = true;
       const parsedData: OnboardingData = JSON.parse(savedSessionData);
       
-      // Sanitiza trainingDays do sessionStorage (pode estar corrompido)
+      // Sanitize trainingDays from sessionStorage (may be corrupted)
       const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
       parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
       
-      // Se estava corrompido, atualiza o sessionStorage
+      // If it was corrupted, update sessionStorage
       if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
         sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
       }
@@ -377,6 +387,7 @@ export default function Result() {
       return;
     }
 
+    // Check for saved onboarding data in database
     if (savedOnboardingData && profile) {
       hasStartedGeneration.current = true;
       const fullData: OnboardingData = {
@@ -406,7 +417,8 @@ export default function Result() {
       return;
     }
 
-    if (!savedOnboardingData && !activePlan) {
+    // No data available - redirect to onboarding
+    if (!savedOnboardingData) {
       navigate('/onboarding');
     }
   }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan]);
