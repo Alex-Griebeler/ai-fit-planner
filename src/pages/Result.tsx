@@ -980,7 +980,7 @@ export default function Result() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="space-y-3"
+          className="space-y-4 pb-24"
         >
           {!isSaved ? (
             <Button 
@@ -1010,15 +1010,15 @@ export default function Result() {
               Ir para Dashboard
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
+          
+          {/* Refazer questionário - centered link style */}
+          <button
             onClick={() => navigate('/onboarding')}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            Refazer questionário
-          </Button>
+            <RefreshCw className="w-4 h-4" />
+            <span>Refazer questionário</span>
+          </button>
         </motion.div>
 
       </div>
