@@ -144,7 +144,7 @@ export default function Result() {
     return [...new Set(days)].filter(day => validDays.includes(day));
   };
 
-  const generatePlan = async (userData: OnboardingData) => {
+  const generatePlan = useCallback(async (userData: OnboardingData) => {
     setLoading(true);
     setError(null);
     setRateLimitResetAt(null);
@@ -243,7 +243,7 @@ export default function Result() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const savePlanToDatabase = async () => {
     if (!plan) return;
@@ -380,7 +380,7 @@ export default function Result() {
     if (!savedOnboardingData) {
       navigate('/onboarding');
     }
-  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan]);
+  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan, generatePlan]);
 
   const handleRetry = () => {
     if (data) {
