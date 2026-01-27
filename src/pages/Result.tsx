@@ -15,6 +15,7 @@ import {
   Calendar, 
   Clock, 
   ChevronDown,
+  ChevronLeft,
   Flame,
   AlertTriangle,
   RefreshCw,
@@ -578,13 +579,22 @@ export default function Result() {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between"
         >
-          <div className="text-left">
-            <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
-              Plano Pronto
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {userName}
-            </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors active:scale-95"
+              aria-label="Voltar para o Dashboard"
+            >
+              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            </button>
+            <div className="text-left">
+              <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
+                Plano Pronto
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {userName}
+              </p>
+            </div>
           </div>
           <button
             onClick={() => navigate('/settings')}
