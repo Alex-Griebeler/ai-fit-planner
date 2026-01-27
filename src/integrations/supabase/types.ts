@@ -97,6 +97,83 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_context_logs: {
+        Row: {
+          actual_frequency: number | null
+          adjustments_applied: boolean | null
+          avg_rpe: number | null
+          avg_session_duration: number | null
+          blocked_reason: string | null
+          completion_rate: number | null
+          confidence_score: number | null
+          cooldown_active: boolean | null
+          created_at: string
+          deload_recommended: boolean | null
+          id: string
+          intensity_shift: string | null
+          planned_frequency: number | null
+          prompt_context: string | null
+          raw_context: Json | null
+          rpe_std_dev: number | null
+          sessions_analyzed: number
+          user_id: string
+          volume_multiplier: number | null
+          workout_plan_id: string | null
+        }
+        Insert: {
+          actual_frequency?: number | null
+          adjustments_applied?: boolean | null
+          avg_rpe?: number | null
+          avg_session_duration?: number | null
+          blocked_reason?: string | null
+          completion_rate?: number | null
+          confidence_score?: number | null
+          cooldown_active?: boolean | null
+          created_at?: string
+          deload_recommended?: boolean | null
+          id?: string
+          intensity_shift?: string | null
+          planned_frequency?: number | null
+          prompt_context?: string | null
+          raw_context?: Json | null
+          rpe_std_dev?: number | null
+          sessions_analyzed?: number
+          user_id: string
+          volume_multiplier?: number | null
+          workout_plan_id?: string | null
+        }
+        Update: {
+          actual_frequency?: number | null
+          adjustments_applied?: boolean | null
+          avg_rpe?: number | null
+          avg_session_duration?: number | null
+          blocked_reason?: string | null
+          completion_rate?: number | null
+          confidence_score?: number | null
+          cooldown_active?: boolean | null
+          created_at?: string
+          deload_recommended?: boolean | null
+          id?: string
+          intensity_shift?: string | null
+          planned_frequency?: number | null
+          prompt_context?: string | null
+          raw_context?: Json | null
+          rpe_std_dev?: number | null
+          sessions_analyzed?: number
+          user_id?: string
+          volume_multiplier?: number | null
+          workout_plan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_context_logs_workout_plan_id_fkey"
+            columns: ["workout_plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           achievement_alerts: boolean
