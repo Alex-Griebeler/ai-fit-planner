@@ -101,7 +101,12 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             <Badge variant="default" className="mb-2 bg-primary/20 text-primary border-0">
               Plano Ativo
             </Badge>
-            <CardTitle className="text-xl">{plan.plan_name}</CardTitle>
+            <CardTitle className="text-xl">
+              {plan.plan_name
+                .replace(/\s+(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()}
+            </CardTitle>
           </div>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </div>
