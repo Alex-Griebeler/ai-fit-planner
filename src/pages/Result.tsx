@@ -227,7 +227,36 @@ export default function Result() {
 
       // Handle function errors - check if it's a rate limit 429 error
       if (functionError) {
-        // Try to parse rate limit info from the error context
+        const errorMessage = functionError.message || '';
+        
+        // Check if it's a 429 error with JSON body
+        if (errorMessage.includes('429')) {
+          // Extract JSON from error message (format: "Edge Function returned a non-2xx status code" or contains JSON)
+          const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              const errorBody = JSON.parse(jsonMatch[0]);
+              if (errorBody.reset_at) {
+                const resetAt = new Date(errorBody.reset_at);
+                setRateLimitResetAt(resetAt);
+                setIsRateLimited(true);
+                throw new Error('Limite de gerações atingido.');
+              }
+            } catch (parseErr) {
+              // JSON parsing failed, continue with fallback
+            }
+          }
+          // Fallback for 429 without parseable JSON
+          setIsRateLimited(true);
+          // Default reset: next hour
+          const nextHour = new Date();
+          nextHour.setMinutes(0, 0, 0);
+          nextHour.setHours(nextHour.getHours() + 1);
+          setRateLimitResetAt(nextHour);
+          throw new Error('Limite de gerações atingido.');
+        }
+        
+        // Try to parse rate limit info from the error context (legacy support)
         const errorContext = (functionError as any).context;
         if (errorContext) {
           try {
@@ -236,37 +265,11 @@ export default function Result() {
               const resetAt = new Date(errorBody.reset_at);
               setRateLimitResetAt(resetAt);
               setIsRateLimited(true);
-              const maxReq = errorBody.max_requests || 5;
-              throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
+              throw new Error('Limite de gerações atingido.');
             }
-          } catch (parseError) {
+          } catch {
             // Not a JSON response, continue with normal error handling
           }
-        }
-        
-        // Check if error message contains rate limit info
-        const errorMessage = functionError.message || '';
-        if (errorMessage.includes('429') || errorMessage.includes('Limite') || errorMessage.includes('Rate limit')) {
-          // Try to extract reset_at from the error message if it contains JSON
-          const jsonMatch = errorMessage.match(/\{.*\}/);
-          if (jsonMatch) {
-            try {
-              const errorBody = JSON.parse(jsonMatch[0]);
-              if (errorBody.reset_at) {
-                const resetAt = new Date(errorBody.reset_at);
-                setRateLimitResetAt(resetAt);
-                setIsRateLimited(true);
-                const maxReq = errorBody.max_requests || 5;
-                throw new Error(`Limite de ${maxReq} gerações por hora atingido.`);
-              }
-            } catch {
-              // Fallback: set rate limited state without specific reset time
-              setIsRateLimited(true);
-              throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
-            }
-          }
-          setIsRateLimited(true);
-          throw new Error('Limite de gerações atingido. Tente novamente em 1 hora.');
         }
         
         throw new Error(functionError.message);
