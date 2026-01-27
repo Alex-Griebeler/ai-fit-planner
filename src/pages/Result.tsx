@@ -375,6 +375,11 @@ export default function Result() {
 
     // PRIORITY 2: No active plan - check if we should generate a new one
     
+    // If we already have a plan in state (generated but not saved yet), don't regenerate
+    if (plan) {
+      return;
+    }
+    
     // Prevent duplicate generation attempts
     if (hasStartedGeneration.current && retryCount === 0) {
       return;
