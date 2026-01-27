@@ -1,65 +1,22 @@
 
-## Plano: Sistema de Sugestão de Treinos (Opção B)
+## Plano: Sistema de Sugestão de Treinos (Opção B - Revisada)
 
 ### Objetivo
-Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, sem obrigar o usuário a seguir.
+Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, **reordenando a lista de treinos na tela do plano** (Result.tsx).
 
-### Fluxo do Usuário
+### Abordagem Escolhida
+**Reordenação da lista** - O treino sugerido sobe automaticamente para o topo da lista, com destaque visual sutil (badge + borda).
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    DASHBOARD - NOVO CARD                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  CENÁRIO 1: Dia programado, treino não feito                    │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Treino de Hoje                                         │  │
-│  │                                                           │  │
-│  │ Upper A                                    6 exercícios   │  │
-│  │ 📅 Segunda-feira                                          │  │
-│  │                                                           │  │
-│  │              [ Iniciar Treino ]                           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  CENÁRIO 2: Treino pendente de dia anterior                     │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ ⏳ Treino Pendente                                        │  │
-│  │                                                           │  │
-│  │ Upper A (era pra Segunda)                  6 exercícios   │  │
-│  │                                                           │  │
-│  │     [ Fazer Agora ]         [ Pular → ]                   │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  CENÁRIO 3: Dia sem treino programado                           │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 📋 Próximo Treino                                         │  │
-│  │                                                           │  │
-│  │ Lower B                                    6 exercícios   │  │
-│  │ 📅 Quarta-feira                                           │  │
-│  │                                                           │  │
-│  │ Você está no ritmo! Descanse hoje. 💪                     │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  CENÁRIO 4: Semana completa                                     │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ ✅ Semana Completa!                                       │  │
-│  │                                                           │  │
-│  │ Você completou todos os 3 treinos desta semana.           │  │
-│  │ Nova semana começa no Domingo.                            │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Arquivos a Criar
+### Arquivos Criados
 
 **1. `src/lib/workoutScheduler.ts`** - Lógica de agendamento
 
 Funções principais:
 - `getDayLabel(dayCode)` - Converte 'mon' para 'Segunda-feira'
 - `sortDaysByWeekOrder(days)` - Ordena dias na sequência da semana
-- `getTodayDayCode()` - Retorna o código do dia atual ('mon', 'tue', etc.)
-- `getWeeklySchedule(workouts, trainingDays, sessions)` - Calcula o cronograma
+- `getTodayDayCode()` - Retorna o código do dia atual
+- `getWeeklySchedule(totalWorkouts, trainingDays, sessions)` - Calcula o cronograma
+- `reorderWorkoutsWithSuggestion(indices, suggestedIndex)` - Reordena a lista
 
 **2. `src/hooks/useWorkoutSchedule.ts`** - Hook de agendamento
 
@@ -71,80 +28,81 @@ Combina dados de:
 Retorna:
 ```typescript
 {
-  nextWorkout: ScheduledWorkout | null,
-  todayWorkout: ScheduledWorkout | null,
-  missedWorkout: ScheduledWorkout | null,
+  suggestedWorkoutIndex: number | null,
+  todayWorkoutIndex: number | null,
+  pendingWorkoutIndex: number | null,
+  completedIndices: number[],
   isWeekComplete: boolean,
   isRestDay: boolean,
+  reason: string,
+  reorderedIndices: number[],
+  trainingDays: string[],
   isLoading: boolean,
 }
 ```
 
-**3. `src/components/dashboard/NextWorkoutCard.tsx`** - Componente visual
+### Arquivos Modificados
 
-Card inteligente que exibe:
-- Treino do dia (se hoje for dia de treino)
-- Treino pendente (se perdeu ontem)
-- Próximo treino (se hoje é dia de descanso)
-- Mensagem de semana completa
+**3. `src/pages/Result.tsx`**
 
-### Arquivos a Modificar
+- Importou `useWorkoutSchedule` e `Badge`
+- Loop de workouts agora usa `reorderedIndices` para ordem inteligente
+- Treino sugerido exibe badge "✨ Sugerido" e borda destacada
+- Mantém compatibilidade com planos sem dados de onboarding
 
-**4. `src/pages/Dashboard.tsx`**
+### Comportamento Visual
 
-Adicionar o novo card entre o WeeklyProgress e o ActivePlanCard:
-```tsx
-<NextWorkoutCard />
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TELA PLANO PRONTO                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ ✨ Sugerido                                               │  │
+│  │ ─────────────────────────────────────────────────────────│  │
+│  │ 🏋️ Upper A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Lower A                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 🏋️ Upper B                                                │  │
+│  │ 6 exercícios · 45-60 min                                 │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Detalhes Técnicos
+### Lógica de Detecção
 
-**Tipos TypeScript:**
-```typescript
-interface ScheduledWorkout {
-  workout: Workout;
-  dayCode: string;           // 'mon', 'tue', etc.
-  dayLabel: string;          // 'Segunda-feira'
-  status: 'today' | 'pending' | 'upcoming' | 'completed';
-  originalDayLabel?: string; // Para treinos pendentes
-}
-```
-
-**Lógica de Detecção:**
 1. Ordenar `trainingDays` pela sequência da semana (dom=0, seg=1...)
 2. Mapear cada treino do plano para um dia específico
 3. Verificar quais treinos da semana já foram completados
 4. Identificar se hoje é dia de treino
 5. Identificar se há treino pendente de dias anteriores
+6. Reordenar lista colocando sugerido no topo
 
-**Tratamento de Edge Cases:**
-- Usuário sem plano ativo: Card não aparece
-- Usuário sem dados de onboarding: Fallback para dias do plano
-- Mais treinos que dias: Usar nomes genéricos para excedentes
-- Semana zerada (domingo): Resetar status
+### Tratamento de Edge Cases
 
-### Comportamento do Botão "Pular"
-
-Quando o usuário clica em "Pular":
-- O treino pendente é removido da fila (apenas visualmente)
-- NÃO cria registro no banco de dados
-- O próximo treino da sequência é exibido
-- Estado persiste apenas durante a sessão (localStorage)
+- Usuário sem plano ativo: Hook retorna valores default
+- Usuário sem dados de onboarding: Fallback para ordem original
+- Semana completa: Nenhum treino sugerido
+- Dia de descanso: Próximo treino futuro é sugerido
 
 ### Impacto no Código Existente
 
 | Componente | Mudança | Risco |
 |------------|---------|-------|
-| `Dashboard.tsx` | Adicionar 1 componente | Nenhum |
+| `Result.tsx` | Loop usa reorderedIndices | Baixo |
 | `useOnboardingData.ts` | Apenas consumido | Nenhum |
 | `useWorkoutSessions.ts` | Apenas consumido | Nenhum |
 | `useWorkoutPlans.ts` | Apenas consumido | Nenhum |
+| `Dashboard.tsx` | Nenhuma mudança | Nenhum |
 | `ActivePlanCard.tsx` | Nenhuma mudança | Nenhum |
 
-### Ordem de Implementação
+### Status: ✅ Implementado
 
-1. Criar `src/lib/workoutScheduler.ts` com funções utilitárias
-2. Criar `src/hooks/useWorkoutSchedule.ts` com lógica de negócio
-3. Criar `src/components/dashboard/NextWorkoutCard.tsx` com UI
-4. Integrar no `src/pages/Dashboard.tsx`
-5. Testar cenários: dia de treino, dia de descanso, treino pendente, semana completa
