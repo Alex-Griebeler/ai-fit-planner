@@ -302,12 +302,9 @@ export default function Result() {
   const savePlanToDatabase = async () => {
     if (!plan) return;
 
-    // Check limit for Free users: max 1 plan
-    if (!isPremium && plans.length >= 1) {
-      toast.error('Limite de 1 plano atingido. Faça upgrade para Premium para planos ilimitados!');
-      navigate('/pricing');
-      return;
-    }
+    // Free users can only have 1 active plan at a time
+    // The createPlan mutation already deactivates old plans, so this is allowed
+    // The limit is enforced by the database trigger for truly preventing multiple active plans
 
     try {
       await createPlan({
