@@ -10,6 +10,7 @@ import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useExerciseLoads } from '@/hooks/useExerciseLoads';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useWorkoutSchedule } from '@/hooks/useWorkoutSchedule';
+import { inferMuscleGroupsFromExercises } from '@/lib/workoutScheduler';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
@@ -550,7 +551,7 @@ export default function Result() {
   if (!plan) return null;
 
   const muscleLabels: Record<string, string> = {
-    // English keys
+    // English keys (lowercase)
     chest: 'Peitoral',
     back: 'Costas',
     shoulders: 'Ombros',
@@ -562,6 +563,16 @@ export default function Result() {
     calves: 'Panturrilhas',
     core: 'Core',
     scapular_belt: 'Cintura Escapular',
+    // Additional variations
+    lats: 'Costas',
+    traps: 'Costas',
+    upper_back: 'Costas',
+    lower_back: 'Lombar',
+    abs: 'Core',
+    abdominals: 'Core',
+    quads: 'Quadríceps',
+    legs: 'Pernas',
+    arms: 'Braços',
     // Portuguese keys (caso IA já retorne PT)
     'Peitoral': 'Peitoral',
     'Costas': 'Costas',
@@ -574,10 +585,38 @@ export default function Result() {
     'Panturrilhas': 'Panturrilhas',
     'Core': 'Core',
     'Cintura Escapular': 'Cintura Escapular',
+    'Lombar': 'Lombar',
+    'Pernas': 'Pernas',
+    'Braços': 'Braços',
   };
 
   const translateMuscleGroup = (group: string): string => {
-    return muscleLabels[group] || muscleLabels[group.toLowerCase()] || group;
+    const normalized = group.trim();
+    return muscleLabels[normalized] || muscleLabels[normalized.toLowerCase()] || normalized;
+  };
+
+  // Combina muscleGroups do plano com inferência dos exercícios
+  // Usa a função importada de workoutScheduler
+  const getMuscleGroups = (workout: Workout): string[] => {
+    const inferred = inferMuscleGroupsFromExercises(workout.exercises);
+    const original = workout.muscleGroups || [];
+    
+    // Combina os dois, priorizando os inferidos que são mais confiáveis
+    const allGroups = new Set<string>();
+    
+    inferred.forEach(g => allGroups.add(g));
+    original.forEach(g => {
+      const translated = translateMuscleGroup(g);
+      allGroups.add(translated);
+    });
+    
+    // Ordena para consistência: grupos grandes primeiro
+    const order = ['Peitoral', 'Costas', 'Ombros', 'Quadríceps', 'Glúteos', 'Posteriores', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Core', 'Cintura Escapular'];
+    return Array.from(allGroups).sort((a, b) => {
+      const idxA = order.indexOf(a);
+      const idxB = order.indexOf(b);
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
   };
 
   return (
@@ -725,14 +764,14 @@ export default function Result() {
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                     className="overflow-hidden"
                   >
-                    {/* Muscle Groups Pills */}
+                    {/* Muscle Groups Pills - uses inferred groups for accuracy */}
                     <div className="px-5 pb-3 flex flex-wrap gap-2">
-                      {workout.muscleGroups.map((group, i) => (
+                      {getMuscleGroups(workout).map((group, i) => (
                         <span 
                           key={i} 
                           className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground"
                         >
-                          {translateMuscleGroup(group)}
+                          {group}
                         </span>
                       ))}
                     </div>

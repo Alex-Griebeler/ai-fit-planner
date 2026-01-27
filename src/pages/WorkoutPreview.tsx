@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { inferMuscleGroupsFromExercises } from '@/lib/workoutScheduler';
 
 interface Exercise {
   order: number;
@@ -166,15 +167,18 @@ export default function WorkoutPreview() {
             <span>{workout.estimatedDuration || '45-60min'}</span>
           </div>
         </div>
-        {workout.muscleGroups && workout.muscleGroups.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {workout.muscleGroups.map((group, idx) => (
-              <Badge key={idx} variant="secondary" className="text-xs">
-                {group}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const muscleGroups = inferMuscleGroupsFromExercises(workout.exercises);
+          return muscleGroups.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {muscleGroups.map((group, idx) => (
+                <Badge key={idx} variant="secondary" className="text-xs">
+                  {group}
+                </Badge>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Exercise list */}
