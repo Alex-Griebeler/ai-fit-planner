@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,13 +32,15 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const { signOut } = useAuth();
   const { profile, isLoading: profileLoading } = useProfile();
   const { 
     plans, 
     activePlan, 
     isLoading: plansLoading, 
-    deletePlan 
+    deletePlan,
+    deactivatePlan
   } = useWorkoutPlans();
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
 
@@ -102,10 +105,23 @@ export default function Dashboard() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction 
-                      onClick={() => navigate('/onboarding')}
+                      onClick={async () => {
+                        try {
+                          setIsDeactivating(true);
+                          // Desativa o plano atual para que o Result.tsx gere um novo
+                          if (activePlan) {
+                            await deactivatePlan(activePlan.id);
+                          }
+                          navigate('/onboarding');
+                        } catch (error) {
+                          toast.error('Erro ao preparar novo plano');
+                          setIsDeactivating(false);
+                        }
+                      }}
+                      disabled={isDeactivating}
                       className="press-scale"
                     >
-                      Continuar
+                      {isDeactivating ? 'Preparando...' : 'Continuar'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
