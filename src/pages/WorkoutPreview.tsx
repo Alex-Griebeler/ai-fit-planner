@@ -124,7 +124,7 @@ export default function WorkoutPreview() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-28 sm:pb-24">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="px-4 py-3">
@@ -256,22 +256,20 @@ export default function WorkoutPreview() {
               </div>
             </motion.div>
           ))}
+
+          {/* Botão de ação - integrado ao scroll */}
+          <div className="pt-6 pb-8">
+            <Button
+              size="lg"
+              className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 press-scale"
+              onClick={handleStartWorkout}
+            >
+              <Play className="w-5 h-5 mr-2" />
+              Iniciar Treino
+            </Button>
+          </div>
         </div>
       </main>
-
-      {/* Bottom action - apenas botão principal */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border p-4 safe-area-inset-bottom">
-        <div className="max-w-lg mx-auto">
-          <Button
-            size="lg"
-            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 press-scale"
-            onClick={handleStartWorkout}
-          >
-            <Play className="w-5 h-5 mr-2" />
-            Iniciar Treino
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
