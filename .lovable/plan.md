@@ -50,59 +50,53 @@ Retorna:
 - Treino sugerido exibe badge "✨ Sugerido" e borda destacada
 - Mantém compatibilidade com planos sem dados de onboarding
 
-### Comportamento Visual
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    TELA PLANO PRONTO                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ ✨ Sugerido                                               │  │
-│  │ ─────────────────────────────────────────────────────────│  │
-│  │ 🏋️ Upper A                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Lower A                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 🏋️ Upper B                                                │  │
-│  │ 6 exercícios · 45-60 min                                 │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Lógica de Detecção
-
-1. Ordenar `trainingDays` pela sequência da semana (dom=0, seg=1...)
-2. Mapear cada treino do plano para um dia específico
-3. Verificar quais treinos da semana já foram completados
-4. Identificar se hoje é dia de treino
-5. Identificar se há treino pendente de dias anteriores
-6. Reordenar lista colocando sugerido no topo
-
-### Tratamento de Edge Cases
-
-- Usuário sem plano ativo: Hook retorna valores default
-- Usuário sem dados de onboarding: Fallback para ordem original
-- Semana completa: Nenhum treino sugerido
-- Dia de descanso: Próximo treino futuro é sugerido
-
-### Impacto no Código Existente
-
-| Componente | Mudança | Risco |
-|------------|---------|-------|
-| `Result.tsx` | Loop usa reorderedIndices | Baixo |
-| `useOnboardingData.ts` | Apenas consumido | Nenhum |
-| `useWorkoutSessions.ts` | Apenas consumido | Nenhum |
-| `useWorkoutPlans.ts` | Apenas consumido | Nenhum |
-| `Dashboard.tsx` | Nenhuma mudança | Nenhum |
-| `ActivePlanCard.tsx` | Nenhuma mudança | Nenhum |
-
 ### Status: ✅ Implementado
 
+---
+
+## Plano: Validação de Ordem de Exercícios
+
+### Objetivo
+Implementar regras técnicas robustas para ordenação de exercícios no sistema de prescrição, garantindo sequência biomecânica e fisiologicamente correta.
+
+### Arquivos Modificados
+
+**1. `supabase/functions/generate-workout/index.ts`**
+
+#### Alteração 1: Expansão da Seção 4 do SYSTEM_PROMPT (linhas ~1741-1818)
+Substituída a seção básica de ordenação por hierarquia completa:
+- **NÍVEL 1**: Tipo de exercício (Multi pesado → Multi secundário → Isolador)
+- **NÍVEL 2**: Demanda energética (Alta → Baixa)
+- **NÍVEL 3**: Grupos musculares por tipo de sessão (Push/Pull/Legs/Upper/Lower/Full Body)
+- **NÍVEL 4**: Posicionamento especial (Core ao final, Cintura Escapular após Costas)
+- **NÍVEL 5**: Ajustes por objetivo (Hipertrofia, Força, Emagrecimento, Saúde)
+- **NÍVEL 6**: Ajustes por nível de usuário (Iniciante/Intermediário/Avançado)
+- **5 regras críticas** que a IA NUNCA deve violar
+
+#### Alteração 2: Nova função `validateExerciseOrder()` (linhas ~940-1050)
+Validação pós-IA que detecta violações de ordem:
+- **Regra 1**: Core não pode estar nas primeiras 2 posições
+- **Regra 2**: Compostos devem vir antes de isoladores
+- **Regra 3**: Isoladores de braço devem estar na segunda metade
+- **Regra 4**: Panturrilha não pode iniciar treino de pernas
+
+#### Alteração 3: Integração no fluxo de validação (linhas ~1325-1352)
+Chamada de `validateExerciseOrder()` dentro de `validateWorkoutPlan()`:
+- Gera warnings (soft validation)
+- Não bloqueia plano
+- Logs detalhados para monitoramento
+
+### Resultado
+- IA recebe instruções detalhadas sobre ordenação
+- Validação pós-IA detecta e reporta violações
+- Logs de warning permitem monitorar conformidade
+
+### Riscos e Mitigações
+
+| Risco | Mitigação |
+|-------|-----------|
+| IA ignora regras | Validação pós-IA detecta e loga |
+| Regras muito rígidas | Usa warnings, não bloqueia plano |
+| Prompt muito longo | Seção bem estruturada com tabelas |
+
+### Status: ✅ Implementado
