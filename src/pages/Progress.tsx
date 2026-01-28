@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Calendar, Dumbbell } from 'lucide-react';
+import { TrendingUp, Calendar, Dumbbell, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PremiumGate } from '@/components/PremiumGate';
 import { LoadProgressChart } from '@/components/progress/LoadProgressChart';
@@ -7,6 +7,7 @@ import { VolumeStats } from '@/components/progress/VolumeStats';
 import { PersonalRecordsCard } from '@/components/progress/PersonalRecordsCard';
 import { PeriodComparisonCard } from '@/components/progress/PeriodComparisonCard';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { PageHeader } from '@/components/shared';
 
 export default function Progress() {
   const { sessions } = useWorkoutSessions();
@@ -23,12 +24,15 @@ export default function Progress() {
         Pular para conteúdo principal
       </a>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
-          <h1 className="text-xl font-bold">Meu Progresso</h1>
-        </div>
-      </header>
+      <PageHeader 
+        title="Meu Progresso" 
+        rightContent={
+          <div className="flex items-center gap-2 text-sm">
+            <Trophy className="w-4 h-4 text-primary" />
+            <span className="font-semibold">{completedSessions.length}</span>
+          </div>
+        }
+      />
 
       <main id="progress-content" className="container mx-auto px-4 py-6 pb-24 max-w-4xl">
         <PremiumGate feature="Análises de progresso" showPreview>
