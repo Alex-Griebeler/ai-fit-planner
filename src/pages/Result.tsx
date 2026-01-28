@@ -283,6 +283,29 @@ export default function Result() {
       if (responseData?.plan) {
         setPlan(responseData.plan);
         sessionStorage.removeItem('onboardingData');
+        
+        // Salvar automaticamente o plano gerado no banco de dados
+        try {
+          await createPlan({
+            plan_name: responseData.plan.planName,
+            description: responseData.plan.description,
+            weekly_frequency: responseData.plan.weeklyFrequency,
+            session_duration: responseData.plan.sessionDuration,
+            periodization: responseData.plan.periodization,
+            plan_data: JSON.parse(JSON.stringify({
+              workouts: responseData.plan.workouts,
+              weeklyVolume: responseData.plan.weeklyVolume,
+              progressionPlan: responseData.plan.progressionPlan,
+              warnings: responseData.plan.warnings,
+              motivationalMessage: responseData.plan.motivationalMessage,
+            })),
+          });
+          setIsSaved(true);
+          toast.success('Plano gerado e salvo com sucesso!');
+        } catch (saveErr) {
+          console.error('Error auto-saving plan:', saveErr);
+          // Não bloqueia - usuário ainda pode salvar manualmente
+        }
       } else {
         throw new Error('Plano não gerado');
       }
