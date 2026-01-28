@@ -124,7 +124,7 @@ export default function WorkoutPreview() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-36 sm:pb-32">
+    <div className="min-h-screen bg-background flex flex-col pb-28 sm:pb-24">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="px-4 py-3">
@@ -259,21 +259,12 @@ export default function WorkoutPreview() {
         </div>
       </main>
 
-      {/* Bottom actions */}
+      {/* Bottom action - apenas botão principal */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border p-4 safe-area-inset-bottom">
-        <div className="max-w-lg sm:max-w-xl lg:max-w-2xl mx-auto flex gap-3 sm:gap-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 h-14 sm:h-16 rounded-2xl press-scale text-sm sm:text-base"
-            onClick={handleDownloadPdf}
-          >
-            <Download className="w-5 h-5 mr-2" />
-            Baixar PDF
-          </Button>
+        <div className="max-w-lg mx-auto">
           <Button
             size="lg"
-            className="flex-1 h-14 sm:h-16 rounded-2xl bg-primary hover:bg-primary/90 press-scale text-sm sm:text-base"
+            className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 press-scale"
             onClick={handleStartWorkout}
           >
             <Play className="w-5 h-5 mr-2" />
