@@ -1,102 +1,66 @@
 
-## Plano: Sistema de Sugestão de Treinos (Opção B - Revisada)
 
-### Objetivo
-Criar um sistema que sugere o próximo treino baseado nos dias selecionados no onboarding e no histórico de sessões da semana, **reordenando a lista de treinos na tela do plano** (Result.tsx).
+# Plano: Correção do Layout da Página /workout-preview
 
-### Abordagem Escolhida
-**Reordenação da lista** - O treino sugerido sobe automaticamente para o topo da lista, com destaque visual sutil (badge + borda).
+## Problema Identificado
 
-### Arquivos Criados
+Os botões "Baixar PDF" e "Iniciar Treino" não aparecem no modo smartphone porque a **BottomNav** (barra de navegação inferior) está sobrepondo a barra de ações fixa da página.
 
-**1. `src/lib/workoutScheduler.ts`** - Lógica de agendamento
+### Causa Raiz
+- A página `/workout-preview` tem uma barra de ações fixa em `bottom-0` com `z-50`
+- A BottomNav global também usa `fixed bottom-0` com `z-50`
+- Ambos os elementos competem pela mesma posição, e a BottomNav cobre os botões
+- A BottomNav tem altura de 64px (h-16), mais a área segura iOS
 
-Funções principais:
-- `getDayLabel(dayCode)` - Converte 'mon' para 'Segunda-feira'
-- `sortDaysByWeekOrder(days)` - Ordena dias na sequência da semana
-- `getTodayDayCode()` - Retorna o código do dia atual
-- `getWeeklySchedule(totalWorkouts, trainingDays, sessions)` - Calcula o cronograma
-- `reorderWorkoutsWithSuggestion(indices, suggestedIndex)` - Reordena a lista
+## Solução Proposta
 
-**2. `src/hooks/useWorkoutSchedule.ts`** - Hook de agendamento
+### 1. Ocultar BottomNav na página /workout-preview
 
-Combina dados de:
-- `useWorkoutPlans` (treinos do plano ativo)
-- `useOnboardingData` (dias selecionados)
-- `useWorkoutSessions` (sessões da semana)
+**Arquivo**: `src/components/BottomNav.tsx`
 
-Retorna:
-```typescript
-{
-  suggestedWorkoutIndex: number | null,
-  todayWorkoutIndex: number | null,
-  pendingWorkoutIndex: number | null,
-  completedIndices: number[],
-  isWeekComplete: boolean,
-  isRestDay: boolean,
-  reason: string,
-  reorderedIndices: number[],
-  trainingDays: string[],
-  isLoading: boolean,
-}
+Adicionar `/workout-preview` à lista de rotas onde a BottomNav deve ser ocultada. Isso é consistente com o comportamento atual de ocultar a nav durante `/workout` (execução).
+
+```text
+Antes:
+hiddenRoutes = ['/', '/login', '/reset-password', '/onboarding', '/pricing']
+isWorkoutExecution = pathname === '/workout'
+
+Depois:
+hiddenRoutes = ['/', '/login', '/reset-password', '/onboarding', '/pricing']
+isWorkoutFlow = pathname === '/workout' || pathname === '/workout-preview'
 ```
 
-### Arquivos Modificados
+### 2. Ajustar padding-bottom para todos os dispositivos
 
-**3. `src/pages/Result.tsx`**
+**Arquivo**: `src/pages/WorkoutPreview.tsx`
 
-- Importou `useWorkoutSchedule` e `Badge`
-- Loop de workouts agora usa `reorderedIndices` para ordem inteligente
-- Treino sugerido exibe badge "✨ Sugerido" e borda destacada
-- Mantém compatibilidade com planos sem dados de onboarding
+Otimizar o espaçamento inferior da área de conteúdo para garantir que os exercícios não fiquem cobertos pela barra de ações em todos os tamanhos de tela:
 
-### Status: ✅ Implementado
+- **Mobile**: `pb-36` (144px) - altura da barra de ações + margem
+- **Tablet/Desktop**: `pb-32` (128px) - botões maiores em telas maiores
 
----
+### 3. Melhorar responsividade da barra de ações
 
-## Plano: Validação de Ordem de Exercícios
+**Arquivo**: `src/pages/WorkoutPreview.tsx`
 
-### Objetivo
-Implementar regras técnicas robustas para ordenação de exercícios no sistema de prescrição, garantindo sequência biomecânica e fisiologicamente correta.
+Ajustar a barra de ações fixa para melhor adaptação em diferentes tamanhos:
 
-### Arquivos Modificados
+```text
+- Mobile: Layout atual com botões flex-1
+- Tablet: Aumentar max-width e espaçamento
+- Desktop: Centralizar com max-width maior, botões mais proeminentes
+```
 
-**1. `supabase/functions/generate-workout/index.ts`**
+## Arquivos a Modificar
 
-#### Alteração 1: Expansão da Seção 4 do SYSTEM_PROMPT (linhas ~1741-1818)
-Substituída a seção básica de ordenação por hierarquia completa:
-- **NÍVEL 1**: Tipo de exercício (Multi pesado → Multi secundário → Isolador)
-- **NÍVEL 2**: Demanda energética (Alta → Baixa)
-- **NÍVEL 3**: Grupos musculares por tipo de sessão (Push/Pull/Legs/Upper/Lower/Full Body)
-- **NÍVEL 4**: Posicionamento especial (Core ao final, Cintura Escapular após Costas)
-- **NÍVEL 5**: Ajustes por objetivo (Hipertrofia, Força, Emagrecimento, Saúde)
-- **NÍVEL 6**: Ajustes por nível de usuário (Iniciante/Intermediário/Avançado)
-- **5 regras críticas** que a IA NUNCA deve violar
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/BottomNav.tsx` | Ocultar nav em `/workout-preview` |
+| `src/pages/WorkoutPreview.tsx` | Ajustar padding e responsividade da barra de ações |
 
-#### Alteração 2: Nova função `validateExerciseOrder()` (linhas ~940-1050)
-Validação pós-IA que detecta violações de ordem:
-- **Regra 1**: Core não pode estar nas primeiras 2 posições
-- **Regra 2**: Compostos devem vir antes de isoladores
-- **Regra 3**: Isoladores de braço devem estar na segunda metade
-- **Regra 4**: Panturrilha não pode iniciar treino de pernas
+## Resultado Esperado
 
-#### Alteração 3: Integração no fluxo de validação (linhas ~1325-1352)
-Chamada de `validateExerciseOrder()` dentro de `validateWorkoutPlan()`:
-- Gera warnings (soft validation)
-- Não bloqueia plano
-- Logs detalhados para monitoramento
+- **Smartphone**: Botões visíveis e funcionais na parte inferior da tela
+- **Tablet**: Layout adaptado com espaçamento adequado
+- **Desktop**: Botões centralizados com largura máxima confortável
 
-### Resultado
-- IA recebe instruções detalhadas sobre ordenação
-- Validação pós-IA detecta e reporta violações
-- Logs de warning permitem monitorar conformidade
-
-### Riscos e Mitigações
-
-| Risco | Mitigação |
-|-------|-----------|
-| IA ignora regras | Validação pós-IA detecta e loga |
-| Regras muito rígidas | Usa warnings, não bloqueia plano |
-| Prompt muito longo | Seção bem estruturada com tabelas |
-
-### Status: ✅ Implementado
