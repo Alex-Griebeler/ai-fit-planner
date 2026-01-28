@@ -937,6 +937,121 @@ interface Exercise {
   equipment: string | null;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          EXERCISE ORDER VALIDATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface OrderValidationResult {
+  isValid: boolean;
+  violations: string[];
+  suggestions: string[];
+}
+
+interface ExerciseOrderInfo {
+  order: number;
+  name: string;
+  isCompound: boolean;
+  muscleGroup: string;
+}
+
+const CORE_MUSCLE_GROUPS = ['core', 'abdômen', 'abdomen', 'abdominal', 'lombar', 'reto abdominal'];
+const SMALL_ARM_GROUPS = ['bíceps', 'biceps', 'tríceps', 'triceps', 'antebraço'];
+const CALF_GROUPS = ['panturrilha', 'panturrilhas', 'calves'];
+
+function validateExerciseOrder(
+  exercises: ExerciseOrderInfo[],
+  workoutType?: string
+): OrderValidationResult {
+  const violations: string[] = [];
+  const suggestions: string[] = [];
+  
+  if (!exercises || exercises.length === 0) {
+    return { isValid: true, violations: [], suggestions: [] };
+  }
+  
+  // Sort by order to ensure correct analysis
+  const sortedExercises = [...exercises].sort((a, b) => a.order - b.order);
+  const totalExercises = sortedExercises.length;
+  
+  // RULE 1: Core exercises should NOT be in the first 2 positions
+  sortedExercises.forEach((ex, idx) => {
+    const isCoreExercise = CORE_MUSCLE_GROUPS.some(g => 
+      ex.muscleGroup.toLowerCase().includes(g)
+    );
+    
+    if (isCoreExercise && idx < 2) {
+      violations.push(
+        `Exercício de Core "${ex.name}" está na posição ${idx + 1}. ` +
+        `Core deve ser posicionado ao final da sessão (posições ${totalExercises - 1}-${totalExercises}).`
+      );
+    }
+  });
+  
+  // RULE 2: Compound exercises should come before isolation exercises
+  let lastCompoundIdx = -1;
+  let firstIsolatorIdx = -1;
+  
+  sortedExercises.forEach((ex, idx) => {
+    if (ex.isCompound) {
+      lastCompoundIdx = idx;
+    } else if (firstIsolatorIdx === -1) {
+      firstIsolatorIdx = idx;
+    }
+  });
+  
+  // Check if there's a compound exercise after the first isolator (allowing for 1 position tolerance)
+  if (firstIsolatorIdx !== -1 && lastCompoundIdx > firstIsolatorIdx + 1) {
+    const compoundName = sortedExercises[lastCompoundIdx].name;
+    const isolatorName = sortedExercises[firstIsolatorIdx].name;
+    violations.push(
+      `Exercício composto "${compoundName}" (posição ${lastCompoundIdx + 1}) ` +
+      `aparece após isolador "${isolatorName}" (posição ${firstIsolatorIdx + 1}). ` +
+      `Compostos devem vir antes de isoladores.`
+    );
+  }
+  
+  // RULE 3: Small arm isolators should be in the second half of the session
+  sortedExercises.forEach((ex, idx) => {
+    const isArmIsolator = SMALL_ARM_GROUPS.some(g => 
+      ex.muscleGroup.toLowerCase().includes(g)
+    ) && !ex.isCompound;
+    
+    const halfwayPoint = Math.floor(totalExercises / 2);
+    if (isArmIsolator && idx < halfwayPoint - 1) {
+      suggestions.push(
+        `Considerar mover isolador de braço "${ex.name}" (${ex.muscleGroup}) ` +
+        `para a segunda metade da sessão (posição ${halfwayPoint + 1}+).`
+      );
+    }
+  });
+  
+  // RULE 4: Calf exercises should not be first in leg workouts
+  const isLegWorkout = workoutType?.toLowerCase().includes('leg') || 
+                       workoutType?.toLowerCase().includes('perna') ||
+                       workoutType?.toLowerCase().includes('lower') ||
+                       workoutType?.toLowerCase().includes('inferior');
+  
+  if (isLegWorkout) {
+    const firstExercise = sortedExercises[0];
+    const isCalfFirst = CALF_GROUPS.some(g => 
+      firstExercise?.muscleGroup.toLowerCase().includes(g)
+    );
+    
+    if (isCalfFirst) {
+      violations.push(
+        `Treino de pernas não deve iniciar com panturrilha ("${firstExercise.name}"). ` +
+        `Panturrilhas devem ser posicionadas ao final.`
+      );
+    }
+  }
+  
+  return {
+    isValid: violations.length === 0,
+    violations,
+    suggestions
+  };
+}
+
 function validateWorkoutPlan(
   rawPlan: unknown,
   catalogExercises: Exercise[],
@@ -1206,6 +1321,27 @@ function validateWorkoutPlan(
       warnings.push(
         `Treino "${workout.name}": tempo estimado ~${totalSessionMinutes}min excede ${maxMinutes}min disponíveis`
       );
+    }
+  }
+  
+  // 8. VALIDATE EXERCISE ORDER within each workout
+  for (const workout of plan.workouts || []) {
+    // Map exercises to order validation format
+    const exercisesForOrderValidation: ExerciseOrderInfo[] = (workout.exercises || []).map((ex: any, idx: number) => ({
+      order: ex.order ?? idx + 1,
+      name: ex.name || 'Unknown',
+      isCompound: ex.isCompound ?? true, // Default to compound if not specified
+      muscleGroup: ex.muscleGroup || '',
+    }));
+    
+    const orderResult = validateExerciseOrder(exercisesForOrderValidation, workout.name);
+    
+    if (orderResult.violations.length > 0) {
+      orderResult.violations.forEach(v => warnings.push(`[${workout.name}] ${v}`));
+    }
+    
+    if (orderResult.suggestions.length > 0) {
+      orderResult.suggestions.forEach(s => warnings.push(`[${workout.name}] Sugestão: ${s}`));
     }
   }
   
@@ -1739,18 +1875,82 @@ Exemplo 4x/semana Hipertrofia:
 - O campo "periodizationDescription" DEVE explicar a estratégia
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 4: ESTRUTURA DO TREINO
+                         SEÇÃO 4: ORDEM DOS EXERCÍCIOS (CRÍTICO)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Ordem dos Exercícios:
-1. Multiarticulares PRIMEIRO (maior demanda neural)
-2. Monoarticulares DEPOIS (isolamento)
-3. Grupo prioritário no INÍCIO da sessão
+## PRINCÍPIO FUNDAMENTAL:
+A ordem dos exercícios impacta diretamente a qualidade do estímulo.
+Exercícios que exigem maior coordenação, força e energia devem vir ANTES.
 
-## Por Nível:
-- INICIANTE: 70%+ máquinas, foco em técnica
-- INTERMEDIÁRIO: 50% máquinas + 50% pesos livres
-- AVANÇADO: Pesos livres como base, máquinas para isolamento
+## HIERARQUIA DE ORDENAÇÃO (OBRIGATÓRIA):
+
+### NÍVEL 1 - Tipo de Exercício:
+1. MULTIARTICULARES PESADOS primeiro (Supino, Agachamento, Remada, Leg Press)
+2. MULTIARTICULARES SECUNDÁRIOS depois (Desenvolvimento, Puxada, Avanço)
+3. MONOARTICULARES/ISOLADORES por último (Rosca, Extensora, Crucifixo)
+
+### NÍVEL 2 - Demanda Energética:
+- Alta demanda energética: posicionar no início (grandes grupos musculares)
+- Baixa demanda energética: posicionar ao final (isoladores, core)
+
+### NÍVEL 3 - Grupos Musculares por Sessão:
+
+| Tipo de Sessão | Ordem de Grupos |
+|----------------|-----------------|
+| PUSH           | Peitoral → Ombros → Tríceps |
+| PULL           | Costas (Grande Dorsal) → Cintura Escapular → Bíceps |
+| LEGS           | Quadríceps → Posteriores → Glúteos → Panturrilhas |
+| UPPER          | Peito/Costas alternados → Ombros → Braços |
+| LOWER          | Quadríceps → Isquiotibiais → Glúteos → Panturrilhas |
+| FULL BODY      | Grandes grupos (Pernas/Costas/Peito) → Ombros → Braços → Core |
+
+### NÍVEL 4 - Posicionamento Especial (CRÍTICO):
+
+#### CORE (Abdômen/Lombar):
+- SEMPRE ao final da sessão (exceto se objetivo principal é Core)
+- Motivo: Core estabiliza em todos os exercícios; pré-exaurir compromete segurança
+
+#### CINTURA ESCAPULAR:
+- APÓS exercícios principais de Costas (remadas, puxadas)
+- Antes de isoladores de braço
+
+#### PANTURRILHAS:
+- Último grupo de pernas (menor prioridade neural)
+
+### NÍVEL 5 - Por Objetivo:
+
+| Objetivo       | Ajuste de Ordem |
+|----------------|-----------------|
+| HIPERTROFIA    | Grupo prioritário do usuário no 1º ou 2º exercício |
+| EMAGRECIMENTO  | Multiarticulares ocupam 70%+ da sessão, no início |
+| FORÇA          | Composto principal SEMPRE primeiro |
+| SAÚDE          | Distribuição equilibrada |
+
+### NÍVEL 6 - Por Nível de Usuário:
+
+| Nível        | Ajuste |
+|--------------|--------|
+| INICIANTE    | Máquinas primeiro (70%+), pesos livres depois |
+| INTERMEDIÁRIO| 50% livre + 50% máquina, livre primeiro |
+| AVANÇADO     | Pesos livres primeiro (maior demanda técnica) |
+
+## EXEMPLO PRÁTICO - Treino Push (Intermediário, Hipertrofia):
+
+| Ordem | Exercício | Tipo | Motivo |
+|-------|-----------|------|--------|
+| 1     | Supino Reto/Barra | Multi pesado | Maior demanda neural |
+| 2     | Supino Inclinado/Halteres | Multi secundário | Variação de ângulo |
+| 3     | Desenvolvimento/Halteres | Multi secundário | Ombros - grupo médio |
+| 4     | Crucifixo/Máquina | Isolador | Acabamento peitoral |
+| 5     | Elevação Lateral | Isolador | Deltóide médio |
+| 6     | Tríceps Pulley | Isolador | Braço pequeno - final |
+
+## ⚠️ REGRAS CRÍTICAS DE ORDEM:
+1. NUNCA colocar Core antes de exercícios compostos pesados
+2. NUNCA colocar isoladores de braço antes de compostos que usam braços
+3. NUNCA iniciar sessão de pernas com panturrilha
+4. SE grupo é prioridade do usuário → posicioná-lo entre exercícios 1-3
+5. Manter consistência de ordem entre sessões do mesmo tipo (A/B)
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 5: ADAPTAÇÕES POR LESÃO
