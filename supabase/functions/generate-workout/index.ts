@@ -2445,7 +2445,7 @@ serve(async (req) => {
       .rpc('check_rate_limit', {
         p_user_id: userId,
         p_endpoint: 'generate-workout',
-        p_max_requests: 5,
+        p_max_requests: 99,
         p_window_hours: 1
       });
 
