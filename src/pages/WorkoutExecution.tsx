@@ -372,7 +372,7 @@ export default function WorkoutExecution() {
       </AnimatePresence>
 
       {/* Exercise list */}
-      <main className="flex-1 overflow-y-auto p-4 pb-32">
+      <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-lg mx-auto space-y-3">
           {workout.exercises.map((exercise, index) => (
             <ExerciseCard
@@ -390,28 +390,59 @@ export default function WorkoutExecution() {
               restTime={exercise.rest}
             />
           ))}
-        </div>
-      </main>
 
-      {/* Bottom navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border p-4 safe-area-inset-bottom">
-        <div className="max-w-lg mx-auto">
-          {isWorkoutComplete ? (
-            <Button
-              size="lg"
-              className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-500 hover:bg-green-600 press-scale"
-              onClick={handleFinishWorkout}
-            >
-              <Check className="w-5 h-5 mr-2" />
-              Finalizar Treino
-            </Button>
-          ) : canFinishEarly ? (
-            <div className="space-y-2">
+          {/* Action buttons - scrolls with content */}
+          <div className="pt-6 pb-8">
+            {isWorkoutComplete ? (
+              <Button
+                size="lg"
+                className="w-full h-14 rounded-2xl text-lg font-semibold bg-green-500 hover:bg-green-600 press-scale"
+                onClick={handleFinishWorkout}
+              >
+                <Check className="w-5 h-5 mr-2" />
+                Finalizar Treino
+              </Button>
+            ) : canFinishEarly ? (
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 h-12 rounded-xl press-scale"
+                    onClick={goToPreviousExercise}
+                    disabled={activeExerciseIndex === 0}
+                  >
+                    <ChevronUp className="w-5 h-5 mr-1" />
+                    Anterior
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="flex-1 h-12 rounded-xl press-scale"
+                    onClick={goToNextExercise}
+                    disabled={activeExerciseIndex === workout.exercises.length - 1}
+                  >
+                    Próximo
+                    <ChevronDown className="w-5 h-5 ml-1" />
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className={cn(
+                    "w-full h-12 rounded-xl border-orange-500/50 text-orange-600 hover:bg-orange-500/10 press-scale"
+                  )}
+                  onClick={handleFinishWorkout}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Encerrar Treino ({Math.round((progressStats.completedSets / progressStats.totalSets) * 100)}%)
+                </Button>
+              </div>
+            ) : (
               <div className="flex gap-3">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="flex-1 h-12 rounded-xl press-scale"
+                  className="flex-1 h-14 rounded-2xl press-scale"
                   onClick={goToPreviousExercise}
                   disabled={activeExerciseIndex === 0}
                 >
@@ -420,7 +451,7 @@ export default function WorkoutExecution() {
                 </Button>
                 <Button
                   size="lg"
-                  className="flex-1 h-12 rounded-xl press-scale"
+                  className="flex-1 h-14 rounded-2xl press-scale"
                   onClick={goToNextExercise}
                   disabled={activeExerciseIndex === workout.exercises.length - 1}
                 >
@@ -428,43 +459,10 @@ export default function WorkoutExecution() {
                   <ChevronDown className="w-5 h-5 ml-1" />
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                size="lg"
-                className={cn(
-                  "w-full h-12 rounded-xl border-orange-500/50 text-orange-600 hover:bg-orange-500/10 press-scale"
-                )}
-                onClick={handleFinishWorkout}
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Encerrar Treino ({Math.round((progressStats.completedSets / progressStats.totalSets) * 100)}%)
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                size="lg"
-                className="flex-1 h-14 rounded-2xl press-scale"
-                onClick={goToPreviousExercise}
-                disabled={activeExerciseIndex === 0}
-              >
-                <ChevronUp className="w-5 h-5 mr-1" />
-                Anterior
-              </Button>
-              <Button
-                size="lg"
-                className="flex-1 h-14 rounded-2xl press-scale"
-                onClick={goToNextExercise}
-                disabled={activeExerciseIndex === workout.exercises.length - 1}
-              >
-                Próximo
-                <ChevronDown className="w-5 h-5 ml-1" />
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* Exit confirmation dialog */}
       <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
