@@ -86,7 +86,9 @@ export default function WorkoutPreview() {
   };
 
   const handleStartWorkout = () => {
-    navigate(`/workout?day=${encodeURIComponent(workout?.day || '')}`);
+    navigate(`/workout?day=${encodeURIComponent(workout?.day || '')}`, {
+      state: { startWorkout: true }
+    });
   };
 
   if (isLoading || isRetrying) {
