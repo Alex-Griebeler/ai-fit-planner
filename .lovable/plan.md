@@ -1,66 +1,77 @@
 
+# Plano: Simplificar Layout dos Botões de Ação
 
-# Plano: Correção do Layout da Página /workout-preview
+## Situação Atual
 
-## Problema Identificado
-
-Os botões "Baixar PDF" e "Iniciar Treino" não aparecem no modo smartphone porque a **BottomNav** (barra de navegação inferior) está sobrepondo a barra de ações fixa da página.
-
-### Causa Raiz
-- A página `/workout-preview` tem uma barra de ações fixa em `bottom-0` com `z-50`
-- A BottomNav global também usa `fixed bottom-0` com `z-50`
-- Ambos os elementos competem pela mesma posição, e a BottomNav cobre os botões
-- A BottomNav tem altura de 64px (h-16), mais a área segura iOS
+A página tem **dois botões de download duplicados**:
+1. Ícone de download no header (canto superior direito) ✓
+2. Botão "Baixar PDF" na barra fixa inferior (duplicado)
 
 ## Solução Proposta
 
-### 1. Ocultar BottomNav na página /workout-preview
+Remover a duplicação e manter cada ação em seu lugar ideal:
 
-**Arquivo**: `src/components/BottomNav.tsx`
+| Ação | Posição | Justificativa |
+|------|---------|---------------|
+| **Baixar PDF** | Header (ícone) | Ação secundária, já existe no lugar certo |
+| **Iniciar Treino** | Fixo na parte inferior | Ação principal, merece destaque |
 
-Adicionar `/workout-preview` à lista de rotas onde a BottomNav deve ser ocultada. Isso é consistente com o comportamento atual de ocultar a nav durante `/workout` (execução).
+### Layout Visual
 
 ```text
-Antes:
-hiddenRoutes = ['/', '/login', '/reset-password', '/onboarding', '/pricing']
-isWorkoutExecution = pathname === '/workout'
-
-Depois:
-hiddenRoutes = ['/', '/login', '/reset-password', '/onboarding', '/pricing']
-isWorkoutFlow = pathname === '/workout' || pathname === '/workout-preview'
+┌───────────────────────────────┐
+│ ← │   Treino A - Peito    │ ⬇ │  ← Download aqui (já existe)
+├───────────────────────────────┤
+│                               │
+│   Lista de Exercícios         │
+│   (scroll normalmente)        │
+│                               │
+├───────────────────────────────┤
+│      [ ▶ Iniciar Treino ]     │  ← Apenas este botão fixo
+└───────────────────────────────┘
 ```
 
-### 2. Ajustar padding-bottom para todos os dispositivos
+## Alterações Técnicas
 
 **Arquivo**: `src/pages/WorkoutPreview.tsx`
 
-Otimizar o espaçamento inferior da área de conteúdo para garantir que os exercícios não fiquem cobertos pela barra de ações em todos os tamanhos de tela:
+1. **Remover o botão "Baixar PDF" da barra inferior**
+   - Manter apenas o botão "Iniciar Treino"
+   
+2. **Ajustar layout do botão único**
+   - Botão ocupa largura total (`w-full` em vez de `flex-1`)
+   - Altura e estilo visual mantidos
 
-- **Mobile**: `pb-36` (144px) - altura da barra de ações + margem
-- **Tablet/Desktop**: `pb-32` (128px) - botões maiores em telas maiores
+3. **Reduzir padding-bottom**
+   - De `pb-36 sm:pb-32` para `pb-28 sm:pb-24` (barra menor com um só botão)
 
-### 3. Melhorar responsividade da barra de ações
+### Código Simplificado
 
-**Arquivo**: `src/pages/WorkoutPreview.tsx`
-
-Ajustar a barra de ações fixa para melhor adaptação em diferentes tamanhos:
-
-```text
-- Mobile: Layout atual com botões flex-1
-- Tablet: Aumentar max-width e espaçamento
-- Desktop: Centralizar com max-width maior, botões mais proeminentes
+```jsx
+{/* Bottom action - apenas botão principal */}
+<div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border p-4 safe-area-inset-bottom">
+  <div className="max-w-lg mx-auto">
+    <Button
+      size="lg"
+      className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 press-scale"
+      onClick={handleStartWorkout}
+    >
+      <Play className="w-5 h-5 mr-2" />
+      Iniciar Treino
+    </Button>
+  </div>
+</div>
 ```
 
-## Arquivos a Modificar
+## Benefícios
+
+- **Sem duplicação** - Download disponível apenas no header
+- **Foco na ação principal** - "Iniciar Treino" fica mais destacado
+- **Mais espaço** - Barra inferior menor e mais limpa
+- **UX Apple** - Consistente com apps de fitness nativos
+
+## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/BottomNav.tsx` | Ocultar nav em `/workout-preview` |
-| `src/pages/WorkoutPreview.tsx` | Ajustar padding e responsividade da barra de ações |
-
-## Resultado Esperado
-
-- **Smartphone**: Botões visíveis e funcionais na parte inferior da tela
-- **Tablet**: Layout adaptado com espaçamento adequado
-- **Desktop**: Botões centralizados com largura máxima confortável
-
+| `src/pages/WorkoutPreview.tsx` | Remover botão PDF duplicado, ajustar layout |
