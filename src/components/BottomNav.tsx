@@ -32,8 +32,7 @@ export function BottomNav() {
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive = location.pathname === path || 
-            (path === '/result' && location.pathname === '/result');
+          const isActive = location.pathname === path;
           
           return (
             <motion.button

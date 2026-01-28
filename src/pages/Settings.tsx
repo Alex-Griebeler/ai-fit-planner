@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Dumbbell, Heart, Moon, CreditCard, Loader2, Shield, Bell, Palette } from 'lucide-react';
+import { User, Dumbbell, Heart, Moon, CreditCard, Shield, Bell, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { useAdmin } from '@/hooks/useAdmin';
 import { ProfileSection, TrainingSection, HealthSection, WellbeingSection, SubscriptionSection, NotificationSection, ThemeSection } from '@/components/settings';
+import { LoadingScreen } from '@/components/shared';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -20,11 +21,7 @@ export default function Settings() {
   const isSavingAny = isUpdating || isSaving;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background" role="status" aria-label="Carregando configurações">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingScreen message="Carregando configurações..." />;
   }
 
   return (
