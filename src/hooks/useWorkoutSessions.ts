@@ -87,6 +87,19 @@ export function useWorkoutSessions() {
     mutationFn: async (params: StartSessionParams): Promise<string> => {
       if (!user?.id) throw new Error('User not authenticated');
 
+      // Check if a session was completed recently (last 30 seconds) to prevent duplicates
+      const recentlyCompleted = await supabase
+        .from('workout_sessions')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+        .gte('completed_at', new Date(Date.now() - 30000).toISOString())
+        .maybeSingle();
+
+      if (recentlyCompleted.data) {
+        throw new Error('Session recently completed - preventing duplicate');
+      }
+
       // Abandon any existing in-progress sessions
       await supabase
         .from('workout_sessions')
@@ -172,6 +185,8 @@ export function useWorkoutSessions() {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Immediately clear current session from cache to prevent race conditions
+      queryClient.setQueryData(['workout-sessions', user?.id, 'current'], null);
       queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
     },
   });

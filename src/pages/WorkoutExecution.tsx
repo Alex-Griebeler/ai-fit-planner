@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,13 @@ interface Workout {
 
 export default function WorkoutExecution() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const dayParam = searchParams.get('day');
+  
+  // Check if this is an intentional start from WorkoutPreview
+  const isIntentionalStart = location.state?.startWorkout === true;
+  const sessionInitializedRef = useRef(false);
 
   const { activePlan, isLoading } = useWorkoutPlans();
   const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
@@ -91,18 +96,29 @@ export default function WorkoutExecution() {
     }
   }, [loads, workout]);
 
-  // Start session when workout loads
+  // Start session when workout loads - only if intentionally started from preview
   useEffect(() => {
-    if (workout && activePlan && !currentSession) {
+    // Only create a new session if:
+    // 1. We have workout data and active plan
+    // 2. There's no current session
+    // 3. This is an intentional navigation from WorkoutPreview (has startWorkout state)
+    // 4. We haven't already initialized a session in this component mount
+    if (workout && activePlan && !currentSession && isIntentionalStart && !sessionInitializedRef.current) {
+      sessionInitializedRef.current = true;
       const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
       startSession({
         workoutPlanId: activePlan.id,
         workoutDay: workout.day,
         workoutName: workout.name,
         totalSets,
-      }).catch(console.error);
+      }).catch((error) => {
+        // Silently handle "recently completed" errors
+        if (!error.message?.includes('recently completed')) {
+          console.error('Error starting session:', error);
+        }
+      });
     }
-  }, [workout, activePlan, currentSession, startSession]);
+  }, [workout, activePlan, currentSession, isIntentionalStart, startSession]);
 
   // Parse rest time from string like "60s" or "2min"
   const parseRestTime = useCallback((rest: string): number => {
