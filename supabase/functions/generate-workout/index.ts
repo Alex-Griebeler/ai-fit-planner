@@ -958,6 +958,54 @@ const CORE_MUSCLE_GROUPS = ['core', 'abdômen', 'abdomen', 'abdominal', 'lombar'
 const SMALL_ARM_GROUPS = ['bíceps', 'biceps', 'tríceps', 'triceps', 'antebraço'];
 const CALF_GROUPS = ['panturrilha', 'panturrilhas', 'calves'];
 
+// Normalize muscle group names to detect alternating patterns
+function normalizeMuscleGroup(group: string): string {
+  const lower = group.toLowerCase();
+  
+  // Chest variations
+  if (lower.includes('peitoral') || lower.includes('peito') || lower.includes('chest')) {
+    return 'chest';
+  }
+  // Shoulder variations  
+  if (lower.includes('ombro') || lower.includes('deltoid') || lower.includes('shoulder')) {
+    return 'shoulders';
+  }
+  // Back variations
+  if (lower.includes('costa') || lower.includes('dorsal') || lower.includes('back')) {
+    return 'back';
+  }
+  // Triceps
+  if (lower.includes('tríceps') || lower.includes('triceps')) {
+    return 'triceps';
+  }
+  // Biceps
+  if (lower.includes('bíceps') || lower.includes('biceps')) {
+    return 'biceps';
+  }
+  // Quadriceps
+  if (lower.includes('quadríceps') || lower.includes('quadriceps') || lower.includes('quads')) {
+    return 'quads';
+  }
+  // Hamstrings
+  if (lower.includes('isquio') || lower.includes('posterior') || lower.includes('hamstring')) {
+    return 'hamstrings';
+  }
+  // Glutes
+  if (lower.includes('glúteo') || lower.includes('gluteo') || lower.includes('glute')) {
+    return 'glutes';
+  }
+  // Core
+  if (CORE_MUSCLE_GROUPS.some(g => lower.includes(g))) {
+    return 'core';
+  }
+  // Calves
+  if (CALF_GROUPS.some(g => lower.includes(g))) {
+    return 'calves';
+  }
+  
+  return lower; // Return as-is if no match
+}
+
 function validateExerciseOrder(
   exercises: ExerciseOrderInfo[],
   workoutType?: string
@@ -1042,6 +1090,34 @@ function validateExerciseOrder(
         `Treino de pernas não deve iniciar com panturrilha ("${firstExercise.name}"). ` +
         `Panturrilhas devem ser posicionadas ao final.`
       );
+    }
+  }
+  
+  // RULE 5: Muscle groups should be grouped together, not alternating
+  // Check for alternating pattern like: Chest → Shoulder → Chest → Shoulder
+  const muscleGroupSequence = sortedExercises.map(ex => ex.muscleGroup.toLowerCase());
+  const seenGroups = new Set<string>();
+  let lastGroup = '';
+  
+  for (let i = 0; i < muscleGroupSequence.length; i++) {
+    const currentGroup = muscleGroupSequence[i];
+    
+    // Normalize similar groups
+    const normalizedGroup = normalizeMuscleGroup(currentGroup);
+    
+    if (normalizedGroup !== lastGroup) {
+      // Switching to a different group
+      if (seenGroups.has(normalizedGroup)) {
+        // This group was seen before - alternating pattern detected!
+        const exerciseName = sortedExercises[i].name;
+        violations.push(
+          `Exercícios do mesmo grupo devem estar agrupados. ` +
+          `"${exerciseName}" (${currentGroup}) na posição ${i + 1} deveria estar junto com os outros exercícios de ${normalizedGroup}.`
+        );
+        break; // Only report first violation to avoid spam
+      }
+      seenGroups.add(normalizedGroup);
+      lastGroup = normalizedGroup;
     }
   }
   
@@ -1893,16 +1969,29 @@ Exercícios que exigem maior coordenação, força e energia devem vir ANTES.
 - Alta demanda energética: posicionar no início (grandes grupos musculares)
 - Baixa demanda energética: posicionar ao final (isoladores, core)
 
-### NÍVEL 3 - Grupos Musculares por Sessão:
+### NÍVEL 3 - Grupos Musculares por Sessão (⚠️ AGRUPAMENTO OBRIGATÓRIO):
 
-| Tipo de Sessão | Ordem de Grupos |
-|----------------|-----------------|
-| PUSH           | Peitoral → Ombros → Tríceps |
-| PULL           | Costas (Grande Dorsal) → Cintura Escapular → Bíceps |
-| LEGS           | Quadríceps → Posteriores → Glúteos → Panturrilhas |
-| UPPER          | Peito/Costas alternados → Ombros → Braços |
-| LOWER          | Quadríceps → Isquiotibiais → Glúteos → Panturrilhas |
+**REGRA CRÍTICA: TODOS os exercícios de um grupo muscular devem vir JUNTOS, ANTES de passar para o próximo grupo.**
+
+❌ ERRADO (alternando): Supino → Desenvolvimento → Supino Inclinado → Elevação Lateral
+✅ CORRETO (agrupado): Supino → Supino Inclinado → Desenvolvimento → Elevação Lateral
+
+| Tipo de Sessão | Ordem de Grupos (AGRUPAR cada um) |
+|----------------|-----------------------------------|
+| PUSH           | TODOS de Peitoral → TODOS de Ombros → TODOS de Tríceps |
+| PULL           | TODOS de Costas → TODOS de Cintura Escapular → TODOS de Bíceps |
+| LEGS           | TODOS de Quadríceps → TODOS de Posteriores → TODOS de Glúteos → Panturrilhas |
+| UPPER          | TODOS de Peito → TODOS de Costas → TODOS de Ombros → TODOS de Braços |
+| LOWER          | TODOS de Quadríceps → TODOS de Isquiotibiais → TODOS de Glúteos → Panturrilhas |
 | FULL BODY      | Grandes grupos (Pernas/Costas/Peito) → Ombros → Braços → Core |
+
+**EXEMPLO PUSH CORRETO:**
+1. Supino Reto (Peito)
+2. Supino Inclinado (Peito)
+3. Crucifixo (Peito)
+4. Desenvolvimento (Ombro) ← só começa ombro após TODOS de peito
+5. Elevação Lateral (Ombro)
+6. Tríceps Pulley (Tríceps) ← só começa tríceps após TODOS de ombro
 
 ### NÍVEL 4 - Posicionamento Especial (CRÍTICO):
 
@@ -1946,11 +2035,16 @@ Exercícios que exigem maior coordenação, força e energia devem vir ANTES.
 | 6     | Tríceps Pulley | Isolador | Braço pequeno - final |
 
 ## ⚠️ REGRAS CRÍTICAS DE ORDEM:
-1. NUNCA colocar Core antes de exercícios compostos pesados
-2. NUNCA colocar isoladores de braço antes de compostos que usam braços
-3. NUNCA iniciar sessão de pernas com panturrilha
-4. SE grupo é prioridade do usuário → posicioná-lo entre exercícios 1-3
-5. Manter consistência de ordem entre sessões do mesmo tipo (A/B)
+1. NUNCA alternar entre grupos musculares - agrupar TODOS os exercícios do mesmo grupo antes de mudar
+2. NUNCA colocar Core antes de exercícios compostos pesados
+3. NUNCA colocar isoladores de braço antes de compostos que usam braços
+4. NUNCA iniciar sessão de pernas com panturrilha
+5. SE grupo é prioridade do usuário → posicioná-lo entre exercícios 1-3
+6. Manter consistência de ordem entre sessões do mesmo tipo (A/B)
+
+## ⛔ ERRO COMUM A EVITAR:
+Peito → Ombro → Peito → Ombro ← INCORRETO!
+Peito → Peito → Ombro → Ombro ← CORRETO!
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 5: ADAPTAÇÕES POR LESÃO
