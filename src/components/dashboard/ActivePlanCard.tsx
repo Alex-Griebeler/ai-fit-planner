@@ -144,7 +144,6 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
 
         {workouts.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Próximos treinos:</p>
             <div className="grid gap-2">
               {workouts.slice(0, 3).map((workout, index) => {
                 // Remove parenthetical suffixes like (força), (hipertrofia), (metabólico)
