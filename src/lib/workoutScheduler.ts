@@ -30,6 +30,44 @@ const DAY_LABELS: Record<DayCode, string> = {
   sat: 'Sábado',
 };
 
+// Mapeamento de nomes em português para códigos de dia
+const DAY_NAME_TO_CODE: Record<string, DayCode> = {
+  // Formato curto
+  'domingo': 'sun',
+  'segunda': 'mon',
+  'terça': 'tue',
+  'terca': 'tue',
+  'quarta': 'wed',
+  'quinta': 'thu',
+  'sexta': 'fri',
+  'sábado': 'sat',
+  'sabado': 'sat',
+  // Formato completo
+  'segunda-feira': 'mon',
+  'terça-feira': 'tue',
+  'terca-feira': 'tue',
+  'quarta-feira': 'wed',
+  'quinta-feira': 'thu',
+  'sexta-feira': 'fri',
+  // Já é código (passthrough)
+  'sun': 'sun',
+  'mon': 'mon',
+  'tue': 'tue',
+  'wed': 'wed',
+  'thu': 'thu',
+  'fri': 'fri',
+  'sat': 'sat',
+};
+
+/**
+ * Normaliza um nome de dia (português ou código) para DayCode
+ * Ex: "Segunda", "segunda-feira", "mon" → "mon"
+ */
+export function normalizeDayCode(day: string): DayCode | null {
+  const normalized = day.toLowerCase().trim();
+  return DAY_NAME_TO_CODE[normalized] || null;
+}
+
 /**
  * Converte código do dia para label em português
  */
@@ -136,8 +174,10 @@ export function getWeeklySchedule(
   // Usamos o índice do treino no plano baseado no workout_day
   const completedIndices: number[] = [];
   completedThisWeek.forEach(session => {
-    // Encontrar o índice do treino pelo dia
-    const dayCode = session.workout_day.toLowerCase() as DayCode;
+    // Normalizar o dia da sessão (pode vir em português: "Segunda")
+    const dayCode = normalizeDayCode(session.workout_day);
+    if (!dayCode) return; // Pular sessões com dia inválido
+    
     for (const [idx, mappedDay] of workoutToDayMap.entries()) {
       if (mappedDay === dayCode && !completedIndices.includes(idx)) {
         completedIndices.push(idx);
