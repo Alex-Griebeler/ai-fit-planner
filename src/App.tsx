@@ -21,7 +21,7 @@ const Result = lazy(() => import('./pages/Result'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const WorkoutExecution = lazy(() => import('./pages/WorkoutExecution'));
-const WorkoutPreview = lazy(() => import('./pages/WorkoutPreview'));
+// WorkoutPreview removed from main flow - direct navigation to WorkoutExecution
 const Pricing = lazy(() => import('./pages/Pricing'));
 const Progress = lazy(() => import('./pages/Progress'));
 const WorkoutComplete = lazy(() => import('./pages/WorkoutComplete'));
@@ -118,14 +118,7 @@ const App = () => (
                       </ProtectedRoute>
                     } 
                   />
-                  <Route 
-                    path="/workout-preview" 
-                    element={
-                      <ProtectedRoute>
-                        <WorkoutPreview />
-                      </ProtectedRoute>
-                    } 
-                  />
+                  {/* /workout-preview route removed - users now go directly to /workout */}
                   <Route path="/pricing" element={<Pricing />} />
                   <Route 
                     path="/progress" 

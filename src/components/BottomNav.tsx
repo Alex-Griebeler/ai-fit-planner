@@ -19,7 +19,7 @@ export function BottomNav() {
 
   // Ocultar em desktop ou rotas de fluxo linear
   const hiddenRoutes = ['/', '/login', '/reset-password', '/onboarding', '/pricing'];
-  const isWorkoutFlow = location.pathname === '/workout' || location.pathname === '/workout-preview';
+  const isWorkoutFlow = location.pathname === '/workout';
   const shouldHide = !isMobile || hiddenRoutes.includes(location.pathname) || isWorkoutFlow;
   
   if (shouldHide) return null;
