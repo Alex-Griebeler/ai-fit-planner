@@ -9,12 +9,14 @@ import {
   ProfileCard, 
   ActivePlanCard, 
   WorkoutHistoryCard, 
+  StatsCard,
   SessionHistoryCard,
+  ProgressPreviewCard 
 } from '@/components/dashboard';
-import { StreakCard, WeeklyProgress } from '@/components/gamification';
+import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { Plus, LogOut } from 'lucide-react';
+import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -69,8 +71,13 @@ export default function Dashboard() {
     navigate('/onboarding');
   };
 
-  // Planos inativos para histórico
-  const inactivePlans = plans.filter(p => !p.is_active);
+  // Estatísticas
+  const totalPlans = plans.length;
+  const totalWorkouts = plans.reduce((acc, plan) => {
+    const planData = plan.plan_data as { workouts?: unknown[] };
+    return acc + (planData?.workouts?.length ?? 0);
+  }, 0);
+  const weeklyFrequency = activePlan?.weekly_frequency ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,7 +91,7 @@ export default function Dashboard() {
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
-            {activePlan && (
+          {activePlan && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="h-10 press-scale">
@@ -124,9 +131,9 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Content - Simplified Layout */}
-      <main id="main-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-4">
-        {/* 1. Profile - Compact */}
+      {/* Content */}
+      <main id="main-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6">
+        {/* Profile Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -135,56 +142,107 @@ export default function Dashboard() {
           <ProfileCard profile={profile} isLoading={profileLoading} />
         </motion.div>
 
-        {/* 2+3. Gamification - Side by Side Grid */}
+        {/* Motivational Message */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          className="grid grid-cols-2 gap-3"
         >
-          <StreakCard compact />
-          <Card className="p-3">
-            <WeeklyProgress compact />
-          </Card>
+          <MotivationalMessage userName={profile?.name} />
         </motion.div>
 
-        {/* 4. Active Plan */}
+        {/* Streak Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
+          <StreakCard />
         </motion.div>
 
-        {/* 5. Session History (max 3 items) */}
+        {/* Weekly Progress */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
+          <Card className="p-4">
+            <WeeklyProgress />
+          </Card>
+        </motion.div>
+
+        {/* Stats Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        >
+          <StatsCard
+            icon={<Dumbbell className="w-5 h-5" />}
+            label="Total de Planos"
+            value={totalPlans}
+          />
+          <StatsCard
+            icon={<Calendar className="w-5 h-5" />}
+            label="Treinos/Semana"
+            value={weeklyFrequency > 0 ? `${weeklyFrequency}x` : '-'}
+          />
+          <StatsCard
+            icon={<Target className="w-5 h-5" />}
+            label="Treinos Criados"
+            value={totalWorkouts}
+          />
+          <StatsCard
+            icon={<TrendingUp className="w-5 h-5" />}
+            label="Duração"
+            value={activePlan?.session_duration ?? '-'}
+          />
+        </motion.div>
+
+        {/* Active Plan */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
+        </motion.div>
+
+        {/* Session History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
         >
           <SessionHistoryCard 
             sessions={sessions || []} 
             isLoading={sessionsLoading}
             onDeleteSession={handleDeleteSession}
-            maxItems={3}
           />
         </motion.div>
 
-        {/* 6. Workout Plans History - Only if inactive plans exist */}
-        {inactivePlans.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <WorkoutHistoryCard 
-              plans={plans} 
-              isLoading={plansLoading} 
-              onDeletePlan={handleDeletePlan}
-            />
-          </motion.div>
-        )}
+        {/* Progress Preview CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.35 }}
+        >
+          <ProgressPreviewCard />
+        </motion.div>
+
+        {/* Workout Plans History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <WorkoutHistoryCard 
+            plans={plans} 
+            isLoading={plansLoading} 
+            onDeletePlan={handleDeletePlan}
+          />
+        </motion.div>
       </main>
     </div>
   );

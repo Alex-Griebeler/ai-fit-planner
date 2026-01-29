@@ -23,15 +23,9 @@ interface SessionHistoryCardProps {
   sessions: WorkoutSession[];
   isLoading: boolean;
   onDeleteSession?: (sessionId: string) => Promise<void>;
-  maxItems?: number;
 }
 
-export function SessionHistoryCard({ 
-  sessions, 
-  isLoading, 
-  onDeleteSession,
-  maxItems = 3 
-}: SessionHistoryCardProps) {
+export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: SessionHistoryCardProps) {
   if (isLoading) {
     return (
       <Card>
@@ -57,7 +51,7 @@ export function SessionHistoryCard({
     );
   }
 
-  const recentSessions = sessions.slice(0, maxItems);
+  const recentSessions = sessions.slice(0, 5);
 
   if (recentSessions.length === 0) {
     return (
@@ -93,7 +87,7 @@ export function SessionHistoryCard({
             key={session.id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: Math.min(index, 5) * 0.05 }}
+            transition={{ delay: index * 0.1 }}
             className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group"
           >
             <div className={`
