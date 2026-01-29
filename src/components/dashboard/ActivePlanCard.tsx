@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 interface ActivePlanCardProps {
   plan: WorkoutPlan | null;
   isLoading: boolean;
+  goal?: string | null;
 }
 
 interface PlanDataWorkout {
@@ -30,7 +31,7 @@ interface PlanData {
   motivationalMessage?: string;
 }
 
-export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
+export function ActivePlanCard({ plan, isLoading, goal }: ActivePlanCardProps) {
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -99,7 +100,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <Badge variant="default" className="mb-2 bg-primary/20 text-primary border-0">
-              Plano Ativo
+              {goal || 'Plano Ativo'}
             </Badge>
             <CardTitle className="text-xl">
               {plan.plan_name
