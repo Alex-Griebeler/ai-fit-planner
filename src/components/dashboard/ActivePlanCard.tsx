@@ -83,8 +83,33 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
     );
   }
 
-  const planData = plan.plan_data as PlanData;
+  const planData = plan.plan_data as PlanData & { goal?: string };
   const workouts = planData?.workouts ?? [];
+
+  // Map goal to Portuguese label
+  const goalLabels: Record<string, string> = {
+    weight_loss: 'Emagrecimento',
+    hypertrophy: 'Hipertrofia',
+    strength: 'Força',
+    endurance: 'Resistência',
+    conditioning: 'Condicionamento',
+    maintenance: 'Manutenção',
+    general_fitness: 'Condicionamento Geral',
+    muscle_gain: 'Ganho Muscular',
+  };
+
+  // Extract goal from plan_data or plan_name and build clean title
+  const extractedGoal = planData?.goal;
+  const goalLabel = extractedGoal ? goalLabels[extractedGoal] : null;
+  
+  const planTitle = goalLabel 
+    ? `Plano de ${goalLabel}`
+    : plan.plan_name
+        .replace(/\s*\d+\s*dias?\s*/gi, ' ')
+        .replace(/\s*-\s*/g, ' ')
+        .replace(/\s*(intenso|leve|moderado|ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
   return (
     <Card className="bg-card border-border overflow-hidden">
@@ -97,14 +122,7 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
         aria-label="Ver detalhes do plano"
       >
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">
-            {plan.plan_name
-              .replace(/\s*\d+\s*dias?\s*/gi, ' ')
-              .replace(/\s*-\s*/g, ' ')
-              .replace(/\s*(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
-              .replace(/\s+/g, ' ')
-              .trim()}
-          </CardTitle>
+          <CardTitle className="text-xl">{planTitle}</CardTitle>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </div>
       </CardHeader>
