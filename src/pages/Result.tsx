@@ -643,7 +643,7 @@ export default function Result() {
             </button>
             <div className="text-left">
               <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
-                Plano Pronto
+                Seu Plano Personalizado
               </h1>
               <p className="text-muted-foreground text-sm">
                 {userName}
