@@ -895,7 +895,7 @@ export default function Result() {
                         className="w-full rounded-xl h-11"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/workout-preview?day=${encodeURIComponent(workout.day)}`);
+                          navigate(`/workout?day=${encodeURIComponent(workout.day)}`);
                         }}
                       >
                         <Flame className="w-4 h-4 mr-2" />
