@@ -36,13 +36,13 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader className="py-3 px-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" />
-              Histórico de Treinos
-            </CardTitle>
+              <span className="text-base font-semibold">Histórico de Treinos</span>
+            </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </div>
         </CardHeader>
@@ -54,19 +54,19 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card>
+      <Card className="bg-card border-border">
         <CollapsibleTrigger asChild>
           <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-primary" />
-                Histórico de Treinos
+                <CardTitle className="text-base">Histórico de Treinos</CardTitle>
                 {recentSessions.length > 0 && (
                   <Badge variant="secondary" className="text-xs ml-1">
                     {recentSessions.length}
                   </Badge>
                 )}
-              </CardTitle>
+              </div>
               <ChevronDown 
                 className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
                   isOpen ? 'rotate-180' : ''
