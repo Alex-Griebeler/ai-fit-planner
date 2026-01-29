@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Flame, Trophy } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { useStreak } from '@/hooks/useStreak';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -9,17 +10,17 @@ interface StreakCardProps {
 }
 
 export function StreakCard({ compact = false }: StreakCardProps) {
-  const { streak, isLoading, isStreakAtRisk } = useStreak();
+  const { streak, isLoading } = useStreak();
 
   if (isLoading) {
     return (
       <Card className="shadow-card">
-        <CardContent className={compact ? 'p-4' : 'p-6'}>
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
+        <CardContent className={compact ? 'p-4' : 'p-4'}>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-6 w-6 rounded" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-1.5 w-full" />
             </div>
           </div>
         </CardContent>
@@ -29,82 +30,65 @@ export function StreakCard({ compact = false }: StreakCardProps) {
 
   const currentStreak = streak?.current_streak ?? 0;
   const longestStreak = streak?.longest_streak ?? 0;
-  const isNewRecord = currentStreak > 0 && currentStreak >= longestStreak;
+  
+  // Progress towards record (cap at 100%)
+  const progressToRecord = longestStreak > 0 
+    ? Math.min((currentStreak / longestStreak) * 100, 100) 
+    : 0;
+  
+  // Check if current streak matches or exceeds the record
+  const isAtRecord = currentStreak > 0 && currentStreak >= longestStreak;
 
   return (
-    <Card className="shadow-card overflow-hidden">
-      <CardContent className={compact ? 'p-4' : 'p-6'}>
-        <div className="flex items-center gap-4">
-          {/* Animated flame icon */}
+    <Card className="shadow-card">
+      <CardContent className="p-4">
+        {/* Main streak display */}
+        <div className="flex items-center gap-3">
           <motion.div
-            className={`relative flex items-center justify-center rounded-full ${
-              currentStreak > 0 
-                ? 'bg-gradient-to-br from-orange-500 to-red-500' 
-                : 'bg-muted'
-            } ${compact ? 'h-12 w-12' : 'h-14 w-14'}`}
-            animate={currentStreak > 0 ? {
-              scale: [1, 1.05, 1],
-            } : {}}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
+            animate={currentStreak > 0 ? { scale: [1, 1.1, 1] } : {}}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
             <Flame 
-              className={`${compact ? 'h-6 w-6' : 'h-7 w-7'} ${
-                currentStreak > 0 ? 'text-white' : 'text-muted-foreground'
+              className={`h-6 w-6 ${
+                currentStreak > 0 
+                  ? isAtRecord 
+                    ? 'text-yellow-500' 
+                    : 'text-orange-500' 
+                  : 'text-muted-foreground'
               }`} 
             />
-            {currentStreak > 0 && (
-              <motion.div
-                className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 to-red-400 opacity-50"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-            )}
           </motion.div>
-
-          {/* Streak info */}
+          
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">
-                Sequência
-              </span>
-              {isNewRecord && currentStreak > 1 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="flex items-center gap-1 text-xs font-medium text-yellow-600 dark:text-yellow-500"
-                >
-                  <Trophy className="h-3 w-3" />
-                  Novo recorde!
-                </motion.div>
-              )}
-            </div>
-            <div className="flex items-baseline gap-1">
+            <div className="flex items-baseline gap-1.5">
               <motion.span
                 key={currentStreak}
                 initial={{ scale: 1.2, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className={`font-bold ${compact ? 'text-2xl' : 'text-3xl'}`}
+                className="font-bold text-lg"
               >
                 {currentStreak}
               </motion.span>
               <span className="text-sm text-muted-foreground">
-                {currentStreak === 1 ? 'dia' : 'dias'}
+                {currentStreak === 1 ? 'dia' : 'dias'} de sequência
               </span>
             </div>
           </div>
-
-          {/* Longest streak badge */}
-          {longestStreak > 0 && !compact && (
-            <div className="text-right">
-              <div className="text-xs text-muted-foreground">Recorde</div>
-              <div className="font-semibold text-foreground">{longestStreak}</div>
-            </div>
-          )}
         </div>
+
+        {/* Progress bar towards record */}
+        {longestStreak > 0 && (
+          <div className="mt-3">
+            <Progress 
+              value={progressToRecord} 
+              className={`h-1.5 ${isAtRecord ? '[&>div]:bg-yellow-500' : ''}`}
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
+              <span>{isAtRecord ? '🏆 No recorde!' : 'Progresso'}</span>
+              <span>Recorde: {longestStreak}</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
