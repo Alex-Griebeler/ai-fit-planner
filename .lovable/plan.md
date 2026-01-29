@@ -1,458 +1,275 @@
 
-# Auditoria Completa: Bugs, Inconsistencias e Melhorias UX (Nivel Apple)
 
-## Sumario Executivo
+# Redesign Dashboard: Nivel Apple
 
-Auditoria detalhada identificou **3 bugs ativos**, **6 inconsistencias de UX**, e **10 oportunidades de polimento** para elevar a aplicacao ao padrao Apple de design.
+## Analise Honesta e Feedback Sincero
+
+### 1. Altura e Peso no ProfileCard
+
+**Minha opiniao**: Concordo com a remocao. Altura e peso sao dados estaticos que:
+- Nao mudam frequentemente
+- Nao sao metricas de desempenho
+- Ocupam espaco visual sem agregar valor imediato
+- Ja estao acessiveis em Settings se o usuario precisar
+
+**Veredicto**: REMOVER. Deixa o ProfileCard mais limpo e focado no essencial (nome, avatar, badge premium).
 
 ---
 
-## PARTE 1: BUGS IDENTIFICADOS
+### 2. Card de Sequencia (StreakCard)
 
-### 1.1 BUG ATIVO - Erro de forwardRef no VolumeStats
+**Situacao atual**: O StreakCard ja mostra:
+- Numero de dias da sequencia
+- Badge "Recorde!" quando atinge recorde
+- Badge "Treine hoje!" quando em risco
+- Recorde historico
 
-**Localizacao**: Console logs, `src/components/progress/VolumeStats.tsx`
-**Impacto**: Warning em desenvolvimento, possivel instabilidade futura
+**Minha analise**: O card esta BOM, mas pode ser MELHOR. O problema e que:
+- A mensagem "Treine hoje!" aparece separada do contexto
+- Falta um CTA claro para ir treinar
+- Nao ha celebracao visual quando o usuario esta no recorde
 
-Os logs mostram:
+**Proposta de melhoria**:
+
 ```text
-Warning: Function components cannot be given refs.
-Check the render method of `Progress`.
-at VolumeStats
+┌─────────────────────────────────────────────────┐
+│  🔥  Sequencia                                  │
+│                                                 │
+│      12                     Recorde: 15         │
+│      dias                   (faltam 3 dias!)    │
+│                                                 │
+│  [═══════════════════════════════░░░░░]  80%    │
+│                                                 │
+│  "Treine hoje para bater seu recorde!" →        │
+└─────────────────────────────────────────────────┘
 ```
 
-**Causa Raiz**: O componente `VolumeStats` e renderizado dentro de um `motion.div` do Framer Motion via `PremiumGate`, que tenta passar refs para componentes funcionais. Alem disso, a biblioteca `recharts` internamente usa refs em componentes como `CartesianGrid`.
+Elementos novos:
+- Barra de progresso visual ate o recorde
+- Mensagem contextual com CTA
+- Click para ir direto ao treino
 
-**Correcao Proposta**:
-- Envolver `VolumeStats` em um wrapper `div` para isolar refs
-- Nao e necessario usar `forwardRef` pois o problema e no contexto de renderizacao
+---
 
+### 3. Grid de Stats (Total Planos, Treinos/Semana, etc.)
+
+**Minha opiniao HONESTA**: 
+
+| Metrica Atual | Valor? | Por que? |
+|---------------|--------|----------|
+| Total de Planos | BAIXO | Usuario free so tem 1 plano, esse numero e quase sempre 1 |
+| Treinos/Semana | MEDIO | Ja aparece no ActivePlanCard e WeeklyProgress |
+| Treinos Criados | BAIXO | Confuso - sao treinos do plano, nao sessoes realizadas |
+| Duracao | MEDIO | Ja aparece no ActivePlanCard |
+
+**Problema central**: Essas metricas sao DESCRITIVAS (sobre o plano), nao sao de DESEMPENHO (sobre o usuario).
+
+**O que a Apple faria?** Mostraria metricas de ACAO e CONQUISTA:
+
+| Metrica Proposta | Valor | Por que? |
+|------------------|-------|----------|
+| Treinos esta semana | ALTO | Acao real, progress tracking |
+| Minutos treinados (mes) | ALTO | Metrica de consistencia |
+| PRs alcancados | ALTO | Celebra conquistas |
+| Taxa de conclusao | ALTO | Engajamento e consistencia |
+
+**Proposta de redesign**:
+
+```text
+┌─────────────────────────────────────────────────┐
+│  ESTA SEMANA                                    │
+│                                                 │
+│  ┌───────────┐  ┌───────────┐                   │
+│  │  🏋️  3/4  │  │  ⏱️  127  │                   │
+│  │  treinos  │  │  minutos  │                   │
+│  │  faltam 1 │  │  +23min   │                   │
+│  └───────────┘  └───────────┘                   │
+│                                                 │
+│  ┌───────────┐  ┌───────────┐                   │
+│  │  🏆  2    │  │  ✅  89%  │                   │
+│  │  PRs      │  │  conclusao│                   │
+│  │  novos    │  │  (+5%)    │                   │
+│  └───────────┘  └───────────┘                   │
+└─────────────────────────────────────────────────┘
+```
+
+Cada metrica mostra:
+- Valor atual (numero grande)
+- Contexto (label)
+- Tendencia (comparativo com semana anterior)
+
+---
+
+### 4. Nome do Plano (4 dias emagrecimento intenso)
+
+**Minha opiniao**: O nome vem da IA na geracao do plano. O problema esta em DOIS lugares:
+
+1. **No ActivePlanCard** - ja existe um regex que limpa sufixos:
+   ```typescript
+   plan.plan_name.replace(/\s+(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
+   ```
+
+2. **Na geracao** - A IA inclui meta-informacoes no nome
+
+**Proposta**:
+- Adicionar "4 dias" e "emagrecimento" ao regex de limpeza
+- Manter apenas o nome semantico do plano
+
+---
+
+## Hierarquia Visual Proposta (Apple-Style)
+
+Analisando apps como Apple Fitness, Activity, e Health, a hierarquia e:
+
+```text
+1. SAUDACAO CONTEXTUAL (Bom dia, Maria!)
+2. ACAO PRINCIPAL (Proximo treino + CTA)
+3. METRICAS DE PROGRESSO (Rings, Stats)
+4. HISTORICO (Atividade recente)
+5. NAVEGACAO SECUNDARIA (Ver mais, Configuracoes)
+```
+
+**Dashboard atual**:
+1. ProfileCard (nome, avatar, altura, peso) ← pode ser mais compacto
+2. MotivationalMessage ← bom
+3. StreakCard ← bom, pode melhorar
+4. WeeklyProgress ← bom
+5. StatsGrid ← substituir por metricas de acao
+6. ActivePlanCard ← PRINCIPAL - deveria subir
+7. SessionHistoryCard ← ok
+8. ProgressPreviewCard ← ok
+9. WorkoutHistoryCard ← ok
+
+**Dashboard proposto**:
+1. **Header compacto** (Avatar + Nome + Streak inline)
+2. **Mensagem motivacional** (contextual)
+3. **Card do Plano Ativo** (HERO - acao principal)
+4. **Metricas de Performance** (2x2 grid)
+5. **Progresso Semanal** (rings ou barra)
+6. **Historico de Sessoes** (ultimos 3)
+7. **CTA Progresso** (link para analytics)
+
+---
+
+## Plano de Implementacao
+
+### Fase 1: Limpeza e Simplificacao
+
+| Arquivo | Mudanca | Risco |
+|---------|---------|-------|
+| `ProfileCard.tsx` | Remover secao de altura/peso | Baixo |
+| `ActivePlanCard.tsx` | Melhorar regex para limpar nome | Baixo |
+| `Dashboard.tsx` | Reordenar componentes | Baixo |
+
+### Fase 2: Redesign StatsGrid
+
+| Arquivo | Mudanca | Risco |
+|---------|---------|-------|
+| `StatsCard.tsx` | Adicionar prop `trend` para mostrar comparativo | Baixo |
+| `Dashboard.tsx` | Substituir metricas descritivas por metricas de acao | Medio |
+| Novo: `usePerformanceStats.ts` | Hook para calcular treinos/semana, minutos, PRs | Medio |
+
+### Fase 3: Melhorar StreakCard
+
+| Arquivo | Mudanca | Risco |
+|---------|---------|-------|
+| `StreakCard.tsx` | Adicionar barra de progresso ate recorde | Baixo |
+| `StreakCard.tsx` | Tornar card clicavel para ir ao treino | Baixo |
+
+### Fase 4: Otimizar Layout
+
+| Arquivo | Mudanca | Risco |
+|---------|---------|-------|
+| `Dashboard.tsx` | Mover ActivePlanCard para cima | Baixo |
+| `Dashboard.tsx` | Combinar Profile + Streak em header compacto | Medio |
+
+---
+
+## Impacto no Codigo Existente
+
+### Baixo Risco
+- Remover altura/peso: apenas CSS/JSX, nao afeta dados
+- Reordenar componentes: apenas Dashboard.tsx
+- Melhorar regex de nome: apenas string manipulation
+
+### Medio Risco
+- Novo hook de metricas: depende de queries existentes
+- Combinar Profile + Streak: precisa testar responsividade
+
+### Mitigacao
+- Manter componentes atuais como fallback
+- Implementar em fases pequenas
+- Testar em mobile primeiro (design mobile-first)
+
+---
+
+## Metricas Propostas em Detalhe
+
+### 1. Treinos esta Semana
 ```typescript
-// Em Progress.tsx, envolver VolumeStats em div adicional
-<div>
-  <VolumeStats sessions={completedSessions} />
-</div>
+// Fonte: useWorkoutSessions (ja existe)
+const weeklyCompleted = sessions.filter(s => 
+  s.status === 'completed' && 
+  isThisWeek(new Date(s.completed_at))
+).length;
+
+// Comparativo: semana anterior
+const lastWeekCompleted = sessions.filter(s => 
+  s.status === 'completed' && 
+  isLastWeek(new Date(s.completed_at))
+).length;
+
+const trend = weeklyCompleted - lastWeekCompleted; // +2, -1, etc
 ```
 
-**Risco**: Baixo - mudanca e puramente estrutural
-
----
-
-### 1.2 BUG POTENCIAL - Timezone no Calculo de Streak
-
-**Localizacao**: `src/hooks/useStreak.ts` (linhas 57, 89-91)
-**Impacto**: Streak pode ser calculado incorretamente para usuarios em diferentes fusos horarios
-
+### 2. Minutos Treinados (Mes)
 ```typescript
-// Linha 57 - usa toISOString que converte para UTC
-const today = new Date().toISOString().split('T')[0];
-
-// Linha 89-91 - compara datas sem considerar timezone
-const lastDate = new Date(lastWorkoutDate);
-const todayDate = new Date(today);
-const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+// Fonte: useWorkoutSessions
+const monthlyMinutes = sessions
+  .filter(s => s.status === 'completed' && isThisMonth(new Date(s.completed_at)))
+  .reduce((acc, s) => acc + (s.duration_minutes ?? 0), 0);
 ```
 
-**Cenario de Falha**:
-- Usuario no Brasil (UTC-3) treina as 23:00 local (02:00 UTC do dia seguinte)
-- Sistema registra data UTC, usuario perde streak por "pular dia"
-
-**Correcao Proposta**:
-- Usar `date-fns` com `startOfDay` e `differenceInDays` para calculo timezone-aware
-
+### 3. PRs Alcancados
 ```typescript
-import { startOfDay, differenceInDays } from 'date-fns';
-
-const today = startOfDay(new Date());
-const lastDate = startOfDay(new Date(lastWorkoutDate));
-const diffDays = differenceInDays(today, lastDate);
+// Fonte: useExerciseLoads (ja existe)
+// Contar quantas vezes o usuario bateu seu proprio recorde
 ```
 
-**Risco**: Medio - afeta logica de streak existente
-
----
-
-### 1.3 BUG - Duplicacao de Safe Area no CSS
-
-**Localizacao**: `src/index.css` (linha 110)
-**Impacto**: Classe CSS pode nao funcionar corretamente
-
-```css
-.safe-area-inset-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-```
-
-A classe esta definida mas a sintaxe do valor fallback pode causar problemas em browsers antigos. A propriedade `env()` nao precisa de fallback inline.
-
-**Correcao Proposta**:
-```css
-.safe-area-inset-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-  /* Fallback para browsers sem suporte */
-  @supports not (padding-bottom: env(safe-area-inset-bottom)) {
-    padding-bottom: 0;
-  }
-}
-```
-
-**Risco**: Baixo - apenas CSS
-
----
-
-## PARTE 2: INCONSISTENCIAS DE UX
-
-### 2.1 Duracao de Toast Inconsistente
-
-| Componente | Duracao | Contexto |
-|------------|---------|----------|
-| WorkoutExecution | 1500ms | `toast.success(..completo!, { duration: 1500 })` |
-| Result (carga) | 1500ms | `toast.success('Carga salva', { duration: 1500 })` |
-| Outros | default (4000ms) | Todas as outras notificacoes |
-
-**Problema**: Inconsistencia na duracao de feedback visual.
-
-**Correcao Proposta**: Padronizar duracao para:
-- Confirmacoes rapidas: 2000ms
-- Erros: 4000ms (default)
-- Mensagens informativas: 3000ms
-
----
-
-### 2.2 Feedback Haptico Parcial
-
-| Componente | Haptico | Tipo |
-|------------|---------|------|
-| WorkoutExecution | Sim | `vibrate([50, 30, 50])` |
-| ExerciseCard | Sim | `vibrate(50)` |
-| Outros botoes | Nao | - |
-
-**Problema**: Apenas telas de treino tem feedback tatil. O hook `useHapticFeedback` foi criado mas nao esta sendo usado globalmente.
-
-**Correcao Proposta**: Aplicar `useHapticFeedback` em:
-- Botao primario de login/cadastro
-- Botao "Criar Plano" no Dashboard
-- Botoes de navegacao principais
-
----
-
-### 2.3 Estados de Loading Visuais Diferentes
-
-| Pagina | Estilo Loading |
-|--------|---------------|
-| Dashboard | Skeleton shimmer |
-| Result | Spinner circular custom |
-| WorkoutPreview | Spinner com borda |
-| Settings | Spinner Loader2 |
-| Onboarding | Loader2 centralizado |
-
-**Problema**: 4+ estilos diferentes de loading.
-
-**Correcao Proposta**: O componente `LoadingScreen` foi criado mas nao esta sendo usado em:
-- `WorkoutPreview.tsx` (ainda usa spinner inline)
-- `WorkoutExecution.tsx` (ainda usa spinner inline)
-
----
-
-### 2.4 Botao Voltar Inconsistente em Headers
-
-| Pagina | Usa PageHeader | Botao Voltar |
-|--------|---------------|--------------|
-| Settings | Sim | Sim |
-| Progress | Sim | Sim |
-| Achievements | Sim | Sim |
-| Result | Nao | Sim (manual) |
-| WorkoutPreview | Nao | Sim (manual) |
-| Dashboard | Nao | Nao (LogOut) |
-
-**Problema**: `Result` e `WorkoutPreview` implementam botao voltar manualmente em vez de usar `PageHeader`.
-
-**Correcao Proposta**: Migrar para `PageHeader` em todas as paginas internas.
-
----
-
-### 2.5 Altura de Botoes CTA Variavel
-
-| Componente | Altura | Classe |
-|------------|--------|--------|
-| WorkoutPreview | h-14 | Iniciar Treino |
-| WorkoutExecution | h-14/h-12 | Finalizar/Navegacao |
-| Result | h-12 | Iniciar Treino |
-| Login | w-full (nao especifica) | Entrar |
-| Dashboard | h-9 (size="sm") | Novo Plano |
-
-**Correcao Proposta**: Padronizar:
-- CTAs primarias: `h-14`
-- CTAs secundarias: `h-12`
-- Botoes de acao em cards: `h-10`
-
----
-
-### 2.6 Animacoes de Lista Lineares
-
-**Atual**:
+### 4. Taxa de Conclusao
 ```typescript
-// WorkoutPreview.tsx
-transition={{ delay: index * 0.05 }}
+// Fonte: useWorkoutSessions
+const completionRate = (completed / total) * 100;
 ```
-
-**Problema**: Animacao linear sem limite - listas longas demoram muito para aparecer.
-
-**Correcao Apple**:
-```typescript
-// Limitar delay a primeiros 5-6 itens
-transition={{ delay: Math.min(index, 5) * 0.05 }}
-```
-
----
-
-## PARTE 3: MELHORIAS UX NIVEL APPLE
-
-### 3.1 Timer de Descanso - Adicionar Haptico em Marcos
-
-**Atual**: Timer visual sem feedback tatil
-**Apple**: Vibracao em momentos chave
-
-**Melhoria**:
-```typescript
-// Em RestTimer.tsx
-useEffect(() => {
-  if (seconds === 10 && navigator.vibrate) {
-    navigator.vibrate(100); // 10s restantes
-  }
-  if (seconds === 0 && navigator.vibrate) {
-    navigator.vibrate([100, 50, 100]); // Tempo esgotado
-  }
-}, [seconds]);
-```
-
----
-
-### 3.2 Skeleton Loading com Shimmer Aprimorado
-
-O shimmer animation foi adicionado ao `skeleton.tsx`, mas pode ser melhorado:
-
-**Atual**:
-```typescript
-"before:animate-[shimmer_2s_infinite]"
-```
-
-**Melhoria**: Adicionar variacao de delay para efeito cascata:
-```typescript
-// Opcional: prop para delay customizado
-function Skeleton({ delay = 0, ...props }) {
-  return (
-    <div 
-      style={{ animationDelay: `${delay}ms` }}
-      className="animate-[shimmer_2s_infinite]"
-      ...
-    />
-  );
-}
-```
-
----
-
-### 3.3 Estados Vazios Padronizados
-
-O componente `EmptyState` foi criado mas pode ser melhorado com ilustracoes SVG tematicas.
-
-**Melhoria**:
-- Criar variantes: `workout`, `progress`, `achievements`
-- Adicionar animacoes sutis de idle
-
----
-
-### 3.4 WeeklyProgress - Ring Style Apple
-
-**Atual**: Bolas/circulos simples
-**Apple**: Activity rings concentricos
-
-**Melhoria**: Converter para SVG ring com stroke-dasharray animado.
-
----
-
-### 3.5 Pull-to-Refresh em Listas
-
-**Atual**: Nao implementado
-**Apple**: Padrao em listas rolaveis
-
-**Implementacao sugerida**: Usar `@tanstack/react-query` com `refetchOnWindowFocus` + gesto de pull.
-
----
-
-### 3.6 Transicao de Pagina com Spring Physics
-
-**Atual**:
-```typescript
-transition={{ duration: 0.15, ease: 'easeOut' }}
-```
-
-**Apple**:
-```typescript
-transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-```
-
----
-
-### 3.7 Micro-copy Mais Humano
-
-**Atual**: "Treino nao encontrado"
-**Apple**: "Hmm, nao conseguimos encontrar esse treino. Que tal tentar novamente?"
-
-**Arquivos para revisar**:
-- `WorkoutPreview.tsx` (linha 111)
-- `WorkoutExecution.tsx` (linha 317)
-- `WorkoutComplete.tsx` (linha 124)
-
----
-
-### 3.8 Long Press para Preview Rapido
-
-**Melhoria**: Em cards de exercicio, long press para mostrar preview modal com detalhes.
-
----
-
-### 3.9 Double-Tap para Completar Serie
-
-**Melhoria**: Em `ExerciseCard`, double-tap no card ativo completa a proxima serie.
-
----
-
-### 3.10 Swipe-to-Dismiss em Historico
-
-**Melhoria**: Em `SessionHistoryCard`, adicionar swipe left para revelar opcao de delete.
-
----
-
-## PARTE 4: PLANO DE IMPLEMENTACAO
-
-### Fase 1: Correcoes Criticas (Baixo Risco)
-
-| Prioridade | Item | Arquivos | Impacto |
-|------------|------|----------|---------|
-| P0 | Fix VolumeStats ref warning | Progress.tsx | Limpa console |
-| P0 | Padronizar toast durations | Multiplos | UX consistente |
-| P1 | Usar LoadingScreen globalmente | WorkoutPreview, WorkoutExecution | UI consistente |
-| P1 | Limitar delay de animacao em listas | WorkoutPreview, Result | Performance visual |
-
-**Estimativa**: 1-2 horas
-
-### Fase 2: Consistencia UX (Baixo-Medio Risco)
-
-| Prioridade | Item | Arquivos | Impacto |
-|------------|------|----------|---------|
-| P1 | Migrar Result/Preview para PageHeader | Result, WorkoutPreview | Consistencia |
-| P2 | Padronizar altura de CTAs | Multiplos | Visual |
-| P2 | Aplicar haptic feedback global | Login, Dashboard | Tatil |
-| P2 | Corrigir timezone no streak | useStreak.ts | Logica |
-
-**Estimativa**: 2-3 horas
-
-### Fase 3: Polimento Apple (Medio Risco)
-
-| Prioridade | Item | Arquivos | Impacto |
-|------------|------|----------|---------|
-| P2 | Haptic em timer de descanso | RestTimer.tsx | Tatil |
-| P3 | Spring physics em transicoes | App.tsx | Animacao |
-| P3 | Micro-copy humanizado | Multiplos | UX |
-| P3 | WeeklyProgress rings | WeeklyProgress.tsx | Visual |
-
-**Estimativa**: 3-5 horas
-
----
-
-## PARTE 5: ANALISE DE IMPACTO
-
-### Mudancas de Baixo Risco
-
-1. **Adicionar wrapper div em VolumeStats**
-   - Impacto: Nenhum em funcionalidade
-   - Beneficio: Remove warning do console
-
-2. **Padronizar toast durations**
-   - Impacto: Apenas visual
-   - Beneficio: UX consistente
-
-3. **Usar LoadingScreen**
-   - Impacto: Apenas visual
-   - Beneficio: Marca consistente
-
-4. **Limitar delay de animacao**
-   - Impacto: Apenas animacao
-   - Beneficio: Listas aparecem mais rapido
-
-### Mudancas de Medio Risco
-
-1. **Corrigir timezone no streak**
-   - Impacto: Afeta logica de streak
-   - Mitigacao: Testar com usuarios em diferentes fusos
-   - Rollback: Manter logica antiga como fallback
-
-2. **Migrar para PageHeader**
-   - Impacto: Layout de paginas
-   - Mitigacao: Manter styling existente
-
-3. **Aplicar haptic global**
-   - Impacto: Pode afetar usuarios sensíveis
-   - Mitigacao: Adicionar toggle em settings
-
-### Mudancas de Alto Risco
-
-Nenhuma mudanca proposta e de alto risco. Todas as melhorias sao incrementais e reversiveis.
-
----
-
-## PARTE 6: CHECKLIST DE TESTES
-
-### Apos Fase 1
-- [ ] Verificar console.log limpo em /progress
-- [ ] Toasts tem duracao consistente
-- [ ] Loading screens aparecem corretamente
-
-### Apos Fase 2
-- [ ] Botao voltar funciona em todas as paginas
-- [ ] Altura de botoes consistente
-- [ ] Haptic feedback funciona em dispositivos moveis
-- [ ] Streak calcula corretamente em timezone diferente
-
-### Apos Fase 3
-- [ ] Timer vibra em 10s e 0s
-- [ ] Transicoes de pagina fluidas
-- [ ] Mensagens de erro amigaveis
 
 ---
 
 ## Arquivos a Modificar
 
 ```text
-src/pages/Progress.tsx
-src/pages/WorkoutPreview.tsx
-src/pages/WorkoutExecution.tsx
-src/pages/Result.tsx
-src/pages/Login.tsx
-src/pages/Dashboard.tsx
-src/hooks/useStreak.ts
-src/components/workout/RestTimer.tsx
-src/components/gamification/WeeklyProgress.tsx
-src/App.tsx
+src/components/dashboard/ProfileCard.tsx      ← remover altura/peso
+src/components/dashboard/ActivePlanCard.tsx   ← melhorar regex nome
+src/components/dashboard/StatsCard.tsx        ← adicionar trend prop
+src/components/gamification/StreakCard.tsx    ← progress bar + CTA
+src/pages/Dashboard.tsx                       ← reordenar + novas metricas
+src/hooks/usePerformanceStats.ts              ← NOVO - calcular metricas
 ```
-
-## Arquivos que NAO Precisam de Mudanca
-
-- `PageHeader.tsx` - ja padronizado
-- `LoadingScreen.tsx` - ja criado
-- `EmptyState.tsx` - ja criado
-- `useHapticFeedback.ts` - ja criado
-- `skeleton.tsx` - shimmer ja implementado
 
 ---
 
-## Recomendacao Final
+## Resumo da Proposta
 
-Sugiro implementar as fases sequencialmente, comecando pela **Fase 1** que resolve bugs sem risco. As fases 2 e 3 podem ser implementadas incrementalmente conforme disponibilidade.
+| Item | Acao | Justificativa |
+|------|------|---------------|
+| Altura/Peso | REMOVER | Nao sao metricas de acao |
+| StreakCard | MELHORAR | Adicionar progress bar e CTA |
+| StatsGrid | SUBSTITUIR | Metricas de acao > metricas descritivas |
+| Nome do plano | LIMPAR | Regex mais abrangente |
+| Layout | REORDENAR | Plano Ativo como HERO card |
 
-**Prioridade imediata**:
-1. Fix VolumeStats ref warning (P0)
-2. Padronizar toast durations (P0)
-3. Corrigir timezone no streak (P2 - importante para integridade de dados)
+**Filosofia Apple aplicada**:
+- Foco na ACAO (treinar) nao na INFORMACAO (dados estaticos)
+- Celebrar CONQUISTAS (PRs, streaks, conclusao)
+- Mostrar PROGRESSO (comparativos, tendencias)
+- Reduzir RUIDO (remover dados que nao guiam decisoes)
+
