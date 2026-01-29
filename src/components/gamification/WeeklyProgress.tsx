@@ -6,10 +6,9 @@ import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 
 interface WeeklyProgressProps {
   compact?: boolean;
-  showTitle?: boolean;
 }
 
-export function WeeklyProgress({ compact = false, showTitle = true }: WeeklyProgressProps) {
+export function WeeklyProgress({ compact = false }: WeeklyProgressProps) {
   const { sessions } = useWorkoutSessions();
   const { activePlan } = useWorkoutPlans();
 
@@ -87,12 +86,10 @@ export function WeeklyProgress({ compact = false, showTitle = true }: WeeklyProg
       {/* Progress bar */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
-          {showTitle && (
-            <span className="font-medium text-foreground">
-              Progresso Semanal
-            </span>
-          )}
-          <span className={`text-muted-foreground ${!showTitle ? 'ml-auto' : ''}`}>
+          <span className="font-medium text-foreground">
+            Progresso Semanal
+          </span>
+          <span className="text-muted-foreground">
             {weeklyStats.completed} de {weeklyStats.target} treinos
           </span>
         </div>

@@ -8,7 +8,7 @@ export function ProgressPreviewCard() {
 
   return (
     <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 overflow-hidden">
-      <CardContent className="p-3">
+      <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
