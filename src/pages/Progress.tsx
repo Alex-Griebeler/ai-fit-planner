@@ -94,7 +94,9 @@ export default function Progress() {
             </Card>
 
             {/* Volume Stats */}
-            <VolumeStats sessions={completedSessions} />
+            <div>
+              <VolumeStats sessions={completedSessions} />
+            </div>
           </motion.div>
         </PremiumGate>
       </main>

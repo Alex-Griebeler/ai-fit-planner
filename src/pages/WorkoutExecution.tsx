@@ -11,6 +11,7 @@ import { ExerciseCard } from '@/components/workout/ExerciseCard';
 import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { LoadingScreen, EmptyState } from '@/components/shared';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -191,7 +192,7 @@ export default function WorkoutExecution() {
       }, 300);
     }
 
-    toast.success(`${exercise.name} completo!`, { duration: 1500 });
+    toast.success(`${exercise.name} completo!`, { duration: 2000 });
   }, [workout, completedSets, currentSession, localLoads, updateSession]);
 
   // Handle single set completion (for granular tracking)
@@ -301,22 +302,20 @@ export default function WorkoutExecution() {
   }, [activeExerciseIndex]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <span className="text-sm text-muted-foreground">Carregando treino...</span>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Carregando treino..." />;
   }
 
   if (!workout) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-        <p className="text-muted-foreground mb-4">Treino não encontrado</p>
-        <Button onClick={() => navigate('/dashboard')}>Voltar ao Dashboard</Button>
-      </div>
+      <EmptyState
+        title="Hmm, treino não encontrado"
+        description="Que tal voltar e tentar novamente?"
+        action={
+          <Button onClick={() => navigate('/dashboard')} className="h-12">
+            Voltar ao Dashboard
+          </Button>
+        }
+      />
     );
   }
 

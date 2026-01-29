@@ -1,20 +1,20 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Download, Play, Clock, Dumbbell, Info, RefreshCw } from 'lucide-react';
+import { Download, Play, Clock, Dumbbell, Info, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { generateWorkoutPdf } from '@/lib/generateWorkoutPdf';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { inferMuscleGroupsFromExercises } from '@/lib/workoutScheduler';
-
+import { PageHeader, LoadingScreen, EmptyState } from '@/components/shared';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 interface Exercise {
   order: number;
   name: string;
@@ -43,6 +43,7 @@ export default function WorkoutPreview() {
   const dayParam = searchParams.get('day');
   const [hasAutoRetried, setHasAutoRetried] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const haptic = useHapticFeedback();
 
   const { activePlan, isLoading, refetchPlans } = useWorkoutPlans();
 
@@ -78,14 +79,15 @@ export default function WorkoutPreview() {
         workout,
         createdAt: new Date(activePlan.created_at),
       });
-      toast.success('PDF baixado com sucesso!');
+      toast.success('PDF baixado com sucesso!', { duration: 2000 });
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Erro ao gerar PDF');
+      toast.error('Erro ao gerar PDF', { duration: 4000 });
     }
   };
 
   const handleStartWorkout = () => {
+    haptic.impact();
     navigate(`/workout?day=${encodeURIComponent(workout?.day || '')}`, {
       state: { startWorkout: true }
     });
@@ -93,73 +95,57 @@ export default function WorkoutPreview() {
 
   if (isLoading || isRetrying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <span className="text-sm text-muted-foreground">
-            {isRetrying ? 'Atualizando dados...' : 'Carregando treino...'}
-          </span>
-        </div>
-      </div>
+      <LoadingScreen 
+        message={isRetrying ? 'Atualizando dados...' : 'Carregando treino...'} 
+      />
     );
   }
 
   if (!workout) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-        <Dumbbell className="w-12 h-12 text-muted-foreground mb-4" />
-        <p className="text-foreground font-medium mb-2">Treino não encontrado</p>
-        <p className="text-sm text-muted-foreground text-center mb-6 max-w-xs">
-          Se você acabou de criar um plano, aguarde um momento e tente atualizar.
-        </p>
-        <div className="flex flex-col gap-3 w-full max-w-xs">
-          <Button onClick={handleManualRetry} variant="outline" className="w-full">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Tentar Novamente
-          </Button>
-          <Button onClick={() => navigate('/dashboard')} className="w-full">
-            Voltar ao Dashboard
-          </Button>
-        </div>
-      </div>
+      <EmptyState
+        icon={<Dumbbell className="w-12 h-12" />}
+        title="Hmm, treino não encontrado"
+        description="Se você acabou de criar um plano, aguarde um momento e tente atualizar."
+        action={
+          <div className="flex flex-col gap-3 w-full">
+            <Button onClick={handleManualRetry} variant="outline" className="w-full h-12">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar Novamente
+            </Button>
+            <Button onClick={() => navigate('/dashboard')} className="w-full h-12">
+              Voltar ao Dashboard
+            </Button>
+          </div>
+        }
+      />
     );
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors press-scale"
-              aria-label="Voltar ao dashboard"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            
-            <div className="text-center flex-1">
-              <h1 className="font-semibold">{workout.name}</h1>
-              <p className="text-xs text-muted-foreground">{workout.focus}</p>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDownloadPdf}
-              className="press-scale"
-              aria-label="Baixar treino em PDF"
-            >
-              <Download className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
+      <PageHeader 
+        title={workout.name}
+        backTo="/dashboard"
+        rightContent={
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDownloadPdf}
+            className="press-scale"
+            aria-label="Baixar treino em PDF"
+          >
+            <Download className="w-5 h-5" />
+          </Button>
+        }
+      />
       {/* Workout summary */}
       <div className="px-4 py-4 border-b border-border/50">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <div className="text-center mb-3">
+          <p className="text-sm text-muted-foreground">{workout.focus}</p>
+        </div>
+        <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Dumbbell className="w-4 h-4" />
             <span>{workout.exercises.length} exercícios</span>
@@ -172,7 +158,7 @@ export default function WorkoutPreview() {
         {(() => {
           const muscleGroups = inferMuscleGroupsFromExercises(workout.exercises);
           return muscleGroups.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-2 mt-3 justify-center">
               {muscleGroups.map((group, idx) => (
                 <Badge key={idx} variant="secondary" className="text-xs">
                   {group}
@@ -191,7 +177,7 @@ export default function WorkoutPreview() {
               key={`${exercise.name}-${index}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: Math.min(index, 5) * 0.05 }}
               className="rounded-xl border border-border bg-card p-4"
             >
               <div className="flex items-start justify-between gap-3">
