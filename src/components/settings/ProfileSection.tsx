@@ -87,7 +87,7 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
                 <AvatarImage 
                   src={profile.avatar_url} 
                   alt={profile.name}
-                  className="object-cover"
+                  className="object-cover object-center"
                 />
               )}
               <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">

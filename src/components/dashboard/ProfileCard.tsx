@@ -76,7 +76,7 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
               <AvatarImage 
                 src={profile.avatar_url} 
                 alt={profile.name}
-                className="object-cover"
+                className="object-cover object-center"
               />
             )}
             <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
