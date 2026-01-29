@@ -25,7 +25,8 @@ export default function Progress() {
       </a>
 
       <PageHeader 
-        title="Meu Progresso" 
+        title="Meu Progresso"
+        backTo="/dashboard"
         rightContent={
           <div className="flex items-center gap-2 text-sm">
             <Trophy className="w-4 h-4 text-primary" />
