@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Ruler, Scale, Settings, Crown } from 'lucide-react';
+import { User, Settings, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 
 interface ProfileCardProps {
@@ -112,22 +112,6 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
           </Button>
         </div>
 
-        {(profile.height || profile.weight) && (
-          <div className="flex gap-6 mt-4 pt-4 border-t border-border">
-            {profile.height && (
-              <div className="flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-muted-foreground" />
-                <span className="text-foreground font-medium">{profile.height} cm</span>
-              </div>
-            )}
-            {profile.weight && (
-              <div className="flex items-center gap-2">
-                <Scale className="w-4 h-4 text-muted-foreground" />
-                <span className="text-foreground font-medium">{profile.weight} kg</span>
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

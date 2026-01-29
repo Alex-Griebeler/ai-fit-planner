@@ -171,16 +171,25 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* Active Plan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
+          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
+        </motion.div>
+
+        {/* Stats Grid - Below Active Plan */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-3"
         >
           <StatsCard
             icon={<Dumbbell className="w-5 h-5" />}
-            label="Total de Planos"
+            label="Planos Criados"
             value={totalPlans}
           />
           <StatsCard
@@ -190,23 +199,14 @@ export default function Dashboard() {
           />
           <StatsCard
             icon={<Target className="w-5 h-5" />}
-            label="Treinos Criados"
+            label="Treinos no Plano"
             value={totalWorkouts}
           />
           <StatsCard
             icon={<TrendingUp className="w-5 h-5" />}
-            label="Duração"
+            label="Duração/Sessão"
             value={activePlan?.session_duration ?? '-'}
           />
-        </motion.div>
-
-        {/* Active Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
         </motion.div>
 
         {/* Session History */}
