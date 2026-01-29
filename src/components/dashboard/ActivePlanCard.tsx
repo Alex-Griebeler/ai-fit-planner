@@ -97,17 +97,14 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
         aria-label="Ver detalhes do plano"
       >
         <div className="flex items-center justify-between">
-          <div>
-            <Badge variant="default" className="mb-2 bg-primary/20 text-primary border-0">
-              Plano Ativo
-            </Badge>
-            <CardTitle className="text-xl">
-              {plan.plan_name
-                .replace(/\s+(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()}
-            </CardTitle>
-          </div>
+          <CardTitle className="text-xl">
+            {plan.plan_name
+              .replace(/\s*\d+\s*dias?\s*/gi, ' ')
+              .replace(/\s*-\s*/g, ' ')
+              .replace(/\s*(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()}
+          </CardTitle>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </div>
       </CardHeader>
