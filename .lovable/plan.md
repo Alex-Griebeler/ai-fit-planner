@@ -1,182 +1,153 @@
 
-# Plano: Dashboard com Metricas de Desempenho e Assiduidade
+# Plano: Melhorias no Card de Sequencia e Historicos Colapsaveis
 
-## Resumo das Mudancas
+## 1. Redesign do Card de Sequencia (StreakCard)
 
-Transformar o grid de estatisticas estaticas (Planos Criados, Treinos/Semana, etc.) em metricas dinamicas de desempenho baseadas nos dados reais de sessoes do usuario.
+### Problemas Atuais
+- Layout horizontal com muita informacao competindo
+- Badge "Novo recorde!" ocupa espaco visual
+- Recorde separado no canto direito parece desconectado
+
+### Sugestoes de Melhoria
+
+**Opcao A - Minimalista**
+```text
+┌─────────────────────────────────────┐
+│  🔥  2 dias                         │
+│      Recorde: 5 dias                │
+└─────────────────────────────────────┘
+```
+
+**Opcao B - Centralizado**
+```text
+┌─────────────────────────────────────┐
+│            🔥                       │
+│      Sequencia atual                │
+│           2                         │
+│          dias                       │
+│    ─────────────────               │
+│    Seu recorde: 5 dias              │
+└─────────────────────────────────────┘
+```
+
+**Opcao C - Compacto com barra de progresso** (Recomendada)
+```text
+┌─────────────────────────────────────┐
+│  🔥  2 dias de sequencia            │
+│  ████████░░░░░░░░  Recorde: 5       │
+└─────────────────────────────────────┘
+```
+
+### Implementacao Sugerida (Opcao C)
+- Remover badge "Novo recorde!" (redundante)
+- Adicionar barra de progresso mostrando distancia ate o recorde
+- Layout horizontal compacto
+- Destacar quando atingir/superar recorde com cor diferente
 
 ---
 
-## 1. Titulo do Card Plano Ativo
+## 2. Cards de Historico Colapsaveis
 
-**Antes**: "Plano Emagrecimento Intenso 4 Dias PPL"
-**Depois**: "Plano de Emagrecimento"
+### Comportamento Atual
+- Historico de Treinos: sempre aberto, mostrando 5 sessoes
+- Historico de Planos: sempre aberto com scroll interno
 
-### Logica
-- Extrair o `goal` do `plan_data` ou do `onboardingData`
-- Mapear para label portugues: `weight_loss` → "Emagrecimento", `hypertrophy` → "Hipertrofia", etc.
-- Formato final: `Plano de {Objetivo}`
-
-### Arquivo
-`src/components/dashboard/ActivePlanCard.tsx`
-
----
-
-## 2. Novas Metricas de Desempenho
-
-Substituir os 4 cards estaticos por metricas calculadas:
-
-| Metrica Atual | Nova Metrica |
-|---------------|--------------|
-| Planos Criados | **Treinos esta Semana** (ex: "3/4") |
-| Treinos/Semana | **Taxa de Conclusao** (ex: "85%") |
-| Treinos no Plano | **Intensidade Media** (RPE 1-10) |
-| Duracao/Sessao | **Tempo Ativo** (min totais na semana) |
-
-### Calculo das Metricas
+### Nova Proposta
+Usar componente `Collapsible` do Radix para ambos os cards:
 
 ```text
-1. Treinos Esta Semana
-   - Contar sessoes completadas nos ultimos 7 dias
-   - Comparar com weekly_frequency do plano ativo
-   - Exibir: "3/4" ou "100%" se atingiu meta
+Estado Fechado (padrao):
+┌─────────────────────────────────────┐
+│  📅 Historico de Treinos    [▼]     │
+└─────────────────────────────────────┘
 
-2. Taxa de Conclusao
-   - (completed_sets / total_sets) das ultimas sessoes
-   - Media ponderada das ultimas 4 sessoes
-   - Exibir: "92%"
-
-3. Intensidade Media (RPE)
-   - Media de perceived_effort das sessoes da semana
-   - Escala 1-10, exibir com indicador visual
-   - Exibir: "7.2" com cor (verde/amarelo/vermelho)
-
-4. Tempo Ativo
-   - Soma de duration_minutes das sessoes da semana
-   - Exibir: "127 min" ou "2h 07min"
+Estado Aberto:
+┌─────────────────────────────────────┐
+│  📅 Historico de Treinos    [▲]     │
+├─────────────────────────────────────┤
+│  ✓ Treino A - 2 dias atras          │
+│  ✓ Treino B - 4 dias atras          │
+│  ...                                │
+└─────────────────────────────────────┘
 ```
+
+### Implementacao
+1. Envolver o conteudo com `Collapsible`
+2. Adicionar icone de chevron no header
+3. Estado inicial: fechado (`defaultOpen={false}`)
+4. Animacao suave na abertura/fechamento
 
 ---
 
-## 3. Implementacao Tecnica
-
-### 3.1 Criar Hook `usePerformanceMetrics`
-
-```typescript
-// src/hooks/usePerformanceMetrics.ts
-export function usePerformanceMetrics(sessions: WorkoutSession[], weeklyGoal: number) {
-  return useMemo(() => {
-    const sevenDaysAgo = subDays(new Date(), 7);
-    const thisWeekSessions = sessions.filter(s => 
-      s.status === 'completed' && 
-      new Date(s.completed_at!) > sevenDaysAgo
-    );
-    
-    // Treinos esta semana
-    const workoutsThisWeek = thisWeekSessions.length;
-    
-    // Taxa de conclusao
-    const completionRate = thisWeekSessions.length > 0
-      ? thisWeekSessions.reduce((acc, s) => acc + (s.completed_sets / s.total_sets), 0) 
-        / thisWeekSessions.length * 100
-      : 0;
-    
-    // RPE medio
-    const sessionsWithRpe = thisWeekSessions.filter(s => s.perceived_effort);
-    const avgRpe = sessionsWithRpe.length > 0
-      ? sessionsWithRpe.reduce((acc, s) => acc + s.perceived_effort!, 0) / sessionsWithRpe.length
-      : null;
-    
-    // Tempo ativo
-    const totalMinutes = thisWeekSessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
-    
-    return {
-      workoutsThisWeek,
-      weeklyGoal,
-      completionRate: Math.round(completionRate),
-      avgRpe: avgRpe ? avgRpe.toFixed(1) : null,
-      totalMinutes,
-    };
-  }, [sessions, weeklyGoal]);
-}
-```
-
-### 3.2 Atualizar StatsCard
-
-Adicionar suporte para indicador de cor baseado em performance:
-
-```typescript
-interface StatsCardProps {
-  icon: ReactNode;
-  label: string;
-  value: string | number;
-  subtext?: string;
-  trend?: 'positive' | 'neutral' | 'negative'; // Nova prop
-}
-```
-
-### 3.3 Atualizar Dashboard.tsx
-
-- Importar novo hook
-- Calcular metricas a partir de `sessions`
-- Renderizar novo grid
-
-### 3.4 Atualizar ActivePlanCard.tsx
-
-- Receber `goal` como prop ou extrair de `plan_data`
-- Aplicar mapeamento para titulo limpo
-
----
-
-## 4. Arquivos a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/hooks/usePerformanceMetrics.ts` | **CRIAR** - novo hook |
-| `src/components/dashboard/ActivePlanCard.tsx` | Titulo com formato "Plano de {Objetivo}" |
-| `src/components/dashboard/StatsCard.tsx` | Adicionar prop `trend` para cores |
-| `src/pages/Dashboard.tsx` | Usar novo hook, atualizar grid |
+| `src/components/gamification/StreakCard.tsx` | Redesign com barra de progresso |
+| `src/components/dashboard/SessionHistoryCard.tsx` | Adicionar Collapsible |
+| `src/components/dashboard/WorkoutHistoryCard.tsx` | Adicionar Collapsible |
 
 ---
 
-## 5. UX das Novas Metricas
+## Detalhes Tecnicos
 
-### Treinos Esta Semana
-- Icone: `Calendar`
-- Valor: "3/4" ou checkmark se 100%
-- Subtexto: "esta semana"
+### StreakCard Redesenhado
+```typescript
+// Barra de progresso ate o recorde
+const progressToRecord = longestStreak > 0 
+  ? Math.min((currentStreak / longestStreak) * 100, 100) 
+  : 0;
 
-### Taxa de Conclusao
-- Icone: `Target`
-- Valor: "92%"
-- Cor: verde ≥80%, amarelo 60-79%, vermelho <60%
+return (
+  <Card>
+    <CardContent className="p-4">
+      <div className="flex items-center gap-3">
+        <Flame className="w-5 h-5 text-orange-500" />
+        <div className="flex-1">
+          <span className="font-bold text-lg">{currentStreak} dias</span>
+          <span className="text-muted-foreground text-sm ml-1">de sequencia</span>
+        </div>
+      </div>
+      {longestStreak > 0 && (
+        <div className="mt-2">
+          <Progress value={progressToRecord} className="h-1.5" />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>Progresso</span>
+            <span>Recorde: {longestStreak}</span>
+          </div>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
+```
 
-### Intensidade Media
-- Icone: `Flame` ou `Activity`
-- Valor: "7.2"
-- Subtexto: "RPE medio"
-- Cor: verde 6-8, amarelo 5 ou 9, vermelho <5 ou >9
+### Cards Colapsaveis
+```typescript
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
-### Tempo Ativo
-- Icone: `Timer`
-- Valor: "2h 07min"
-- Subtexto: "esta semana"
+<Collapsible defaultOpen={false}>
+  <Card>
+    <CollapsibleTrigger asChild>
+      <CardHeader className="cursor-pointer hover:bg-muted/50">
+        <div className="flex items-center justify-between">
+          <CardTitle>Historico de Treinos</CardTitle>
+          <ChevronDown className="w-4 h-4 transition-transform" />
+        </div>
+      </CardHeader>
+    </CollapsibleTrigger>
+    <CollapsibleContent>
+      <CardContent>...</CardContent>
+    </CollapsibleContent>
+  </Card>
+</Collapsible>
+```
 
 ---
 
-## 6. Fallbacks
+## Resultado Esperado
 
-- Sem sessoes na semana: mostrar "0" ou "-" com mensagem encorajadora
-- Sem RPE registrado: mostrar "-" com tooltip explicativo
-- Usuario novo: mostrar metricas zeradas sem erros
-
----
-
-## Impacto e Riscos
-
-**Baixo risco**: Todas as mudancas sao visuais e usam dados ja disponiveis.
-
-**Beneficios**:
-- Metricas acionaveis ao inves de estaticas
-- Feedback imediato sobre performance
-- Incentivo a manter assiduidade
+1. **StreakCard**: Mais limpo, com progresso visual ate o recorde
+2. **Historicos**: Dashboard menos poluido por padrao, usuario expande quando quiser ver detalhes
+3. **UX**: Informacoes principais visiveis, detalhes sob demanda
