@@ -40,16 +40,16 @@ const PageLoader = () => (
   </div>
 );
 
-// Page transition wrapper - simplified to avoid ref issues with lazy components
+// Page transition wrapper - Apple-style spring physics
 function PageTransition({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   
   return (
     <motion.div
       key={location.pathname}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="min-h-screen"
     >
       {children}

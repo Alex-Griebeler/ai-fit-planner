@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 
 interface RestTimerProps {
   initialSeconds: number;
@@ -13,16 +14,31 @@ export function RestTimer({ initialSeconds, onComplete, autoStart = false }: Res
   const [seconds, setSeconds] = useState(initialSeconds);
   const [isRunning, setIsRunning] = useState(autoStart);
   const [isComplete, setIsComplete] = useState(false);
+  const haptic = useHapticFeedback();
+  const hapticTriggeredRef = useRef<{ tenSec: boolean; complete: boolean }>({ tenSec: false, complete: false });
 
   const progress = ((initialSeconds - seconds) / initialSeconds) * 100;
 
   useEffect(() => {
     setSeconds(initialSeconds);
     setIsComplete(false);
+    hapticTriggeredRef.current = { tenSec: false, complete: false };
     if (autoStart) {
       setIsRunning(true);
     }
   }, [initialSeconds, autoStart]);
+
+  // Haptic feedback at key moments
+  useEffect(() => {
+    if (seconds === 10 && isRunning && !hapticTriggeredRef.current.tenSec) {
+      hapticTriggeredRef.current.tenSec = true;
+      haptic.trigger('warning'); // 10 seconds remaining
+    }
+    if (seconds === 0 && !hapticTriggeredRef.current.complete) {
+      hapticTriggeredRef.current.complete = true;
+      haptic.notification('success'); // Timer complete
+    }
+  }, [seconds, isRunning, haptic]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

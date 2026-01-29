@@ -15,6 +15,7 @@ import {
 } from '@/components/dashboard';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -40,6 +41,7 @@ export default function Dashboard() {
     deletePlan 
   } = useWorkoutPlans();
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
+  const haptic = useHapticFeedback();
 
   const handleSignOut = async () => {
     await signOut();
@@ -49,19 +51,24 @@ export default function Dashboard() {
   const handleDeletePlan = async (planId: string) => {
     try {
       await deletePlan(planId);
-      toast.success('Plano excluído com sucesso');
+      toast.success('Plano excluído com sucesso', { duration: 2000 });
     } catch {
-      toast.error('Erro ao excluir plano');
+      toast.error('Erro ao excluir plano', { duration: 4000 });
     }
   };
 
   const handleDeleteSession = async (sessionId: string) => {
     try {
       await deleteSession(sessionId);
-      toast.success('Treino excluído do histórico');
+      toast.success('Treino excluído do histórico', { duration: 2000 });
     } catch {
-      toast.error('Erro ao excluir treino');
+      toast.error('Erro ao excluir treino', { duration: 4000 });
     }
+  };
+
+  const handleNewPlan = () => {
+    haptic.impact();
+    navigate('/onboarding');
   };
 
   // Estatísticas
@@ -84,10 +91,10 @@ export default function Dashboard() {
         <div className="container max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
-            {activePlan && (
+          {activePlan && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="press-scale">
+                  <Button variant="outline" size="sm" className="h-10 press-scale">
                     <Plus className="w-4 h-4 mr-1" />
                     Novo Plano
                   </Button>
@@ -102,7 +109,7 @@ export default function Dashboard() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction 
-                      onClick={() => navigate('/onboarding')}
+                      onClick={handleNewPlan}
                       className="press-scale"
                     >
                       Continuar

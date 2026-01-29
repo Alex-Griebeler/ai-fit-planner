@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { startOfDay, differenceInDays, format } from 'date-fns';
 
 export interface UserStreak {
   id: string;
@@ -54,7 +55,9 @@ export function useStreak() {
     mutationFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const today = new Date().toISOString().split('T')[0];
+      // Use timezone-aware date calculation
+      const todayLocal = startOfDay(new Date());
+      const todayStr = format(todayLocal, 'yyyy-MM-dd');
       const currentStreak = streakQuery.data;
 
       if (!currentStreak) {
@@ -65,7 +68,7 @@ export function useStreak() {
             user_id: user.id,
             current_streak: 1,
             longest_streak: 1,
-            last_workout_date: today,
+            last_workout_date: todayStr,
           })
           .select()
           .single();
@@ -81,13 +84,13 @@ export function useStreak() {
       if (!lastWorkoutDate) {
         // First workout
         newCurrentStreak = 1;
-      } else if (lastWorkoutDate === today) {
+      } else if (lastWorkoutDate === todayStr) {
         // Already worked out today, no change
         return currentStreak;
       } else {
-        const lastDate = new Date(lastWorkoutDate);
-        const todayDate = new Date(today);
-        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        // Timezone-aware day difference calculation
+        const lastDate = startOfDay(new Date(lastWorkoutDate + 'T00:00:00'));
+        const diffDays = differenceInDays(todayLocal, lastDate);
 
         if (diffDays === 1) {
           // Consecutive day
@@ -108,7 +111,7 @@ export function useStreak() {
         .update({
           current_streak: newCurrentStreak,
           longest_streak: newLongestStreak,
-          last_workout_date: today,
+          last_workout_date: todayStr,
         })
         .eq('user_id', user.id)
         .select()

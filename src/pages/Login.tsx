@@ -3,18 +3,19 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Dumbbell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePasswordValidation } from '@/hooks/usePasswordValidation';
 import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
 import { TermsCheckbox } from '@/components/TermsCheckbox';
 import { toast } from 'sonner';
-import { Dumbbell } from 'lucide-react';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+  const haptic = useHapticFeedback();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,11 +44,12 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    haptic.impact();
     
     // Validate terms acceptance for signup
     if (!isLogin && !acceptedTerms) {
       setTermsError(true);
-      toast.error('Você precisa aceitar os Termos de Uso e a Política de Privacidade');
+      toast.error('Você precisa aceitar os Termos de Uso e a Política de Privacidade', { duration: 4000 });
       return;
     }
     
@@ -68,15 +70,16 @@ export default function Login() {
         } else if (error.message.toLowerCase().includes('email not confirmed')) {
           errorMessage = 'Confirme seu email antes de fazer login.';
         }
-        toast.error(errorMessage);
+        toast.error(errorMessage, { duration: 4000 });
       } else {
         if (!isLogin) {
-          toast.success('Conta criada com sucesso!');
+          haptic.notification('success');
+          toast.success('Conta criada com sucesso!', { duration: 2000 });
         }
         navigate(from, { replace: true });
       }
     } catch (err) {
-      toast.error('Erro ao processar autenticação');
+      toast.error('Erro ao processar autenticação', { duration: 4000 });
     } finally {
       setLoading(false);
     }
@@ -89,13 +92,13 @@ export default function Login() {
     try {
       const { error } = await resetPassword(email);
       if (error) {
-        toast.error(error.message);
+        toast.error(error.message, { duration: 4000 });
       } else {
         setResetSent(true);
-        toast.success('Email de recuperação enviado!');
+        toast.success('Email de recuperação enviado!', { duration: 3000 });
       }
     } catch (err) {
-      toast.error('Erro ao enviar email de recuperação');
+      toast.error('Erro ao enviar email de recuperação', { duration: 4000 });
     } finally {
       setLoading(false);
     }
@@ -105,7 +108,7 @@ export default function Login() {
     setLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error(error.message);
+      toast.error(error.message, { duration: 4000 });
       setLoading(false);
     }
     // OAuth will redirect, so we don't need to handle success here
