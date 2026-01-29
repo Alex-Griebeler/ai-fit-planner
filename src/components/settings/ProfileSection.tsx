@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Profile, ProfileUpdate } from '@/hooks/useProfile';
+import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { toast } from 'sonner';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Camera, Trash2 } from 'lucide-react';
 
 interface ProfileSectionProps {
   profile: Profile | null;
@@ -15,6 +17,9 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadAvatar, removeAvatar, isUploading } = useAvatarUpload();
+  
   const [formData, setFormData] = useState({
     name: '',
     gender: '' as 'female' | 'male' | 'other' | '',
@@ -22,6 +27,24 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
     height: '',
     weight: '',
   });
+
+  const initials = profile?.name
+    ?.split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U';
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadAvatar(file);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -56,6 +79,68 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
         <CardTitle className="text-lg">Dados Pessoais</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Avatar Upload */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative">
+            <Avatar className="w-24 h-24 bg-primary/10 text-primary">
+              {profile?.avatar_url && (
+                <AvatarImage 
+                  src={profile.avatar_url} 
+                  alt={profile.name}
+                  className="object-cover"
+                />
+              )}
+              <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              <Camera className="w-4 h-4 mr-1" />
+              {profile?.avatar_url ? 'Trocar Foto' : 'Adicionar Foto'}
+            </Button>
+            
+            {profile?.avatar_url && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={removeAvatar}
+                disabled={isUploading}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          
+          <p className="text-xs text-muted-foreground">
+            JPG, PNG ou GIF. Máx. 2MB.
+          </p>
+        </div>
+
         {/* Nome */}
         <div className="space-y-2">
           <Label htmlFor="name">Nome</Label>
