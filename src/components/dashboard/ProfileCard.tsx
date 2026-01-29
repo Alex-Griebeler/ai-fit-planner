@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Profile } from '@/hooks/useProfile';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -72,6 +72,13 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
           <Avatar className="w-16 h-16 bg-primary/10 text-primary">
+            {profile.avatar_url && (
+              <AvatarImage 
+                src={profile.avatar_url} 
+                alt={profile.name}
+                className="object-cover"
+              />
+            )}
             <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
               {initials}
             </AvatarFallback>
