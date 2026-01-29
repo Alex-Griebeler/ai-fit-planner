@@ -27,8 +27,10 @@ import {
   Sparkles,
   Info,
   Target,
-  Settings
+  Settings,
+  Download
 } from 'lucide-react';
+import { generateWorkoutPdf } from '@/lib/generateWorkoutPdf';
 import {
   Popover,
   PopoverContent,
@@ -888,14 +890,34 @@ export default function Result() {
                       })()}
                     </div>
                     
-                    {/* Quick Action - Start Workout */}
-                    <div className="px-5 pb-5">
+                    {/* Quick Actions - PDF + Start Workout */}
+                    <div className="px-5 pb-5 flex gap-2">
                       <Button
-                        variant="outline"
-                        className="w-full rounded-xl h-11"
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 w-11 shrink-0 rounded-xl"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/workout-preview?day=${encodeURIComponent(workout.day)}`);
+                          if (activePlan) {
+                            generateWorkoutPdf({
+                              planName: activePlan.plan_name,
+                              workout,
+                              createdAt: new Date(activePlan.created_at),
+                            });
+                            toast.success('PDF baixado!', { duration: 2000 });
+                          }
+                        }}
+                        aria-label="Baixar treino em PDF"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-xl h-11"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/workout?day=${encodeURIComponent(workout.day)}`, {
+                            state: { startWorkout: true }
+                          });
                         }}
                       >
                         <Flame className="w-4 h-4 mr-2" />
