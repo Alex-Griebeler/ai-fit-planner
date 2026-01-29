@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Flame, Trophy, AlertTriangle } from 'lucide-react';
+import { Flame, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useStreak } from '@/hooks/useStreak';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -78,17 +78,7 @@ export function StreakCard({ compact = false }: StreakCardProps) {
                   className="flex items-center gap-1 text-xs font-medium text-yellow-600 dark:text-yellow-500"
                 >
                   <Trophy className="h-3 w-3" />
-                  Recorde!
-                </motion.div>
-              )}
-              {isStreakAtRisk && currentStreak > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-500"
-                >
-                  <AlertTriangle className="h-3 w-3" />
-                  Treine hoje!
+                  Novo recorde!
                 </motion.div>
               )}
             </div>
