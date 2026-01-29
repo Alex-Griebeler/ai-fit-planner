@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
+import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
@@ -31,6 +32,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+const goalLabels: Record<string, string> = {
+  weight_loss: 'Emagrecimento',
+  hypertrophy: 'Hipertrofia',
+  health: 'Saúde',
+  performance: 'Performance',
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -44,6 +52,9 @@ export default function Dashboard() {
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
   const performanceStats = usePerformanceStats();
   const haptic = useHapticFeedback();
+  const { onboardingData } = useOnboardingData();
+
+  const userGoal = goalLabels[onboardingData?.goal || ''] || null;
 
   const handleSignOut = async () => {
     await signOut();
@@ -145,13 +156,24 @@ export default function Dashboard() {
           <MotivationalMessage userName={profile?.name} />
         </motion.div>
 
-        {/* Active Plan - HERO Card (moved up) */}
+        {/* Weekly Progress - moved up, without title */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.08 }}
+        >
+          <Card className="p-4">
+            <WeeklyProgress showTitle={false} />
+          </Card>
+        </motion.div>
+
+        {/* Active Plan - HERO Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
+          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} goal={userGoal} />
         </motion.div>
 
         {/* Streak Card - Now with progress bar and CTA */}
@@ -200,17 +222,6 @@ export default function Dashboard() {
             trend={performanceStats.completionRateTrend}
             trendLabel="%"
           />
-        </motion.div>
-
-        {/* Weekly Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.18 }}
-        >
-          <Card className="p-4">
-            <WeeklyProgress />
-          </Card>
         </motion.div>
 
         {/* Session History */}

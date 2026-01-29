@@ -51,7 +51,7 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
     );
   }
 
-  const recentSessions = sessions.slice(0, 5);
+  const recentSessions = sessions.slice(0, 3);
 
   if (recentSessions.length === 0) {
     return (
