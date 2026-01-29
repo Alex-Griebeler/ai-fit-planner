@@ -662,44 +662,6 @@ export default function Result() {
 
       <div className="container max-w-xl mx-auto px-6 pb-12">
 
-        {/* Plan Stats - 3 columns minimal */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-4 mb-8"
-        >
-          <div className="text-center">
-            <Calendar className="w-5 h-5 mx-auto mb-2 text-primary" />
-            <p className="text-xl font-semibold text-foreground">{plan.weeklyFrequency}x</p>
-            <p className="text-xs text-muted-foreground">semana</p>
-          </div>
-          <div className="text-center">
-            <Clock className="w-5 h-5 mx-auto mb-2 text-primary" />
-            <p className="text-xl font-semibold text-foreground">{plan.sessionDuration}</p>
-            <p className="text-xs text-muted-foreground">sessão</p>
-          </div>
-          <div className="text-center">
-            <Target className="w-5 h-5 mx-auto mb-2 text-primary" />
-            <p className="text-xl font-semibold text-foreground">
-              {(() => {
-                const displayGoal = data?.goal 
-                  || (activePlan?.plan_data as Record<string, unknown>)?.goal as string
-                  || savedOnboardingData?.goal 
-                  || 'Geral';
-                const goalLabels: Record<string, string> = {
-                  weight_loss: 'Emagrecimento',
-                  hypertrophy: 'Hipertrofia',
-                  health: 'Saúde',
-                  performance: 'Performance',
-                };
-                return goalLabels[displayGoal] || displayGoal;
-              })()}
-            </p>
-            <p className="text-xs text-muted-foreground">objetivo</p>
-          </div>
-        </motion.div>
-
         {/* Workouts - Ultra-minimal Apple style with smart reordering */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
