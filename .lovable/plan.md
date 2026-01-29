@@ -1,129 +1,151 @@
 
 
-# Plano: Corrigir Bug de Sessões Duplicadas/Abandonadas
+# Plano: Corrigir Sistema de Sugestão de Treinos
 
-## Problema Identificado
+## Diagnóstico
 
-Após completar um treino corretamente (com parabéns, nota de intensidade, etc.), uma **nova sessão é criada automaticamente** menos de 1 segundo depois. Isso acontece porque:
+O sistema de sugestão de treinos **não está funcionando** devido a uma incompatibilidade de formatos:
 
-1. O `useEffect` em `WorkoutExecution.tsx` cria uma nova sessão quando `!currentSession`
-2. Após completar o treino, `currentSession` fica `null` 
-3. Se houver qualquer re-renderização ou navegação para `/workout`, uma nova sessão é criada
-4. A nova sessão fica com status `in_progress` (aparece como "abandonada" se não completada)
+| Fonte de Dados | Formato | Exemplo |
+|----------------|---------|---------|
+| `user_onboarding_data.training_days` | Código inglês | `['mon', 'wed', 'fri']` |
+| `workout_plans.workouts[].day` | Português | `"Segunda"`, `"Terça-feira"` |
+| `workout_sessions.workout_day` | Português | `"Segunda"` (copiado do plano) |
+| `workoutScheduler.ts` (esperado) | Código inglês | `'mon'`, `'tue'` |
 
-### Evidência no Banco de Dados
+### Resultado
 
-```text
-Sessão 1: 22:54:28 → 22:54:43 (completed ✅, RPE: 4)
-Sessão 2: 22:54:44 (in_progress ❌, criada 0.89s depois!)
-```
+- O scheduler compara `"segunda" === "mon"` → **sempre falso**
+- Treinos completados nunca são reconhecidos
+- A sugestão sempre mostra o primeiro treino (índice 0)
 
-## Correções Propostas
+---
 
-### Correção 1: Evitar Criação Duplicada de Sessões
+## Solução
 
-**Arquivo**: `src/hooks/useWorkoutSessions.ts`
+Adicionar uma função de normalização no `workoutScheduler.ts` que converte nomes de dias em português para códigos de dia.
 
-Adicionar verificação para não criar sessão se uma foi completada recentemente (últimos 30 segundos):
-
-```typescript
-// No startMutation, adicionar verificação:
-const recentlyCompleted = await supabase
-  .from('workout_sessions')
-  .select('completed_at')
-  .eq('user_id', user.id)
-  .eq('status', 'completed')
-  .gte('completed_at', new Date(Date.now() - 30000).toISOString())
-  .maybeSingle();
-
-if (recentlyCompleted.data) {
-  throw new Error('Session recently completed');
-}
-```
-
-### Correção 2: Melhorar Guard no useEffect
-
-**Arquivo**: `src/pages/WorkoutExecution.tsx`
-
-Adicionar flag para evitar re-criação após montar:
-
-```typescript
-const [sessionInitialized, setSessionInitialized] = useState(false);
-
-useEffect(() => {
-  if (workout && activePlan && !currentSession && !sessionInitialized) {
-    setSessionInitialized(true);
-    startSession({...}).catch(console.error);
-  }
-}, [workout, activePlan, currentSession, sessionInitialized, startSession]);
-```
-
-### Correção 3: Limpar Sessão Atual Após Completar
-
-**Arquivo**: `src/hooks/useWorkoutSessions.ts`
-
-Invalidar a query de `currentSession` imediatamente após completar:
-
-```typescript
-// No completeMutation.onSuccess:
-onSuccess: () => {
-  queryClient.setQueryData(['workout-sessions', user?.id, 'current'], null);
-  queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
-},
-```
-
-### Correção 4: Verificar Status ao Montar WorkoutExecution
-
-**Arquivo**: `src/pages/WorkoutExecution.tsx`
-
-Adicionar verificação de URL/state para saber se deve criar sessão:
-
-```typescript
-// Verificar se veio de navegação intencional vs refresh
-const location = useLocation();
-const isIntentionalStart = location.state?.startWorkout === true;
-
-useEffect(() => {
-  if (workout && activePlan && !currentSession && isIntentionalStart) {
-    startSession({...});
-  }
-}, [...]);
-```
-
-E modificar o botão "Iniciar Treino" em WorkoutPreview:
-
-```typescript
-navigate(`/workout?day=${...}`, { state: { startWorkout: true } });
-```
-
-## Arquivos a Modificar
+### Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useWorkoutSessions.ts` | Adicionar proteção contra duplicatas e limpar cache |
-| `src/pages/WorkoutExecution.tsx` | Melhorar lógica de inicialização de sessão |
-| `src/pages/WorkoutPreview.tsx` | Passar state na navegação |
+| `src/lib/workoutScheduler.ts` | Adicionar `normalizeDayCode()` e atualizar lógica |
 
-## Impacto e Mitigação
+---
+
+## Implementação Técnica
+
+### 1. Criar Função de Normalização
+
+```typescript
+// Nova função para converter PT → código
+const DAY_NAME_TO_CODE: Record<string, DayCode> = {
+  // Formato curto
+  'domingo': 'sun',
+  'segunda': 'mon',
+  'terça': 'tue',
+  'terca': 'tue',
+  'quarta': 'wed',
+  'quinta': 'thu',
+  'sexta': 'fri',
+  'sábado': 'sat',
+  'sabado': 'sat',
+  // Formato completo
+  'segunda-feira': 'mon',
+  'terça-feira': 'tue',
+  'terca-feira': 'tue',
+  'quarta-feira': 'wed',
+  'quinta-feira': 'thu',
+  'sexta-feira': 'fri',
+  // Já é código
+  'sun': 'sun',
+  'mon': 'mon',
+  'tue': 'tue',
+  'wed': 'wed',
+  'thu': 'thu',
+  'fri': 'fri',
+  'sat': 'sat',
+};
+
+export function normalizeDayCode(day: string): DayCode | null {
+  const normalized = day.toLowerCase().trim();
+  return DAY_NAME_TO_CODE[normalized] || null;
+}
+```
+
+### 2. Atualizar `getWeeklySchedule()`
+
+Modificar a linha 140 para usar a normalização:
+
+```typescript
+// ANTES (linha 140):
+const dayCode = session.workout_day.toLowerCase() as DayCode;
+
+// DEPOIS:
+const dayCode = normalizeDayCode(session.workout_day);
+if (!dayCode) return; // Pular sessões com dia inválido
+```
+
+### 3. Atualizar Mapeamento Treino → Dia
+
+O mapeamento atual assume que o índice do treino corresponde ao índice do dia no onboarding. Precisamos também mapear o dia do **treino do plano** para o código correto:
+
+```typescript
+// Mapear treinos para dias baseado no dia no PLANO
+workouts.forEach((workout, idx) => {
+  const workoutDayCode = normalizeDayCode(workout.day);
+  if (workoutDayCode && sortedDays.includes(workoutDayCode)) {
+    workoutToDayMap.set(idx, workoutDayCode);
+  }
+});
+```
+
+---
+
+## Fluxo Corrigido
+
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│                    FLUXO CORRIGIDO                               │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Sessão Salva          Normalização           Matching           │
+│  ────────────          ────────────           ────────           │
+│  workout_day:     →    normalizeDayCode()  →   === sortedDays   │
+│  "Segunda"             → "mon"                  ['mon'] ✓       │
+│                                                                  │
+│  Resultado: Treino reconhecido como completado!                 │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Testes Necessários
+
+1. **Sessão existente com `workout_day: "Segunda"`**
+   - Deve ser reconhecida como completada se `training_days` inclui `'mon'`
+   
+2. **Novo treino iniciado em dia de treino**
+   - Deve aparecer como sugerido com badge "✨ Sugerido"
+   
+3. **Treino perdido (dia anterior)**
+   - Deve aparecer como sugerido com reason "Treino de Segunda-feira ainda não realizado"
+
+4. **Semana completa**
+   - Nenhum treino deve ter badge de sugestão
+
+---
+
+## Impacto e Riscos
 
 ### Baixo Risco
-- Mudanças são defensivas (adicionam verificações)
-- Não alteram fluxo principal de dados
-- Compatíveis com sessões existentes
+- Mudança é puramente de normalização/tradução
+- Não altera estrutura de dados
+- Compatível com sessões existentes
 
-### Testes Necessários
-1. Iniciar treino → Completar → Verificar histórico
-2. Iniciar treino → Fechar app → Reabrir → Verificar se retoma
-3. Completar treino → Navegar para /workout → Verificar que não cria nova sessão
-
-## Limpeza de Dados Recomendada
-
-Executar query para limpar sessões órfãs (in_progress antigas):
-
-```sql
-UPDATE workout_sessions 
-SET status = 'abandoned' 
-WHERE status = 'in_progress' 
-AND started_at < NOW() - INTERVAL '2 hours';
-```
+### Benefícios Imediatos
+- Sistema de sugestão passa a funcionar corretamente
+- Badge "✨ Sugerido" aparece no treino certo
+- Histórico de treinos é considerado na sugestão
 
