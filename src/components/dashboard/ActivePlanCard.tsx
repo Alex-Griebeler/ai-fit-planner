@@ -103,6 +103,8 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
             </Badge>
             <CardTitle className="text-xl">
               {plan.plan_name
+                .replace(/\s*\d+\s*dias?\s*/gi, ' ')
+                .replace(/\s*(emagrecimento|hipertrofia|força|resistência|intenso|moderado)\s*/gi, ' ')
                 .replace(/\s+(ULPPL|PPL|ABC|ABCD|ABCDE|Full Body|Upper|Lower)\s*/gi, ' ')
                 .replace(/\s+/g, ' ')
                 .trim()}

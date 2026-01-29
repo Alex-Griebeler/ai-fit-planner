@@ -15,8 +15,9 @@ import {
 } from '@/components/dashboard';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { usePerformanceStats } from '@/hooks/usePerformanceStats';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
+import { Plus, LogOut, Dumbbell, Clock, CheckCircle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ export default function Dashboard() {
     deletePlan 
   } = useWorkoutPlans();
   const { sessions, isLoading: sessionsLoading, deleteSession } = useWorkoutSessions();
+  const performanceStats = usePerformanceStats();
   const haptic = useHapticFeedback();
 
   const handleSignOut = async () => {
@@ -70,14 +72,6 @@ export default function Dashboard() {
     haptic.impact();
     navigate('/onboarding');
   };
-
-  // Estatísticas
-  const totalPlans = plans.length;
-  const totalWorkouts = plans.reduce((acc, plan) => {
-    const planData = plan.plan_data as { workouts?: unknown[] };
-    return acc + (planData?.workouts?.length ?? 0);
-  }, 0);
-  const weeklyFrequency = activePlan?.weekly_frequency ?? 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,8 +126,8 @@ export default function Dashboard() {
       </header>
 
       {/* Content */}
-      <main id="main-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-6">
-        {/* Profile Section */}
+      <main id="main-content" className="container max-w-4xl mx-auto px-4 py-6 pb-24 space-y-4">
+        {/* Profile Section - More compact */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,69 +145,79 @@ export default function Dashboard() {
           <MotivationalMessage userName={profile?.name} />
         </motion.div>
 
-        {/* Streak Card */}
+        {/* Active Plan - HERO Card (moved up) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
+          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
+        </motion.div>
+
+        {/* Streak Card - Now with progress bar and CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
           <StreakCard />
+        </motion.div>
+
+        {/* Performance Stats Grid - NEW */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className="grid grid-cols-2 gap-3"
+        >
+          <StatsCard
+            icon={<Dumbbell className="w-5 h-5" />}
+            label="Treinos esta semana"
+            value={`${performanceStats.weeklyCompleted}/${performanceStats.weeklyTarget}`}
+            subtext={performanceStats.weeklyCompleted >= performanceStats.weeklyTarget ? 'Meta atingida! 🎉' : `Faltam ${performanceStats.weeklyTarget - performanceStats.weeklyCompleted}`}
+            trend={performanceStats.weeklyTrend}
+            trendLabel=" vs semana passada"
+          />
+          <StatsCard
+            icon={<Clock className="w-5 h-5" />}
+            label="Minutos este mês"
+            value={performanceStats.monthlyMinutes}
+            subtext="de treino"
+            trend={performanceStats.monthlyMinutesTrend}
+            trendLabel="min"
+          />
+          <StatsCard
+            icon={<Trophy className="w-5 h-5" />}
+            label="Sessões completas"
+            value={performanceStats.totalSessions}
+            subtext="nos últimos 30 dias"
+          />
+          <StatsCard
+            icon={<CheckCircle className="w-5 h-5" />}
+            label="Taxa de conclusão"
+            value={`${performanceStats.completionRate}%`}
+            subtext="séries completadas"
+            trend={performanceStats.completionRateTrend}
+            trendLabel="%"
+          />
         </motion.div>
 
         {/* Weekly Progress */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.12 }}
+          transition={{ duration: 0.3, delay: 0.18 }}
         >
           <Card className="p-4">
             <WeeklyProgress />
           </Card>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3"
-        >
-          <StatsCard
-            icon={<Dumbbell className="w-5 h-5" />}
-            label="Total de Planos"
-            value={totalPlans}
-          />
-          <StatsCard
-            icon={<Calendar className="w-5 h-5" />}
-            label="Treinos/Semana"
-            value={weeklyFrequency > 0 ? `${weeklyFrequency}x` : '-'}
-          />
-          <StatsCard
-            icon={<Target className="w-5 h-5" />}
-            label="Treinos Criados"
-            value={totalWorkouts}
-          />
-          <StatsCard
-            icon={<TrendingUp className="w-5 h-5" />}
-            label="Duração"
-            value={activePlan?.session_duration ?? '-'}
-          />
-        </motion.div>
-
-        {/* Active Plan */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
-        </motion.div>
-
         {/* Session History */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
         >
           <SessionHistoryCard 
             sessions={sessions || []} 
@@ -226,7 +230,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.35 }}
+          transition={{ duration: 0.3, delay: 0.22 }}
         >
           <ProgressPreviewCard />
         </motion.div>
@@ -235,7 +239,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
+          transition={{ duration: 0.3, delay: 0.24 }}
         >
           <WorkoutHistoryCard 
             plans={plans} 
