@@ -36,6 +36,30 @@ export function useSubscription(): UseSubscriptionReturn {
       setIsLoading(true);
       setError(null);
 
+      // First check local database for subscription status
+      const { data: dbSubscription, error: dbError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single();
+
+      if (dbSubscription && dbSubscription.plan_type === 'premium') {
+        // User has premium in database, check if still valid
+        const isValid = !dbSubscription.current_period_end || 
+          new Date(dbSubscription.current_period_end) > new Date();
+        
+        if (isValid) {
+          setSubscription({
+            subscribed: true,
+            productId: dbSubscription.stripe_subscription_id,
+            subscriptionEnd: dbSubscription.current_period_end,
+          });
+          return;
+        }
+      }
+
+      // Fallback to Stripe check via edge function
       const { data, error: fnError } = await supabase.functions.invoke('check-subscription');
 
       if (fnError) {
