@@ -642,12 +642,9 @@ export default function Result() {
               <ChevronLeft className="w-5 h-5 text-muted-foreground" />
             </button>
             <div className="text-left">
-              <h1 className="text-2xl font-display font-semibold text-foreground mb-1">
-                Seu Plano Personalizado
+              <h1 className="text-xl font-display font-semibold text-foreground mb-1">
+                {userName}, aqui está o seu plano personalizado
               </h1>
-              <p className="text-muted-foreground text-sm">
-                {userName}
-              </p>
             </div>
           </div>
           <button
