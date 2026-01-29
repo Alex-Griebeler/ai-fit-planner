@@ -31,23 +31,23 @@ export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHi
   if (isLoading) {
     return (
       <Card className="bg-card border-border">
-        <CardHeader className="pb-3">
+        <CardHeader className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <Skeleton className="w-5 h-5 rounded" />
-            <Skeleton className="h-5 w-40" />
+            <Skeleton className="w-4 h-4 rounded" />
+            <Skeleton className="h-4 w-32" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
+        <CardContent className="px-4 pb-4 pt-0 space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-28" />
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-14" />
+                  <Skeleton className="h-2 w-16" />
                 </div>
               </div>
-              <Skeleton className="h-8 w-8 rounded-md" />
+              <Skeleton className="h-7 w-7 rounded-md" />
             </div>
           ))}
         </CardContent>
@@ -57,20 +57,20 @@ export function WorkoutHistoryCard({ plans, isLoading, onDeletePlan }: WorkoutHi
 
   return (
     <Card className="bg-card border-border">
-      <CardHeader className="pb-3">
+      <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <History className="w-5 h-5 text-primary" />
-          <CardTitle className="text-lg">Histórico de Planos</CardTitle>
+          <History className="w-4 h-4 text-primary" />
+          <CardTitle className="text-base">Histórico de Planos</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 pb-4 pt-0">
         {inactivePlans.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <History className="w-10 h-10 mx-auto mb-2 opacity-50" />
+          <div className="text-center py-4 text-muted-foreground">
+            <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nenhum plano anterior</p>
           </div>
         ) : (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-[200px] pr-4">
             <div className="space-y-3">
               {inactivePlans.map((plan) => (
                 <div

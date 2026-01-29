@@ -29,21 +29,21 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
             Histórico de Treinos
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-24" />
+        <CardContent className="px-4 pb-4 pt-0 space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-2 w-20" />
               </div>
-              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-5 w-14" />
             </div>
           ))}
         </CardContent>
@@ -56,17 +56,16 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
   if (recentSessions.length === 0) {
     return (
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
             Histórico de Treinos
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-6 text-muted-foreground">
-            <Dumbbell className="w-10 h-10 mx-auto mb-2 opacity-50" />
-            <p>Nenhum treino registrado ainda</p>
-            <p className="text-sm">Comece seu primeiro treino!</p>
+        <CardContent className="px-4 pb-4 pt-0">
+          <div className="text-center py-4 text-muted-foreground">
+            <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Nenhum treino registrado</p>
           </div>
         </CardContent>
       </Card>
@@ -75,13 +74,13 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-primary" />
+      <CardHeader className="py-3 px-4">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-primary" />
           Histórico de Treinos
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="px-4 pb-4 pt-0 space-y-2">
         {recentSessions.map((session, index) => (
           <motion.div
             key={session.id}

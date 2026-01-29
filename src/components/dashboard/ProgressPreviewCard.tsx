@@ -8,16 +8,16 @@ export function ProgressPreviewCard() {
 
   return (
     <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 overflow-hidden">
-      <CardContent className="p-5">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-primary" />
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Seu Progresso</h3>
-              <p className="text-sm text-muted-foreground">
-                Veja estatísticas e recordes pessoais
+              <h3 className="font-medium text-sm text-foreground">Seu Progresso</h3>
+              <p className="text-xs text-muted-foreground">
+                Estatísticas e recordes
               </p>
             </div>
           </div>
@@ -25,9 +25,9 @@ export function ProgressPreviewCard() {
             variant="ghost" 
             size="icon"
             onClick={() => navigate('/progress')}
-            className="text-primary hover:bg-primary/10"
+            className="text-primary hover:bg-primary/10 h-8 w-8"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </CardContent>
