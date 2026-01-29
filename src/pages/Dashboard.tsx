@@ -15,8 +15,9 @@ import {
 } from '@/components/dashboard';
 import { StreakCard, MotivationalMessage, WeeklyProgress } from '@/components/gamification';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { usePerformanceMetrics, formatActiveTime } from '@/hooks/usePerformanceMetrics';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { Plus, LogOut, Dumbbell, Calendar, Target, TrendingUp } from 'lucide-react';
+import { Plus, LogOut, Calendar, Target, Flame, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -71,13 +72,9 @@ export default function Dashboard() {
     navigate('/onboarding');
   };
 
-  // Estatísticas
-  const totalPlans = plans.length;
-  const totalWorkouts = plans.reduce((acc, plan) => {
-    const planData = plan.plan_data as { workouts?: unknown[] };
-    return acc + (planData?.workouts?.length ?? 0);
-  }, 0);
-  const weeklyFrequency = activePlan?.weekly_frequency ?? 0;
+  // Performance metrics from sessions
+  const weeklyGoal = activePlan?.weekly_frequency ?? 0;
+  const metrics = usePerformanceMetrics(sessions, weeklyGoal);
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,7 +177,7 @@ export default function Dashboard() {
           <ActivePlanCard plan={activePlan ?? null} isLoading={plansLoading} />
         </motion.div>
 
-        {/* Stats Grid - Below Active Plan */}
+        {/* Performance Metrics Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -188,24 +185,30 @@ export default function Dashboard() {
           className="grid grid-cols-2 md:grid-cols-4 gap-3"
         >
           <StatsCard
-            icon={<Dumbbell className="w-5 h-5" />}
-            label="Planos Criados"
-            value={totalPlans}
-          />
-          <StatsCard
             icon={<Calendar className="w-5 h-5" />}
-            label="Treinos/Semana"
-            value={weeklyFrequency > 0 ? `${weeklyFrequency}x` : '-'}
+            label="Treinos"
+            value={weeklyGoal > 0 ? `${metrics.workoutsThisWeek}/${weeklyGoal}` : metrics.workoutsThisWeek}
+            subtext="esta semana"
           />
           <StatsCard
             icon={<Target className="w-5 h-5" />}
-            label="Treinos no Plano"
-            value={totalWorkouts}
+            label="Conclusão"
+            value={metrics.completionRate > 0 ? `${metrics.completionRate}%` : '-'}
+            subtext="séries completadas"
+            trend={metrics.completionRate > 0 ? metrics.completionTrend : undefined}
           />
           <StatsCard
-            icon={<TrendingUp className="w-5 h-5" />}
-            label="Duração/Sessão"
-            value={activePlan?.session_duration ?? '-'}
+            icon={<Flame className="w-5 h-5" />}
+            label="Intensidade"
+            value={metrics.avgRpe ?? '-'}
+            subtext="RPE médio"
+            trend={metrics.avgRpe ? metrics.rpeTrend : undefined}
+          />
+          <StatsCard
+            icon={<Timer className="w-5 h-5" />}
+            label="Tempo Ativo"
+            value={formatActiveTime(metrics.totalMinutes)}
+            subtext="esta semana"
           />
         </motion.div>
 
