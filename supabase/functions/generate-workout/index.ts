@@ -420,6 +420,280 @@ function reorderWorkoutsByDayStructure(workouts: any[], dayStructure: string[]):
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          REORDER EXERCISES WITHIN WORKOUT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Hierarquia de grupos musculares para ordenação
+ * Grandes grupos vêm primeiro, Core e Panturrilhas por último
+ */
+const MUSCLE_GROUP_PRIORITY: Record<string, number> = {
+  // Grandes grupos (prioridade máxima) - 1-10
+  'costas': 1,
+  'back': 1,
+  'peitoral': 2,
+  'peito': 2,
+  'chest': 2,
+  'quadríceps': 3,
+  'quadriceps': 3,
+  'quads': 3,
+  'posteriores': 4,
+  'isquiotibiais': 4,
+  'hamstrings': 4,
+  'glúteos': 5,
+  'gluteos': 5,
+  'glutes': 5,
+  
+  // Grupos médios - 10-20
+  'ombros': 10,
+  'ombro': 10,
+  'shoulders': 10,
+  'deltóides': 10,
+  'deltoides': 10,
+  'cintura escapular': 12,
+  'scapular_belt': 12,
+  
+  // Grupos pequenos - 20-30
+  'bíceps': 20,
+  'biceps': 20,
+  'tríceps': 21,
+  'triceps': 21,
+  
+  // Sempre no final - 90+
+  'panturrilhas': 90,
+  'panturrilha': 90,
+  'calves': 90,
+  'core': 95,
+  'abdômen': 95,
+  'abdomen': 95,
+  'abs': 95,
+  'lombar': 96,
+};
+
+/**
+ * Mapeamento de áreas do onboarding para grupos musculares
+ */
+const BODY_AREA_TO_MUSCLE_GROUPS: Record<string, string[]> = {
+  'peitoral': ['peitoral', 'peito', 'chest'],
+  'peito': ['peitoral', 'peito', 'chest'],
+  'costas': ['costas', 'back'],
+  'ombros': ['ombros', 'shoulders', 'deltóides'],
+  'braços': ['bíceps', 'tríceps', 'biceps', 'triceps'],
+  'biceps': ['bíceps', 'biceps'],
+  'triceps': ['tríceps', 'triceps'],
+  'abdômen': ['core', 'abdômen', 'abs'],
+  'abdomen': ['core', 'abdômen', 'abs'],
+  'core': ['core', 'abdômen', 'abs'],
+  'glúteos': ['glúteos', 'glutes'],
+  'gluteos': ['glúteos', 'glutes'],
+  'quadríceps': ['quadríceps', 'quadriceps', 'quads'],
+  'quadriceps': ['quadríceps', 'quadriceps', 'quads'],
+  'coxas': ['quadríceps', 'quadriceps', 'quads', 'posteriores', 'hamstrings'],
+  'pernas': ['quadríceps', 'quadriceps', 'glúteos', 'posteriores', 'panturrilhas'],
+  'posteriores': ['posteriores', 'isquiotibiais', 'hamstrings'],
+  'panturrilhas': ['panturrilhas', 'calves'],
+};
+
+/**
+ * Infere o grupo muscular de um exercício pelo nome
+ */
+function inferMuscleGroup(exerciseName: string): string {
+  const name = exerciseName.toLowerCase();
+  
+  // Costas
+  if (name.includes('remada') || name.includes('puxada') || name.includes('pulldown') || 
+      name.includes('pull-up') || name.includes('barra fixa') || name.includes('pull up') ||
+      name.includes('serrote') || name.includes('row') || name.includes('lat ') ||
+      name.includes('dorsal') || name.includes('pulley costas')) {
+    return 'costas';
+  }
+  
+  // Peitoral
+  if ((name.includes('supino') || (name.includes('press') && !name.includes('leg press'))) ||
+      name.includes('flexão') || name.includes('peck') || name.includes('fly') ||
+      name.includes('crucifixo') || name.includes('voador') || name.includes('crossover')) {
+    return 'peitoral';
+  }
+  
+  // Ombros
+  if (name.includes('desenvolvimento') || name.includes('desenv') || name.includes('elevação lateral') ||
+      name.includes('elevação frontal') || name.includes('ombro') || name.includes('shoulder') ||
+      name.includes('deltóide') || name.includes('militar') || name.includes('arnold')) {
+    return 'ombros';
+  }
+  
+  // Bíceps
+  if ((name.includes('rosca') && !name.includes('rosca punho')) ||
+      name.includes('biceps') || name.includes('bíceps') || name.includes('curl') ||
+      name.includes('scott') || name.includes('martelo')) {
+    return 'bíceps';
+  }
+  
+  // Tríceps
+  if (name.includes('tríceps') || name.includes('triceps') || name.includes('paralela') ||
+      name.includes('testa') || name.includes('francês') || name.includes('francesa') || 
+      name.includes('pushdown') || name.includes('extensão de tríceps') || name.includes('coice')) {
+    return 'tríceps';
+  }
+  
+  // Quadríceps
+  if (name.includes('agachamento') || name.includes('leg press') || name.includes('extensora') ||
+      name.includes('hack') || name.includes('squat') || name.includes('avanço') ||
+      name.includes('passada') || name.includes('búlgaro') || name.includes('afundo')) {
+    return 'quadríceps';
+  }
+  
+  // Posteriores
+  if (name.includes('flexora') || name.includes('stiff') || name.includes('romeno') ||
+      name.includes('hamstring') || name.includes('posterior') || name.includes('leg curl') ||
+      name.includes('mesa flexora')) {
+    return 'posteriores';
+  }
+  
+  // Glúteos
+  if (name.includes('glúteo') || name.includes('gluteo') || name.includes('hip thrust') ||
+      name.includes('elevação pélvica') || name.includes('abdução') || name.includes('glute')) {
+    return 'glúteos';
+  }
+  
+  // Panturrilhas
+  if (name.includes('panturrilha') || name.includes('gêmeos') || name.includes('calf') ||
+      name.includes('sóleo') || name.includes('elevação de calcanhar')) {
+    return 'panturrilhas';
+  }
+  
+  // Core
+  if (name.includes('abdominal') || name.includes('abd.') || name.includes('prancha') || 
+      name.includes('crunch') || name.includes('oblíquo') || name.includes('plank') || 
+      name.includes('core') || name.includes('lombar') || name.includes('hiperextensão')) {
+    return 'core';
+  }
+  
+  // Cintura Escapular
+  if (name.includes('face pull') || name.includes('rotação externa') ||
+      name.includes('encolhimento') || name.includes('shrug') || name.includes('escapular') ||
+      name.includes('manguito') || name.includes('crucifixo inverso')) {
+    return 'cintura escapular';
+  }
+  
+  return 'outros';
+}
+
+/**
+ * Verifica se um grupo muscular é prioritário para o usuário
+ */
+function isPriorityGroup(muscleGroup: string, userPriorities: string[]): boolean {
+  if (!userPriorities || userPriorities.length === 0) return false;
+  
+  const normalizedGroup = muscleGroup.toLowerCase();
+  
+  for (const priority of userPriorities) {
+    const normalizedPriority = priority.toLowerCase();
+    const mappedGroups = BODY_AREA_TO_MUSCLE_GROUPS[normalizedPriority] || [normalizedPriority];
+    
+    if (mappedGroups.some(g => g.toLowerCase() === normalizedGroup)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+interface ExerciseForReorder {
+  name: string;
+  muscleGroup?: string;
+  isCompound?: boolean;
+  [key: string]: any;
+}
+
+/**
+ * Reordena os exercícios dentro de um treino seguindo as regras:
+ * 1. Grupos prioritários do usuário vêm primeiro
+ * 2. Grandes grupos (Costas, Peito, Pernas) antes de grupos menores
+ * 3. Exercícios do mesmo grupo muscular são agrupados
+ * 4. Dentro de um grupo: compostos antes de isoladores
+ * 5. Core e Panturrilhas sempre no final
+ */
+function reorderExercisesWithinWorkout(
+  exercises: ExerciseForReorder[],
+  userPriorities: string[]
+): ExerciseForReorder[] {
+  if (!exercises || exercises.length === 0) return exercises;
+  
+  console.log(`[EXERCISE_REORDER] Input: ${exercises.map(e => e.name).join(' | ')}`);
+  console.log(`[EXERCISE_REORDER] User priorities: ${userPriorities?.join(', ') || 'none'}`);
+  
+  // Enriquece exercícios com grupo muscular inferido se não tiver
+  const enrichedExercises = exercises.map((ex, idx) => ({
+    ...ex,
+    _originalIndex: idx,
+    _inferredGroup: ex.muscleGroup || inferMuscleGroup(ex.name),
+    _isCompound: ex.isCompound ?? !ex.name.toLowerCase().match(/rosca|curl|extensão|elevação lateral|elevação frontal|isolador|isolado|fly|crucifixo|voador|flexora|extensora|panturrilha|abdominal|prancha/i),
+  }));
+  
+  // Calcula a prioridade de ordenação para cada exercício
+  const getExercisePriority = (ex: typeof enrichedExercises[0]): number => {
+    const group = ex._inferredGroup.toLowerCase();
+    let basePriority = MUSCLE_GROUP_PRIORITY[group] ?? 50;
+    
+    // Boost para grupos prioritários do usuário (-100 para garantir que venham primeiro)
+    if (isPriorityGroup(group, userPriorities)) {
+      basePriority -= 100;
+    }
+    
+    // Compostos vêm antes de isoladores dentro do mesmo grupo
+    if (!ex._isCompound) {
+      basePriority += 0.5;
+    }
+    
+    return basePriority;
+  };
+  
+  // Agrupa exercícios por grupo muscular
+  const groupedExercises = new Map<string, typeof enrichedExercises>();
+  
+  for (const ex of enrichedExercises) {
+    const group = ex._inferredGroup.toLowerCase();
+    if (!groupedExercises.has(group)) {
+      groupedExercises.set(group, []);
+    }
+    groupedExercises.get(group)!.push(ex);
+  }
+  
+  // Ordena cada grupo internamente (compostos primeiro)
+  for (const [group, exs] of groupedExercises) {
+    exs.sort((a, b) => {
+      // Compostos primeiro
+      if (a._isCompound !== b._isCompound) {
+        return a._isCompound ? -1 : 1;
+      }
+      // Mantém ordem original como desempate
+      return a._originalIndex - b._originalIndex;
+    });
+  }
+  
+  // Ordena os grupos pela prioridade
+  const sortedGroups = Array.from(groupedExercises.entries()).sort((a, b) => {
+    const prioA = getExercisePriority(a[1][0]);
+    const prioB = getExercisePriority(b[1][0]);
+    return prioA - prioB;
+  });
+  
+  // Flatten mantendo agrupamento
+  const reordered = sortedGroups.flatMap(([_, exs]) => exs);
+  
+  // Remove propriedades temporárias
+  const cleanedResult = reordered.map(ex => {
+    const { _originalIndex, _inferredGroup, _isCompound, ...clean } = ex;
+    return clean as ExerciseForReorder;
+  });
+  
+  console.log(`[EXERCISE_REORDER] Output: ${cleanedResult.map(e => e.name).join(' | ')}`);
+  
+  return cleanedResult;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          TEMPO POR SESSÃO
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3024,8 +3298,20 @@ serve(async (req) => {
       
       const reorderedWorkouts = reorderWorkoutsByDayStructure(finalWorkouts, splitRule.dayStructure);
       
+      // 3b. REORDER EXERCISES within each workout (prioritize user's body areas + large groups)
+      const userPriorities = validatedData.bodyAreas || [];
+      const workoutsWithReorderedExercises = reorderedWorkouts.map((workout: any) => {
+        if (workout.exercises && Array.isArray(workout.exercises)) {
+          return {
+            ...workout,
+            exercises: reorderExercisesWithinWorkout(workout.exercises, userPriorities),
+          };
+        }
+        return workout;
+      });
+      
       // 4. Assign workoutPlan.workouts with the REORDERED array
-      workoutPlan.workouts = reorderedWorkouts;
+      workoutPlan.workouts = workoutsWithReorderedExercises;
       
       // 5. Update weeklyFrequency to match actual workout count
       workoutPlan.weeklyFrequency = workoutPlan.workouts.length;
