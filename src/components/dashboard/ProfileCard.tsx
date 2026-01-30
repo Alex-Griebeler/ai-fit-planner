@@ -85,12 +85,12 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
           </Avatar>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1">
               <h2 className="text-xl font-bold text-foreground truncate">
                 {profile.name}
               </h2>
               {isPremium && (
-                <Badge className="bg-primary text-primary-foreground border-0 shrink-0">
+                <Badge className="bg-primary text-primary-foreground border-0 w-fit">
                   <Crown className="w-3 h-3 mr-1" />
                   Premium
                 </Badge>
