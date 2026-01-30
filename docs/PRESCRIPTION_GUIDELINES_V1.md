@@ -153,26 +153,38 @@ small:  ["biceps", "triceps", "calves", "core"]
 
 ### 3.1 Boost de Volume para Grupos Prioritários (+25%)
 
-**Constantes:** `PRIORITY_BOOST = 1.25` (linha 694)
+**Constante:** `PRIORITY_BOOST = 1.25`
 
 Quando o usuário seleciona áreas de foco (`bodyAreas`) durante o onboarding, esses grupos musculares recebem **+25% de volume** (mínimo e máximo).
 
-**Mapeamento de Áreas para Grupos Musculares:**
+#### Mapeamento de Chaves (Banco → Músculos)
+
+| bodyArea (EN) | Grupos Musculares Afetados |
+|---------------|---------------------------|
+| chest         | chest |
+| shoulders     | shoulders |
+| arms          | biceps, triceps |
+| back          | back, scapular_belt ⭐ |
+| core          | core |
+| glutes        | glutes |
+| legs          | quadriceps, hamstrings, glutes, calves |
+
+⭐ **Regra Especial**: Quando "Costas" é prioridade, a Cintura Escapular também recebe o boost de +25%, garantindo pelo menos 1 exercício de deltóide posterior/romboides.
+
+#### Aliases Suportados (PT)
 
 ```typescript
-// BODY_AREA_TO_MUSCLES (linhas 697-720)
+// Compatibilidade com entradas alternativas
 "peitoral" / "peito"       → chest
-"costas" / "dorsal"        → back
-"ombros" / "deltoides"     → shoulders
-"biceps" / "bíceps"        → biceps
-"triceps" / "tríceps"      → triceps
+"costas"                   → back + scapular_belt ⭐
+"dorsal"                   → back
+"ombros"                   → shoulders
 "braços"                   → biceps + triceps
-"quadriceps" / "coxas"     → quadriceps
-"pernas"                   → quadriceps + hamstrings + glutes
-"isquiotibiais"            → hamstrings
-"gluteos" / "bumbum"       → glutes
+"gluteos" / "glúteos"      → glutes
+"pernas"                   → quadriceps + hamstrings + glutes + calves
+"quadriceps"               → quadriceps
 "panturrilhas"             → calves
-"core" / "abdomen"         → core
+"abdomen" / "abdômen"      → core
 ```
 
 **Exemplo Prático:**
@@ -181,8 +193,7 @@ Quando o usuário seleciona áreas de foco (`bodyAreas`) durante o onboarding, e
 |-------|--------------------|-----------------------|
 | Peitoral (sem foco) | 10-25 séries | 10-25 séries |
 | Peitoral (COM foco) | 12-31 séries | **+25% mínimo e máximo** |
-| Glúteos (sem foco) | 10-25 séries | 10-25 séries |
-| Glúteos (COM foco) | 12-31 séries | **+25% mínimo e máximo** |
+| Costas (COM foco) | 12-31 séries | **+25% para back E scapular_belt** |
 
 **Impacto:**
 - A tabela de volume enviada para a IA já mostra os ranges ajustados
