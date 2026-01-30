@@ -112,6 +112,7 @@ interface CalculatedVolumeRanges extends VolumeRanges {
     duration: string;
     level: number;
     recovery: number;
+    learningContext: number; // Learning Context V2 multiplier (0.85 - 1.15)
   };
 }
 
@@ -568,8 +569,9 @@ function calculateVolumeRanges(params: {
   trainingDaysCount: number;
   sleepHours: string | null;
   stressLevel: string | null;
+  learningContextMultiplier?: number; // Learning Context V2 multiplier (0.85 - 1.15)
 }): CalculatedVolumeRanges {
-  const { experienceLevel, goal, sessionDuration, trainingDaysCount, sleepHours, stressLevel } = params;
+  const { experienceLevel, goal, sessionDuration, trainingDaysCount, sleepHours, stressLevel, learningContextMultiplier } = params;
   
   // 1. Range base por FREQUÊNCIA SEMANAL
   const frequencyKey = getFrequencyKey(trainingDaysCount);
@@ -606,9 +608,15 @@ function calculateVolumeRanges(params: {
   const lowRecovery = hasLowRecovery(sleepHours, stressLevel);
   const recoveryMultiplier = lowRecovery ? 0.90 : 1.00;
   
-  // 7. Calcular volumes finais
+  // 7. Multiplicador do LEARNING CONTEXT V2 (baseado no histórico real do usuário)
+  // Range: 0.85 a 1.15 conforme docs/LEARNING_CONTEXT_PHASE_2_SPEC.md
+  const lcMultiplier = learningContextMultiplier ?? 1.00;
+  
+  // 8. Calcular volumes finais (aplicar TODOS os multiplicadores)
+  // Ordem: Base × Nível × Recuperação × Learning Context
+  const combinedMultiplier = levelMultiplier * recoveryMultiplier * lcMultiplier;
   const adjustedMin = Math.round(weeklyMin * levelMultiplier);
-  const adjustedMax = Math.round(Math.min(weeklyMax * levelMultiplier * recoveryMultiplier, maxPossibleWeekly));
+  const adjustedMax = Math.round(Math.min(weeklyMax * combinedMultiplier, maxPossibleWeekly));
   
   // Garantir range mínimo de 4 séries entre min e max
   const finalMin = adjustedMin;
@@ -665,6 +673,7 @@ function calculateVolumeRanges(params: {
       duration: sessionDuration || "45min",
       level: levelMultiplier,
       recovery: recoveryMultiplier,
+      learningContext: lcMultiplier,
     },
   };
 }
@@ -2746,8 +2755,14 @@ serve(async (req) => {
       // Continue normally without history - graceful degradation
     }
 
-    // === BUILD USER PROMPT ===
-    const userPrompt = buildUserPrompt(validatedData, filteredExercises, learningContext);
+    // === BUILD USER PROMPT (with Learning Context V2 volume multiplier) ===
+    const volumeMultiplier = learningContextV2?.guardrails.canApplyAdjustments 
+      ? learningContextV2.adjustments.volumeMultiplier 
+      : 1.0;
+    
+    console.log(`[LC-V2] Volume multiplier: ${volumeMultiplier} (canApply: ${learningContextV2?.guardrails.canApplyAdjustments ?? false})`);
+    
+    const userPrompt = buildUserPrompt(validatedData, filteredExercises, learningContext, volumeMultiplier);
 
     // === CALL AI ===
     console.log("Calling Lovable AI for user:", userId);
@@ -3362,7 +3377,12 @@ function buildLearningContext(sessions: SessionData[], loadHistory: LoadData[]):
 //                          USER PROMPT BUILDER
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[], learningContext: string = ""): string {
+function buildUserPrompt(
+  userData: ValidatedUserData, 
+  exercises: Exercise[], 
+  learningContext: string = "",
+  learningContextMultiplier: number = 1.0
+): string {
   // Calculate BMI
   const heightM = (userData.height || 170) / 100;
   const weight = userData.weight || 70;
@@ -3373,7 +3393,7 @@ function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[], lea
   else if (parseFloat(bmi) >= 25 && parseFloat(bmi) < 30) bmiCategory = "sobrepeso";
   else if (parseFloat(bmi) >= 30) bmiCategory = "obesidade";
 
-  // Calculate volume ranges using NEW system
+  // Calculate volume ranges using NEW system with Learning Context V2 multiplier
   const level = userData.experienceLevel || "beginner";
   const volumeRanges = calculateVolumeRanges({
     experienceLevel: level,
@@ -3382,6 +3402,7 @@ function buildUserPrompt(userData: ValidatedUserData, exercises: Exercise[], lea
     trainingDaysCount: userData.trainingDays?.length || 3,
     sleepHours: userData.sleepHours,
     stressLevel: userData.stressLevel,
+    learningContextMultiplier: learningContextMultiplier,
   });
 
   // Calculate density strategy for time-limited sessions

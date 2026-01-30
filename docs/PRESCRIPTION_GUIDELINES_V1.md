@@ -104,18 +104,31 @@ O volume semanal (séries por grupamento) é determinado pela **INTERSEÇÃO** d
 - `7-8`: 7 horas → recuperação normal
 - `more8`: 9 horas → recuperação normal
 
-### 2.3 Learning Context V2 (Fase 2)
+### 2.3 Learning Context V2 (ATIVO)
 
 **Constante:** `LEARNING_CONTEXT_V2_FLAGS` (linhas 2997-3002)
 
 | Configuração | Valor Atual | Descrição |
 |--------------|-------------|-----------|
 | enabled      | true        | Sistema ativo |
-| loggingOnly  | false       | Ajustes aplicados |
+| loggingOnly  | false       | ✅ Ajustes aplicados ao cálculo de volume |
 | maxAdjustment| 0.15        | ±15% máximo |
 | minSessions  | 5           | Mínimo para ativar |
 
 **Range do volumeMultiplier:** 0.85 a 1.15
+
+**Integração no Cálculo de Volume:**
+
+O `volumeMultiplier` calculado pelo Learning Context V2 é passado para `calculateVolumeRanges` e aplicado junto com os outros multiplicadores:
+
+```
+Volume Final = Base × levelMultiplier × recoveryMultiplier × learningContextMultiplier
+```
+
+**Condições para Aplicação:**
+- `guardrails.canApplyAdjustments === true`
+- Mínimo 5 sessões completadas
+- Sem bloqueio ativo (gap > 14 dias, dados suspeitos, etc.)
 
 ---
 
