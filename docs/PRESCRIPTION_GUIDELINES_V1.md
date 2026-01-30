@@ -138,17 +138,17 @@ Volume Final = Base × levelMultiplier × recoveryMultiplier × learningContextM
 
 | Grupamento | Hipertrofia | Emagrecimento | Saúde | Performance |
 |------------|-------------|---------------|-------|-------------|
-| **Grande** (peito, costas, quads, hams, glúteos) | 10 | 8 | 6 | 8 |
+| **Grande** (peito, costas, quads, hams, glúteos, **core**) | 10 | 8 | 6 | 8 |
 | **Médio** (ombros, cintura escapular) | 6 | 6 | 4 | 6 |
-| **Pequeno** (bíceps, tríceps, panturrilha, core) | 6 | 4 | 4 | 6 |
+| **Pequeno** (bíceps, tríceps, panturrilha) | 6 | 4 | 4 | 6 |
 
 **Classificação de Grupos Musculares:**
 
 ```typescript
 // Função: getMuscleCategory (linhas 681-688)
-large:  ["chest", "back", "quadriceps", "hamstrings", "glutes"]
+large:  ["chest", "back", "quadriceps", "hamstrings", "glutes", "core"]
 medium: ["shoulders", "scapular_belt"]
-small:  ["biceps", "triceps", "calves", "core"]
+small:  ["biceps", "triceps", "calves"]
 ```
 
 ### 3.1 Boost de Volume para Grupos Prioritários (+25%)

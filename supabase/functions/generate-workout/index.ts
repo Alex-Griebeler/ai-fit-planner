@@ -679,7 +679,7 @@ function calculateVolumeRanges(params: {
 }
 
 function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
-  const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes"];
+  const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes", "core"];
   const mediumGroups = ["shoulders", "scapular_belt"];
   
   if (largeGroups.includes(muscle.toLowerCase())) return "large";
@@ -782,7 +782,7 @@ function buildVolumeTableWithPriorities(
     { name: "Bíceps", nameEN: "biceps", category: "small", allowZero: !allowIsolation },
     { name: "Tríceps", nameEN: "triceps", category: "small", allowZero: !allowIsolation },
     { name: "Panturrilhas", nameEN: "calves", category: "small" },
-    { name: "Core", nameEN: "core", category: "small" },
+    { name: "Core", nameEN: "core", category: "large" },
   ];
   
   let table = `| Grupamento       | Mínimo | Máximo | Prioridade |\n`;
