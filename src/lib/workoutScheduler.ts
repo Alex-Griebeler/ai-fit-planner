@@ -32,7 +32,7 @@ const DAY_LABELS: Record<DayCode, string> = {
 
 // Mapeamento de nomes em português para códigos de dia
 const DAY_NAME_TO_CODE: Record<string, DayCode> = {
-  // Formato curto
+  // Formato curto (português)
   'domingo': 'sun',
   'segunda': 'mon',
   'terça': 'tue',
@@ -42,6 +42,15 @@ const DAY_NAME_TO_CODE: Record<string, DayCode> = {
   'sexta': 'fri',
   'sábado': 'sat',
   'sabado': 'sat',
+  // Formato abreviado (3 letras)
+  'dom': 'sun',
+  'seg': 'mon',
+  'ter': 'tue',
+  'qua': 'wed',
+  'qui': 'thu',
+  'sex': 'fri',
+  'sab': 'sat',
+  'sáb': 'sat',
   // Formato completo
   'segunda-feira': 'mon',
   'terça-feira': 'tue',
@@ -49,6 +58,14 @@ const DAY_NAME_TO_CODE: Record<string, DayCode> = {
   'quarta-feira': 'wed',
   'quinta-feira': 'thu',
   'sexta-feira': 'fri',
+  // Formato "Dia X" (mapeado para ordem da semana começando segunda)
+  'dia 1': 'mon',
+  'dia 2': 'tue',
+  'dia 3': 'wed',
+  'dia 4': 'thu',
+  'dia 5': 'fri',
+  'dia 6': 'sat',
+  'dia 7': 'sun',
   // Já é código (passthrough)
   'sun': 'sun',
   'mon': 'mon',

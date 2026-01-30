@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
@@ -130,6 +131,7 @@ interface WorkoutPlan {
 
 export default function Result() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
   const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans, deactivatePlan } = useWorkoutPlans();
@@ -350,8 +352,8 @@ export default function Result() {
         })),
       });
 
-      // Pequeno delay para garantir propagação do cache invalidation
-      await new Promise(resolve => setTimeout(resolve, 150));
+      // Aguarda invalidação do cache de forma correta
+      await queryClient.invalidateQueries({ queryKey: ['workout-plans'] });
 
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
