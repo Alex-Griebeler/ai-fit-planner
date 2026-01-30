@@ -148,10 +148,10 @@ const RECOMMENDED_SPLITS: Record<string, string> = {
   "1":   "Full Body Único",
   "2":   "Full Body A/B",
   "3":   "Full Body 3x (iniciantes) ou FB + A/B (intermediários+)",
-  "4":   "Upper/Lower A/B",
-  "5":   "Híbrido (Sup-Inf-Puxar-Empurrar-Inf)",
-  "6":   "Push/Pull/Legs 2x",
-  "7":   "PPL 2x + Especialização",
+  "4":   "Superior/Inferior A/B",
+  "5":   "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+  "6":   "Empurrar/Puxar/Pernas 2x",
+  "7":   "Empurrar/Puxar/Pernas 2x + Especialização",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -238,68 +238,68 @@ const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
       dayStructure: ["Full Body A", "Full Body B", "Full Body C"]
     },
     consecutive: {
-      split: "A/B/C Split (Push/Pull/Legs)",
-      description: "Push/Pull/Legs para evitar sobreposição muscular em dias seguidos",
-      dayStructure: ["Push (Peito/Ombro/Tríceps)", "Pull (Costas/Bíceps)", "Legs (Pernas/Core)"]
+      split: "A/B/C Split (Empurrar/Puxar/Pernas)",
+      description: "Empurrar/Puxar/Pernas para evitar sobreposição muscular em dias seguidos",
+      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Pernas (Membros Inferiores/Core)"]
     },
     mixed: {
       split: "Full Body + A/B",
       description: "Full Body no dia isolado, A/B nos dias consecutivos",
-      dayStructure: ["Full Body", "Upper", "Lower"]
+      dayStructure: ["Full Body", "Superior", "Inferior"]
     }
   },
   // 4 dias/semana
   "4": {
     alternating: {
-      split: "Upper/Lower 2x",
-      description: "Clássico Upper/Lower com 2 frequências por grupamento",
-      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+      split: "Superior/Inferior 2x",
+      description: "Clássico Superior/Inferior com 2 frequências por grupamento",
+      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
     },
     consecutive: {
-      split: "Upper/Lower 2x (adaptado)",
-      description: "Alternar Upper/Lower mesmo em dias seguidos - sem sobreposição",
-      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+      split: "Superior/Inferior 2x (adaptado)",
+      description: "Alternar Superior/Inferior mesmo em dias seguidos - sem sobreposição",
+      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
     },
     mixed: {
-      split: "Upper/Lower 2x",
-      description: "Upper/Lower adaptado ao padrão misto",
-      dayStructure: ["Upper A", "Lower A", "Upper B", "Lower B"]
+      split: "Superior/Inferior 2x",
+      description: "Superior/Inferior adaptado ao padrão misto",
+      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
     }
   },
   // 5 dias/semana
   "5": {
     alternating: {
-      split: "Híbrido ULPPL",
-      description: "Upper-Lower-Push-Pull-Legs",
-      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+      description: "Superior-Inferior-Empurrar-Puxar-Inferior",
+      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
     },
     consecutive: {
-      split: "Híbrido ULPPL",
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
       description: "Organizado para minimizar sobreposição em dias seguidos",
-      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
     },
     mixed: {
-      split: "Híbrido ULPPL",
-      description: "Upper-Lower-Push-Pull-Legs adaptado",
-      dayStructure: ["Upper", "Lower", "Push", "Pull", "Legs"]
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+      description: "Superior-Inferior-Empurrar-Puxar-Inferior adaptado",
+      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
     }
   },
   // 6 dias/semana
   "6": {
     alternating: {
-      split: "PPL 2x",
-      description: "Push/Pull/Legs repetido 2x na semana",
-      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+      split: "Empurrar/Puxar/Pernas 2x",
+      description: "Empurrar/Puxar/Pernas repetido 2x na semana",
+      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
     },
     consecutive: {
-      split: "PPL 2x",
-      description: "Push/Pull/Legs organizado para evitar mesmo grupo em dias seguidos",
-      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+      split: "Empurrar/Puxar/Pernas 2x",
+      description: "Empurrar/Puxar/Pernas organizado para evitar mesmo grupo em dias seguidos",
+      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
     },
     mixed: {
-      split: "PPL 2x",
-      description: "Push/Pull/Legs 2x",
-      dayStructure: ["Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"]
+      split: "Empurrar/Puxar/Pernas 2x",
+      description: "Empurrar/Puxar/Pernas 2x",
+      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
     }
   }
 };
@@ -1754,38 +1754,38 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 - Core/Abdômen: Encaixar no Dia 3 (Puxar) ou Dia 4 (Empurrar)
 
 ═══════════════════════════════════════════════════════════════════════════════
-### 6x/SEMANA - Push/Pull/Legs 2x
+### 6x/SEMANA - Empurrar/Puxar/Pernas 2x
 ═══════════════════════════════════════════════════════════════════════════════
 | Dia | Tipo | Grupos |
 |-----|------|--------|
-| 1 | Push | Peitoral, Ombros, Tríceps |
-| 2 | Pull | Costas, Bíceps |
-| 3 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
-| 4 | Push | Peitoral, Ombros, Tríceps |
-| 5 | Pull | Costas, Bíceps |
-| 6 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 1 | Empurrar | Peitoral, Ombros, Tríceps |
+| 2 | Puxar | Costas, Bíceps |
+| 3 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 4 | Empurrar | Peitoral, Ombros, Tríceps |
+| 5 | Puxar | Costas, Bíceps |
+| 6 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
 
 - Estímulos: 2x/semana por grupo ✅
 - Conflitos: NENHUM (sequência natural)
 - Alternativa: Arnold Split (Peito/Costas, Ombros/Braços, Pernas) 2x
 
 ═══════════════════════════════════════════════════════════════════════════════
-### 7x/SEMANA - PPL 2x + Especialização
+### 7x/SEMANA - Empurrar/Puxar/Pernas 2x + Especialização
 ═══════════════════════════════════════════════════════════════════════════════
 | Dia | Tipo | Grupos |
 |-----|------|--------|
-| 1 | Push | Peitoral, Ombros, Tríceps |
-| 2 | Pull | Costas, Bíceps |
-| 3 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
-| 4 | Push | Peitoral, Ombros, Tríceps |
-| 5 | Pull | Costas, Bíceps |
-| 6 | Legs | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 1 | Empurrar | Peitoral, Ombros, Tríceps |
+| 2 | Puxar | Costas, Bíceps |
+| 3 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 4 | Empurrar | Peitoral, Ombros, Tríceps |
+| 5 | Puxar | Costas, Bíceps |
+| 6 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
 | 7 | Especialização | Grupo PRIORITÁRIO do usuário |
 
 - Estímulos: 2-3x/semana por grupo ✅
 - ⚠️ REGRA CRÍTICA: O grupo do Dia 7 NÃO pode ser o mesmo do Dia 6 nem do Dia 1
-- Se Dia 6 = Legs → Dia 7 ≠ pernas
-- Se Dia 1 = Push → Dia 7 ≠ peitoral/ombros/tríceps
+- Se Dia 6 = Pernas → Dia 7 ≠ membros inferiores
+- Se Dia 1 = Empurrar → Dia 7 ≠ peitoral/ombros/tríceps
 
 ═══════════════════════════════════════════════════════════════════════════════
 ### REGRAS DE SELEÇÃO AUTOMÁTICA
@@ -1795,15 +1795,15 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 |------------|-----------|---------------|----------|
 | 1-2 dias | Full Body | Full Body | Full Body |
 | 3 dias | Full Body 3x | FB + A/B | FB + A/B |
-| 4 dias | Upper/Lower | Upper/Lower | Upper/Lower |
+| 4 dias | Superior/Inferior | Superior/Inferior | Superior/Inferior |
 | 5 dias | Híbrido 5x | Híbrido 5x | Híbrido 5x |
-| 6 dias | PPL 2x | PPL 2x | Arnold 2x |
-| 7 dias | NÃO RECOMENDADO | PPL + Espec. | PPL + Espec. |
+| 6 dias | Empurrar/Puxar/Pernas 2x | Empurrar/Puxar/Pernas 2x | Arnold 2x |
+| 7 dias | NÃO RECOMENDADO | Empurrar/Puxar/Pernas + Espec. | Empurrar/Puxar/Pernas + Espec. |
 
 ## SPLITS AUTO-OTIMIZADOS (sem conflitos naturais):
-- Upper/Lower 4x
+- Superior/Inferior 4x
 - Híbrido 5x
-- PPL 6x
+- Empurrar/Puxar/Pernas 6x
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 3.2: DISTRIBUIÇÃO DE ESTÍMULOS POR DIA
@@ -2006,14 +2006,14 @@ Exercícios que exigem maior coordenação, força e energia devem vir ANTES.
 
 | Tipo de Sessão | Ordem de Grupos (AGRUPAR cada um) |
 |----------------|-----------------------------------|
-| PUSH           | TODOS de Peitoral → TODOS de Ombros → TODOS de Tríceps |
-| PULL           | TODOS de Costas → TODOS de Cintura Escapular → TODOS de Bíceps |
-| LEGS           | TODOS de Quadríceps → TODOS de Posteriores → TODOS de Glúteos → Panturrilhas |
-| UPPER          | TODOS de Peito → TODOS de Costas → TODOS de Ombros → TODOS de Braços |
-| LOWER          | TODOS de Quadríceps → TODOS de Isquiotibiais → TODOS de Glúteos → Panturrilhas |
+| EMPURRAR       | TODOS de Peitoral → TODOS de Ombros → TODOS de Tríceps |
+| PUXAR          | TODOS de Costas → TODOS de Cintura Escapular → TODOS de Bíceps |
+| PERNAS         | TODOS de Quadríceps → TODOS de Posteriores → TODOS de Glúteos → Panturrilhas |
+| SUPERIOR       | TODOS de Peito → TODOS de Costas → TODOS de Ombros → TODOS de Braços |
+| INFERIOR       | TODOS de Quadríceps → TODOS de Isquiotibiais → TODOS de Glúteos → Panturrilhas |
 | FULL BODY      | Grandes grupos (Pernas/Costas/Peito) → Ombros → Braços → Core |
 
-**EXEMPLO PUSH CORRETO:**
+**EXEMPLO EMPURRAR CORRETO:**
 1. Supino Reto (Peito)
 2. Supino Inclinado (Peito)
 3. Crucifixo (Peito)
@@ -2051,7 +2051,7 @@ Exercícios que exigem maior coordenação, força e energia devem vir ANTES.
 | INTERMEDIÁRIO| 50% livre + 50% máquina, livre primeiro |
 | AVANÇADO     | Pesos livres primeiro (maior demanda técnica) |
 
-## EXEMPLO PRÁTICO - Treino Push (Intermediário, Hipertrofia):
+## EXEMPLO PRÁTICO - Treino Empurrar (Intermediário, Hipertrofia):
 
 | Ordem | Exercício | Tipo | Motivo |
 |-------|-----------|------|--------|
@@ -2319,7 +2319,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
   "workouts": [
     {
       "day": "Dia da semana",
-      "name": "Nome do treino",
+      "name": "Nome do treino em PORTUGUÊS (ex: 'Empurrar A', 'Puxar B', 'Pernas A', 'Superior A', 'Full Body B')",
       "focus": "Grupos musculares principais separados por ' • ' (ex: 'Peitoral • Ombros • Tríceps')",
       "muscleGroups": ["Peitoral", "Ombros", "Tríceps"],
       "estimatedDuration": "XX min",
@@ -2393,6 +2393,21 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
   - Peitoral, Costas, Ombros, Bíceps, Tríceps, Quadríceps, Posteriores, Glúteos, Panturrilhas, Core, Cintura Escapular
 - NUNCA use nomes em inglês (chest, back, shoulders, etc.) no campo muscleGroups
 
+## NOMENCLATURA DE TREINOS (OBRIGATÓRIO EM PORTUGUÊS):
+O campo "name" de cada treino DEVE seguir estas regras:
+- SEMPRE em português brasileiro
+- Usar: "Empurrar" (NÃO "Push"), "Puxar" (NÃO "Pull"), "Pernas" (NÃO "Legs")
+- Usar: "Superior" (NÃO "Upper"), "Inferior" (NÃO "Lower")
+- Exemplos CORRETOS:
+  - "Empurrar A (Força)" ou "Empurrar A"
+  - "Puxar B (Hipertrofia)" ou "Puxar B"
+  - "Pernas A (Metabólico)" ou "Pernas A"
+  - "Superior A" ou "Inferior B"
+  - "Full Body A" ou "Full Body B" (Full Body é aceito)
+- Exemplos INCORRETOS:
+  - "Push A", "Pull B", "Legs A" ❌
+  - "Upper A", "Lower B" ❌
+
 ## OBRIGATÓRIO:
 1. Retorne APENAS o JSON, sem texto adicional
 2. Use APENAS exercícios do CATÁLOGO fornecido
@@ -2409,6 +2424,7 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 13. Aplique estratégia de variação conforme preferência do usuário (alta/moderada/baixa)
 14. O campo "focus" DEVE listar os grupos musculares principais separados por " • " (ex: "Peitoral • Ombros • Tríceps"), NÃO o tipo de estímulo
 15. O campo "planName" DEVE ser "Plano de {Objetivo}" onde {Objetivo} é o objetivo do usuário em português (ex: "Plano de Emagrecimento", "Plano de Hipertrofia", "Plano de Saúde"). NUNCA use siglas técnicas como ULPPL, PPL, ABC, PHUL ou número de dias no nome.
+16. O campo "name" de cada treino DEVE estar em português (Empurrar/Puxar/Pernas, NÃO Push/Pull/Legs)
 
 ## NUNCA:
 - Prescreva saltos para dor em joelho/tornozelo
@@ -2420,7 +2436,8 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 - Invente exercícios fora do catálogo
 - Negligencie a Cintura Escapular
 - Gere treinos que excedam o tempo disponível
-- Use muscleGroups em inglês`;
+- Use muscleGroups em inglês
+- Use nomes de treinos em inglês (Push/Pull/Legs → Empurrar/Puxar/Pernas)`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //                          MAIN SERVER HANDLER
