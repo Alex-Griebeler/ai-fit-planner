@@ -1,317 +1,436 @@
 
-# Auditoria Completa do Código - AI Trainer App
+# Plano de Melhorias de Médio Risco - AI Trainer App
 
-## Sumário Executivo
+## REVISÃO COMPLETA E PLANEJAMENTO SEGURO
 
-Esta auditoria analisou **+50 arquivos** incluindo hooks, páginas, componentes, edge functions e integrações. Foram identificados **17 bugs/inconsistências**, **8 áreas com "remendos"** (workarounds), e **12 oportunidades de refatoração**.
+Este documento detalha as melhorias de médio risco com análise de impacto e plano de implementação que **preserva 100% das funcionalidades existentes**.
 
 ---
 
-## 1. BUGS E INCONSISTÊNCIAS CRÍTICOS
+## 1. PADRONIZAÇÃO DO INÍCIO DE SEMANA (Segunda-feira)
 
-### 1.1 Race Condition na Finalização de Treino
-**Arquivo:** `src/pages/WorkoutComplete.tsx` (linhas 59-78)
-**Problema:** O `useEffect` que atualiza streak e conquistas usa `eslint-disable` para suprimir warning de dependências faltantes. Isso pode causar:
-- Conquistas não desbloqueadas corretamente
-- Streak não atualizado se `achievementStats` mudar
+### Situação Atual
 
+| Arquivo | Comportamento | Linha |
+|---------|---------------|-------|
+| `WeeklyProgress.tsx` | Domingo como início (`today.getDay()`) | 21-22 |
+| `workoutScheduler.ts` | Domingo como início (`DAY_ORDER[0] = 'sun'`) | 21, 103-110 |
+| `useStreak.ts` | Usa `date-fns` (independente) | 59-60 |
+
+### Impacto da Inconsistência
+- **Leve:** O componente `WeeklyProgress` mostra "D S T Q Q S S" (Domingo primeiro) que é o padrão brasileiro
+- **Funcional:** A lógica de streak funciona corretamente com `date-fns`
+- **Não há bug:** Apenas inconsistência visual vs expectativa
+
+### Plano de Correção (BAIXO RISCO)
+
+**Opção A - Manter Domingo (Recomendado):**
+- O padrão brasileiro de calendário usa Domingo como primeiro dia
+- Apenas documentar a convenção no código
+- **Risco: ZERO** - nenhuma alteração
+
+**Opção B - Migrar para Segunda:**
 ```typescript
-// eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);  // ← Faltam dependências: updateStreak, checkAndUnlockAchievements, achievementStats
+// WeeklyProgress.tsx - ANTES
+startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday = 0
+
+// WeeklyProgress.tsx - DEPOIS  
+const dayOfWeek = today.getDay();
+const offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
+startOfWeek.setDate(today.getDate() - offset);
+
+// Também atualizar dayLabels para começar em Segunda
+const dayLabels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']; // Seg-Dom
 ```
 
-**Risco de Reescrita:** BAIXO - Correção pontual
+**Funcionalidades Afetadas:**
+- ✅ Contagem de sessões da semana (continua funcionando)
+- ✅ Badges de dias treinados (apenas ordem visual muda)
+- ✅ Streak calculation (usa date-fns, não afetado)
+
+**Risco de Reescrita:** BAIXO - Mudança isolada em 1 arquivo
 
 ---
 
-### 1.2 Variável Não Utilizada em Settings
-**Arquivo:** `src/pages/Settings.tsx` (linha 21)
-**Problema:** `isSavingAny` é declarada mas nunca utilizada
+## 2. TIPAR RESPOSTAS DA EDGE FUNCTION (Remover `any`)
 
-```typescript
-const isSavingAny = isUpdating || isSaving; // ← Não usada
-```
-
-**Risco de Reescrita:** MUITO BAIXO - Remover linha
-
----
-
-### 1.3 Uso de `any` Extensivo na Edge Function
-**Arquivo:** `supabase/functions/generate-workout/index.ts`
-**Problema:** 15+ usos de `any` type, incluindo:
+### Situação Atual
+A Edge Function `generate-workout/index.ts` (3911 linhas) usa `any` em:
 - Linha 233: `(functionError as any).context`
 - Linha 372: `function reorderWorkoutsByDayStructure(workouts: any[])`
 - Linhas 1141-1158: Schemas Zod com `z.any()`
 - Linha 1397: `const plan = rawPlan as any`
 
-**Impacto:** Erros de runtime não detectados em compile time
+### Impacto dos `any`
+- **Segurança:** Erros de runtime não detectados em compile-time
+- **Manutenção:** Difícil refatorar sem tipos
+- **Funcional:** Não causa bugs visíveis ao usuário
 
-**Risco de Reescrita:** MÉDIO - Requer criação de tipos para todo o pipeline
+### Plano de Correção (MÉDIO RISCO)
 
----
-
-### 1.4 TODO Pendente - Volume Total de Conquistas
-**Arquivo:** `src/pages/WorkoutComplete.tsx` (linha 50)
-**Problema:** `totalVolume: 0` é hardcoded, conquistas baseadas em volume nunca serão desbloqueadas
-
+**Fase 1 - Criar interfaces (SEM alterar lógica):**
 ```typescript
-totalVolume: 0, // TODO: Calculate from exercises_data
-```
+// Adicionar no topo da Edge Function
 
-**Risco de Reescrita:** BAIXO - Implementação simples
+interface WorkoutExercise {
+  order: number;
+  name: string;
+  equipment: string;
+  sets: number;
+  reps: string;
+  rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
+  isCompound?: boolean;
+  method?: string;
+  muscleGroup?: string;
+}
 
----
+interface GeneratedWorkout {
+  day: string;
+  name: string;
+  focus: string;
+  muscleGroups: string[];
+  estimatedDuration: string;
+  exercises: WorkoutExercise[];
+  cardio?: WorkoutCardio | null;
+}
 
-### 1.5 Google OAuth Desabilitado sem Alternativa
-**Arquivo:** `src/pages/Login.tsx` (linhas 351-352)
-**Problema:** Login com Google está comentado mas o botão `signInWithGoogle` ainda existe no hook
-
-```typescript
-{/* TODO: Re-enable when Google OAuth is properly configured */}
-```
-
-**Risco de Reescrita:** MUITO BAIXO - Apenas descomentar/remover
-
----
-
-## 2. INCONSISTÊNCIAS DE DADOS
-
-### 2.1 Mapeamento de Dias Incompleto
-**Arquivo:** `src/lib/workoutScheduler.ts` (linhas 34-60)
-**Problema:** O mapeamento `DAY_NAME_TO_CODE` não cobre todos os formatos possíveis vindos da IA:
-
-```typescript
-// Faltam variações como:
-// 'seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'
-// 'Dia 1', 'Dia 2', etc.
-```
-
-**Risco de Reescrita:** BAIXO - Adicionar aliases
-
----
-
-### 2.2 Inconsistência na Contagem de Semana
-**Arquivo:** `src/components/gamification/WeeklyProgress.tsx` (linhas 19-22)
-**Problema:** A semana começa no Domingo (padrão americano), mas o onboarding usa segunda como início
-
-```typescript
-startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday = 0
-```
-
-Conflita com a lógica de `useStreak.ts` que usa `startOfDay` diferentemente.
-
-**Risco de Reescrita:** MÉDIO - Requer padronização global
-
----
-
-### 2.3 Dados Falsos em Política de Privacidade
-**Arquivo:** `src/pages/PrivacyPolicy.tsx` (linha 39)
-**Problema:** CNPJ placeholder nunca substituído
-
-```typescript
-inscrito no CNPJ sob o nº XX.XXX.XXX/0001-XX
-```
-
-**Risco de Reescrita:** MUITO BAIXO - Atualizar texto
-
----
-
-## 3. REMENDOS (WORKAROUNDS)
-
-### 3.1 Deleção de Planos para Contornar Limite Free
-**Arquivo:** `src/hooks/useWorkoutPlans.ts` (linhas 83-96)
-**Problema:** Em vez de usar o trigger do banco (`enforce_workout_plan_limit`), o código deleta planos manualmente antes de criar novos
-
-```typescript
-// Para usuários free: deletar planos anteriores antes de criar novo
-// (O trigger enforce_workout_plan_limit bloqueia se houver 1+ plano)
-if (existingPlans && existingPlans.length > 0) {
-  await supabase.from("workout_plans").delete().eq("user_id", user.id);
+interface GeneratedPlan {
+  planName: string;
+  description: string;
+  weeklyFrequency: number;
+  sessionDuration: string;
+  periodization: string;
+  workouts: GeneratedWorkout[];
+  weeklyVolume: Record<string, number>;
+  progressionPlan: string | ProgressionPlan;
+  warnings: string[];
+  motivationalMessage: string;
 }
 ```
 
-**Solução Limpa:** Modificar o trigger para substituir automaticamente OU desativar planos anteriores
-
-**Risco de Reescrita:** MÉDIO - Requer migração de banco
-
----
-
-### 3.2 Prevenção de Duplicatas por Tempo
-**Arquivo:** `src/hooks/useWorkoutSessions.ts` (linhas 90-101)
-**Problema:** Verifica se sessão foi completada nos últimos 30 segundos para evitar duplicatas - isso é um remendo para race conditions
-
+**Fase 2 - Substituir `any` gradualmente:**
 ```typescript
-// Check if a session was completed recently (last 30 seconds) to prevent duplicates
-const recentlyCompleted = await supabase
-  .from('workout_sessions')
-  .select('completed_at')
-  .gte('completed_at', new Date(Date.now() - 30000).toISOString())
+// ANTES
+function reorderWorkoutsByDayStructure(workouts: any[]): any[]
+
+// DEPOIS
+function reorderWorkoutsByDayStructure(workouts: GeneratedWorkout[]): GeneratedWorkout[]
 ```
 
-**Solução Limpa:** Usar transações ou locks no banco
+**Funcionalidades Afetadas:**
+- ✅ Geração de plano (lógica idêntica, só tipos adicionados)
+- ✅ Validação Zod (mantida)
+- ✅ Resposta ao frontend (estrutura preservada)
 
-**Risco de Reescrita:** ALTO - Race conditions são complexas
-
----
-
-### 3.3 Cache Invalidation com Delay Hardcoded
-**Arquivo:** `src/pages/Result.tsx` (linhas 353-354)
-**Problema:** Delay de 150ms para "garantir propagação do cache"
-
-```typescript
-// Pequeno delay para garantir propagação do cache invalidation
-await new Promise(resolve => setTimeout(resolve, 150));
-```
-
-**Solução Limpa:** Usar `await queryClient.invalidateQueries()` corretamente
-
-**Risco de Reescrita:** BAIXO
+**Risco de Reescrita:** MÉDIO - Muitos arquivos, mas sem mudança de lógica
 
 ---
 
-### 3.4 Ref para Controlar Execução Única
-**Arquivo:** `src/pages/Result.tsx` (linha 157)
-**Problema:** `hasStartedGeneration.current` é usado para evitar re-renders gerando planos duplicados
+## 3. ESTRUTURAR RESPOSTA DE RATE LIMIT (Status 429)
 
+### Situação Atual
+- Edge Function retorna erro como string na mensagem
+- Frontend usa regex para extrair `reset_at` (linhas 253-269 de Result.tsx)
+- Funciona mas é frágil
+
+### Código Atual (Result.tsx)
 ```typescript
-const hasStartedGeneration = useRef(false);
-// ... usado em múltiplos lugares para evitar re-execução
-```
-
-**Solução Limpa:** Usar React Query mutations corretamente
-
-**Risco de Reescrita:** MÉDIO - Refatorar fluxo de geração
-
----
-
-### 3.5 Rate Limit Parsing via Regex em Mensagens de Erro
-**Arquivo:** `src/pages/Result.tsx` (linhas 231-272)
-**Problema:** Tenta extrair `reset_at` de mensagens de erro via JSON parsing e regex
-
-```typescript
+// Tenta extrair reset_at de mensagens de erro via JSON parsing e regex
 const jsonMatch = errorMessage.match(/\{.*\}/);
 if (jsonMatch) {
   try {
     const errorBody = JSON.parse(jsonMatch[0]);
 ```
 
-**Solução Limpa:** Edge function retornar status code 429 com body estruturado
+### Plano de Correção (BAIXO RISCO)
 
-**Risco de Reescrita:** BAIXO - Apenas padronizar resposta
+**Edge Function - Retornar resposta estruturada:**
+```typescript
+// ANTES (misturado na mensagem)
+return new Response(JSON.stringify({
+  error: `Limite de ${maxRequests} gerações por hora atingido.`,
+  reset_at: rateLimitResult.reset_at,
+  // ...
+}), { status: 200 });  // ← Status 200 com erro no body!
 
----
+// DEPOIS (status HTTP correto)
+return new Response(JSON.stringify({
+  error: 'rate_limit_exceeded',
+  message: `Limite de ${maxRequests} gerações por hora atingido.`,
+  reset_at: rateLimitResult.reset_at,
+  max_requests: maxRequests,
+  current_count: rateLimitResult.current_count,
+}), { 
+  status: 429,
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+});
+```
 
-## 4. OPORTUNIDADES DE REFATORAÇÃO
+**Frontend - Simplificar parsing:**
+```typescript
+// ANTES (regex frágil)
+const jsonMatch = errorMessage.match(/\{.*\}/);
 
-### 4.1 Hooks Muito Grandes
-| Hook | Linhas | Recomendação |
-|------|--------|--------------|
-| `useWorkoutSessions.ts` | 257 | Extrair mutations para hooks separados |
-| `useWorkoutPlans.ts` | 175 | OK, mas pode extrair `useActivePlan` |
-| `useSubscription.ts` | 166 | Extrair `useStripeCheckout` |
+// DEPOIS (estruturado)
+if (functionError?.context?.status === 429) {
+  const errorBody = JSON.parse(functionError.context.body);
+  setRateLimitResetAt(new Date(errorBody.reset_at));
+  setIsRateLimited(true);
+}
+```
 
-**Risco:** BAIXO - Refatoração incremental
+**Funcionalidades Afetadas:**
+- ✅ Rate limiting (continua funcionando)
+- ✅ Timer de espera (informação mais confiável)
+- ✅ Mensagem ao usuário (preservada)
 
----
-
-### 4.2 Páginas com Lógica Demais
-| Página | Linhas | Problema |
-|--------|--------|----------|
-| `Result.tsx` | 1041 | Mistura geração, exibição, salvamento |
-| `WorkoutExecution.tsx` | 507 | Muita lógica de estado local |
-
-**Recomendação:** Extrair hooks customizados:
-- `useWorkoutGeneration()` 
-- `useWorkoutExecutionState()`
-
-**Risco:** MÉDIO - Muitas dependências internas
-
----
-
-### 4.3 Edge Function Monolítica
-**Arquivo:** `supabase/functions/generate-workout/index.ts` (3911 linhas)
-
-**Problemas:**
-- Impossível testar unitariamente
-- Difícil manutenção
-- Risco de timeout em cold starts
-
-**Recomendação:** Dividir em módulos:
-- `volume-calculator.ts`
-- `split-rules.ts`
-- `prompt-builder.ts`
-- `post-validator.ts`
-
-**Risco:** ALTO - Função crítica, requer testes extensivos
+**Risco de Reescrita:** BAIXO - Melhoria sem mudança de comportamento
 
 ---
 
-### 4.4 Duplicação de Lógica de Tradução
-**Arquivos:** 
-- `src/lib/workoutScheduler.ts` (translations)
-- `src/pages/Result.tsx` (muscleLabels)
-- `supabase/functions/generate-workout/index.ts` (BODY_AREA_TO_MUSCLES)
+## 4. WORKAROUND DE DELEÇÃO MANUAL DE PLANOS
 
-**Recomendação:** Criar `src/lib/i18n/muscle-groups.ts` centralizado
+### Situação Atual (useWorkoutPlans.ts linhas 83-96)
+```typescript
+// Para usuários free: deletar planos anteriores antes de criar novo
+if (existingPlans && existingPlans.length > 0) {
+  await supabase.from("workout_plans").delete().eq("user_id", user.id);
+}
+```
 
-**Risco:** BAIXO
+### Por que existe este workaround?
+- O trigger `enforce_workout_plan_limit` BLOQUEIA inserção se já existe 1+ plano
+- O código deleta TODOS os planos antes de inserir novo
+- Isso FUNCIONA mas perde histórico de planos anteriores
+
+### Análise de Impacto
+| Comportamento | Com Workaround | Sem Workaround |
+|---------------|----------------|----------------|
+| Criar novo plano (free) | ✅ Funciona | ❌ Erro do trigger |
+| Histórico de planos | ❌ Perdido | ✅ Preservado |
+| Planos inativos | ❌ Deletados | ✅ Mantidos |
+
+### Plano de Correção (MÉDIO RISCO)
+
+**Opção A - Modificar Trigger (Recomendado):**
+```sql
+-- Novo comportamento: desativar planos anteriores em vez de bloquear
+CREATE OR REPLACE FUNCTION public.enforce_workout_plan_limit()
+RETURNS trigger AS $$
+BEGIN
+  -- Check if premium
+  IF EXISTS (
+    SELECT 1 FROM subscriptions 
+    WHERE user_id = NEW.user_id 
+    AND plan_type = 'premium' 
+    AND status = 'active'
+  ) THEN
+    RETURN NEW;
+  END IF;
+  
+  -- Free users: desativar planos anteriores (não bloquear)
+  UPDATE workout_plans 
+  SET is_active = false 
+  WHERE user_id = NEW.user_id AND is_active = true;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Remover workaround do hook:**
+```typescript
+// ANTES (useWorkoutPlans.ts)
+if (existingPlans && existingPlans.length > 0) {
+  await supabase.from("workout_plans").delete().eq("user_id", user.id);
+}
+
+// DEPOIS
+// Não precisa deletar - trigger desativa automaticamente
+```
+
+**Funcionalidades Afetadas:**
+- ✅ Criar plano (continua funcionando)
+- ✅ Limite de 1 plano ativo (respeitado)
+- ✅ Histórico de planos (agora preservado!)
+- ⚠️ Requer migração de banco
+
+**Risco de Reescrita:** MÉDIO - Requer teste extensivo do fluxo de criação
 
 ---
 
-## 5. PROBLEMAS DE SEGURANÇA MENORES
+## 5. DELAY HARDCODED DE CACHE (Result.tsx linha 353)
 
-### 5.1 Sanitização Básica de Inputs
-**Arquivo:** `supabase/functions/generate-workout/index.ts` (linhas 58-89)
-- Sanitização existe mas é básica
-- Não há rate limiting no client-side
-- Zod valida mas `any` bypassa
+### Situação Atual
+```typescript
+// Pequeno delay para garantir propagação do cache invalidation
+await new Promise(resolve => setTimeout(resolve, 150));
+```
 
-**Risco:** BAIXO (RLS protege dados)
+### Por que existe?
+- `queryClient.invalidateQueries()` é assíncrono
+- Sem o delay, navegação pode mostrar dados stale
+- É um remendo para timing de React Query
 
----
+### Plano de Correção (MUITO BAIXO RISCO)
 
-## 6. MATRIZ DE RISCO PARA REESCRITA
+**Usar await corretamente:**
+```typescript
+// ANTES
+await createPlan({...});
+await new Promise(resolve => setTimeout(resolve, 150));
 
-| Área | Risco de Corrupção | Complexidade | Prioridade |
-|------|-------------------|--------------|------------|
-| Bug WorkoutComplete | BAIXO | Fácil | 🔴 Alta |
-| TODO totalVolume | BAIXO | Fácil | 🔴 Alta |
-| Variável não usada | MUITO BAIXO | Trivial | 🟢 Baixa |
-| Workaround 30s duplicatas | ALTO | Complexa | 🟡 Média |
-| Deleção manual de planos | MÉDIO | Média | 🟡 Média |
-| Tipos `any` | MÉDIO | Trabalhosa | 🟡 Média |
-| Edge function split | ALTO | Muito Complexa | 🟠 Baixa/Futura |
-| Inconsistência semana | MÉDIO | Média | 🟡 Média |
-| CNPJ placeholder | MUITO BAIXO | Trivial | 🟢 Baixa |
+// DEPOIS
+await createPlan({...});
+await queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
+```
 
----
+**Funcionalidades Afetadas:**
+- ✅ Salvamento de plano (idêntico)
+- ✅ Navegação pós-save (mais confiável)
 
-## 7. RESUMO DE AÇÕES RECOMENDADAS
-
-### Correções Imediatas (Baixo Risco):
-1. Remover `eslint-disable` em WorkoutComplete e adicionar dependências
-2. Implementar cálculo de `totalVolume` para conquistas
-3. Remover variável `isSavingAny` não utilizada
-4. Atualizar CNPJ na política de privacidade
-
-### Melhorias de Curto Prazo (Médio Risco):
-5. Padronizar início de semana (domingo vs segunda)
-6. Tipar respostas da Edge Function (remover `any`)
-7. Estruturar resposta de rate limit com status 429
-
-### Refatorações de Longo Prazo (Alto Risco):
-8. Dividir Edge Function em módulos testáveis
-9. Extrair hooks de `Result.tsx` e `WorkoutExecution.tsx`
-10. Substituir workaround de duplicatas por solução transacional
+**Risco de Reescrita:** MUITO BAIXO
 
 ---
 
-## 8. CONCLUSÃO
+## 6. REF PARA CONTROLE DE EXECUÇÃO ÚNICA (Result.tsx linha 157)
 
-O código está **funcionalmente estável** com arquitetura sólida. Os principais problemas são:
+### Situação Atual
+```typescript
+const hasStartedGeneration = useRef(false);
+// ... usado para evitar re-renders gerando planos duplicados
+```
 
-1. **Dívida técnica acumulada** em workarounds
-2. **Falta de tipagem forte** na Edge Function
-3. **Algumas features incompletas** (totalVolume, Google OAuth)
+### Análise
+- Este padrão é **VÁLIDO** em React para efeitos one-time
+- Alternativa seria React Query `useMutation`, mas requer refatoração maior
+- **NÃO É UM BUG** - é um padrão defensivo
 
-**Recomendação:** Priorizar correções de bugs (#1-4) que são de baixo risco, e planejar refatorações maiores para sprints futuros com testes adequados.
+### Recomendação: MANTER
+- O código funciona corretamente
+- Refatorar para mutations aumentaria complexidade
+- Prioridade: BAIXA/FUTURA
+
+---
+
+## 7. WORKAROUND DE 30 SEGUNDOS PARA DUPLICATAS
+
+### Situação Atual (useWorkoutSessions.ts linhas 90-101)
+```typescript
+// Check if a session was completed recently (last 30 seconds)
+const recentlyCompleted = await supabase
+  .from('workout_sessions')
+  .select('completed_at')
+  .gte('completed_at', new Date(Date.now() - 30000).toISOString())
+```
+
+### Por que existe?
+- Double-clicks ou re-renders podem chamar `startSession` múltiplas vezes
+- Sem esta verificação, criaria sessões duplicadas
+- É um **mecanismo de proteção** que funciona
+
+### Análise de Risco
+| Solução | Complexidade | Risco |
+|---------|--------------|-------|
+| Manter workaround | Nenhuma | ZERO |
+| Database locks | Alta | ALTO |
+| Unique constraint | Média | MÉDIO |
+
+### Recomendação: MANTER
+- O workaround é efetivo e seguro
+- Solução "limpa" (locks/transactions) tem complexidade alta
+- Prioridade: BAIXA/FUTURA
+
+---
+
+## 8. MAPEAMENTO DE DIAS INCOMPLETO
+
+### Situação Atual (workoutScheduler.ts linhas 34-60)
+```typescript
+const DAY_NAME_TO_CODE: Record<string, DayCode> = {
+  'domingo': 'sun',
+  'segunda': 'mon',
+  // ... faltam variações
+};
+```
+
+### Variações que faltam
+- Abreviações: 'seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom'
+- Formato numérico: 'Dia 1', 'Dia 2', etc.
+
+### Plano de Correção (MUITO BAIXO RISCO)
+```typescript
+const DAY_NAME_TO_CODE: Record<string, DayCode> = {
+  // Existentes...
+  
+  // Adicionar abreviações
+  'seg': 'mon',
+  'ter': 'tue',
+  'qua': 'wed',
+  'qui': 'thu',
+  'sex': 'fri',
+  'sab': 'sat',
+  'dom': 'sun',
+};
+```
+
+**Funcionalidades Afetadas:**
+- ✅ Agendamento de treinos (mais robusto)
+- ✅ Nenhuma lógica alterada
+
+**Risco de Reescrita:** MUITO BAIXO
+
+---
+
+## MATRIZ DE PRIORIZAÇÃO FINAL
+
+| Item | Risco | Impacto | Complexidade | Prioridade |
+|------|-------|---------|--------------|------------|
+| Mapeamento de dias | MUITO BAIXO | Baixo | Trivial | 1️⃣ |
+| Delay de cache | MUITO BAIXO | Baixo | Trivial | 2️⃣ |
+| Rate limit 429 | BAIXO | Médio | Baixa | 3️⃣ |
+| Início de semana | BAIXO | Baixo | Baixa | 4️⃣ |
+| Trigger de planos | MÉDIO | Médio | Média | 5️⃣ |
+| Tipar Edge Function | MÉDIO | Alto | Alta | 6️⃣ |
+| Ref hasStarted | N/A | N/A | N/A | MANTER |
+| Workaround 30s | N/A | N/A | N/A | MANTER |
+
+---
+
+## ORDEM DE IMPLEMENTAÇÃO RECOMENDADA
+
+### Sprint 1 (Baixíssimo Risco) ✅
+1. Adicionar aliases de dias em `workoutScheduler.ts`
+2. Remover delay hardcoded em `Result.tsx`
+
+### Sprint 2 (Baixo Risco)
+3. Estruturar resposta 429 na Edge Function
+4. Atualizar parsing no frontend
+5. Documentar convenção de início de semana
+
+### Sprint 3 (Médio Risco) 
+6. Migração do trigger `enforce_workout_plan_limit`
+7. Remover workaround de deleção no hook
+
+### Sprint 4 (Longo Prazo)
+8. Tipar Edge Function progressivamente
+
+---
+
+## GARANTIAS DE PRESERVAÇÃO
+
+Para CADA mudança, validar:
+
+- [ ] Geração de plano funciona
+- [ ] Salvamento de plano funciona
+- [ ] Carregamento de plano existente funciona
+- [ ] Rate limit exibe timer corretamente
+- [ ] Histórico de sessões preservado
+- [ ] Streak calculation correto
+- [ ] Weekly progress exibe corretamente
+- [ ] Conquistas desbloqueiam
+
+**NENHUMA funcionalidade será alterada sem teste prévio.**
