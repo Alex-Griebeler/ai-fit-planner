@@ -36,9 +36,9 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">1. Controlador dos Dados</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O AI Trainer, inscrito no CNPJ sob o nº XX.XXX.XXX/0001-XX, com sede na cidade de São Paulo/SP, 
-              é o controlador dos dados pessoais coletados através desta plataforma, nos termos da Lei Geral 
-              de Proteção de Dados (Lei nº 13.709/2018 - LGPD).
+              O AI Trainer, com sede na cidade de São Paulo/SP, é o controlador dos dados pessoais 
+              coletados através desta plataforma, nos termos da Lei Geral de Proteção de Dados 
+              (Lei nº 13.709/2018 - LGPD).
             </p>
           </section>
 
