@@ -145,11 +145,49 @@ Volume Final = Base × levelMultiplier × recoveryMultiplier × learningContextM
 **Classificação de Grupos Musculares:**
 
 ```typescript
-// Função: getMuscleCategory (linhas 672-679)
+// Função: getMuscleCategory (linhas 681-688)
 large:  ["chest", "back", "quadriceps", "hamstrings", "glutes"]
 medium: ["shoulders", "scapular_belt"]
 small:  ["biceps", "triceps", "calves", "core"]
 ```
+
+### 3.1 Boost de Volume para Grupos Prioritários (+25%)
+
+**Constantes:** `PRIORITY_BOOST = 1.25` (linha 694)
+
+Quando o usuário seleciona áreas de foco (`bodyAreas`) durante o onboarding, esses grupos musculares recebem **+25% de volume** (mínimo e máximo).
+
+**Mapeamento de Áreas para Grupos Musculares:**
+
+```typescript
+// BODY_AREA_TO_MUSCLES (linhas 697-720)
+"peitoral" / "peito"       → chest
+"costas" / "dorsal"        → back
+"ombros" / "deltoides"     → shoulders
+"biceps" / "bíceps"        → biceps
+"triceps" / "tríceps"      → triceps
+"braços"                   → biceps + triceps
+"quadriceps" / "coxas"     → quadriceps
+"pernas"                   → quadriceps + hamstrings + glutes
+"isquiotibiais"            → hamstrings
+"gluteos" / "bumbum"       → glutes
+"panturrilhas"             → calves
+"core" / "abdomen"         → core
+```
+
+**Exemplo Prático:**
+
+| Grupo | Base (Hipertrofia) | Com Prioridade (+25%) |
+|-------|--------------------|-----------------------|
+| Peitoral (sem foco) | 10-25 séries | 10-25 séries |
+| Peitoral (COM foco) | 12-31 séries | **+25% mínimo e máximo** |
+| Glúteos (sem foco) | 10-25 séries | 10-25 séries |
+| Glúteos (COM foco) | 12-31 séries | **+25% mínimo e máximo** |
+
+**Impacto:**
+- A tabela de volume enviada para a IA já mostra os ranges ajustados
+- A validação pós-IA também considera os ranges aumentados
+- Grupos não-prioritários mantêm seus mínimos obrigatórios
 
 ---
 
