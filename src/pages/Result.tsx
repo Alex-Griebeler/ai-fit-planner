@@ -367,7 +367,33 @@ export default function Result() {
       return;
     }
 
-    // PRIORITY 1: If there's an active plan, display it and DON'T generate a new one
+    // Prevent duplicate generation attempts
+    if (hasStartedGeneration.current && retryCount === 0) {
+      return;
+    }
+
+    // PRIORITY 1: Check for pending onboarding data in sessionStorage (from onboarding flow)
+    // This takes precedence over existing plans - user wants to generate a NEW plan
+    const savedSessionData = sessionStorage.getItem('onboardingData');
+    if (savedSessionData) {
+      hasStartedGeneration.current = true;
+      const parsedData: OnboardingData = JSON.parse(savedSessionData);
+      
+      // Sanitize trainingDays from sessionStorage (may be corrupted)
+      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
+      
+      // If it was corrupted, update sessionStorage
+      if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
+        sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
+      }
+      
+      setData(parsedData);
+      generatePlan(parsedData);
+      return;
+    }
+
+    // PRIORITY 2: If there's an active plan and no new onboarding data, display it
     if (activePlan) {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
@@ -393,39 +419,10 @@ export default function Result() {
         });
         setIsSaved(true);
       }
-      // Clear any pending onboarding data since we already have a plan
-      sessionStorage.removeItem('onboardingData');
-      return; // Don't proceed to generation logic
-    }
-
-    // PRIORITY 2: No active plan - check if we should generate a new one
-    
-    // Prevent duplicate generation attempts
-    if (hasStartedGeneration.current && retryCount === 0) {
       return;
     }
 
-    // Check for pending onboarding data in sessionStorage (from onboarding flow)
-    const savedSessionData = sessionStorage.getItem('onboardingData');
-    if (savedSessionData) {
-      hasStartedGeneration.current = true;
-      const parsedData: OnboardingData = JSON.parse(savedSessionData);
-      
-      // Sanitize trainingDays from sessionStorage (may be corrupted)
-      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-      parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
-      
-      // If it was corrupted, update sessionStorage
-      if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
-        sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
-      }
-      
-      setData(parsedData);
-      generatePlan(parsedData);
-      return;
-    }
-
-    // Check for saved onboarding data in database
+    // PRIORITY 3: No active plan and no sessionStorage - check if we can generate from saved onboarding
     if (savedOnboardingData && profile) {
       hasStartedGeneration.current = true;
       const fullData: OnboardingData = {
@@ -436,6 +433,8 @@ export default function Result() {
         sessionDuration: savedOnboardingData.sessionDuration || null,
         exerciseTypes: savedOnboardingData.exerciseTypes || [],
         includeCardio: savedOnboardingData.includeCardio || false,
+        cardioTiming: savedOnboardingData.cardioTiming || null,
+        splitPreference: savedOnboardingData.splitPreference || null,
         experienceLevel: savedOnboardingData.experienceLevel || null,
         variationPreference: savedOnboardingData.variationPreference || null,
         bodyAreas: savedOnboardingData.bodyAreas || [],
