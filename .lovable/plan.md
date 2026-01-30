@@ -1,215 +1,104 @@
 
-# Plano: Reescrita Segura da Nomenclatura e Lógica de Priorização
 
-## Resumo Executivo
+# Plano: Elevar Core para Grupo Grande
 
-Este plano implementa duas correções estruturais na Edge Function `generate-workout`:
+## Resumo
 
-1. **Nomenclatura**: Padronizar "Inferior" → "Membros Inferiores" em todos os splits
-2. **Mapeamento de Prioridades**: Corrigir chaves para inglês (valores salvos no banco)
-3. **Cintura Escapular Vinculada a Costas**: Quando "back" é prioridade, automaticamente incluir `scapular_belt` como prioridade também (+25%)
+Atualmente o **Core** está classificado como grupo "small", recebendo volume mínimo de **6 séries/semana** para hipertrofia. O usuário quer que Core tenha o **mesmo tratamento dos grupos grandes** (10+ séries/semana para hipertrofia).
 
 ---
 
-## Diagnóstico Confirmado
+## Diagnóstico Atual
 
-### Problema 1: Nomenclatura Inconsistente
-
-**Estado atual nos splits:**
-
-| Frequência | Estrutura Atual | Problema |
-|------------|-----------------|----------|
-| 3 dias (mixed) | `["Full Body", "Superior", "Inferior"]` | Usa "Inferior" |
-| 4 dias (todos) | `["Superior A", "Inferior A", "Superior B", "Inferior B"]` | Usa "Inferior" |
-| 5 dias (todos) | `["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]` | Mistura "Inferior" e "Pernas" |
-| 6 dias (todos) | `["Empurrar A", "Puxar A", "Pernas A", ...]` | Usa "Pernas" |
-
-**Decisão do usuário**: Padronizar para **"Membros Inferiores"**
-
-### Problema 2: Mapeamento de `body_areas` Quebrado
-
-**Onboarding salva em inglês** (confirmado em `StepBodyAreas.tsx`):
+**Classificação de Grupos (linha 681-688):**
 ```typescript
-const BODY_AREA_OPTIONS = [
-  { value: 'chest', label: 'Peitoral' },
-  { value: 'shoulders', label: 'Ombros' },
-  { value: 'arms', label: 'Braços' },
-  { value: 'back', label: 'Costas' },
-  { value: 'core', label: 'Core' },
-  { value: 'glutes', label: 'Glúteos' },
-  { value: 'legs', label: 'Pernas' },
-];
+const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes"];
+const mediumGroups = ["shoulders", "scapular_belt"];
+// Core cai no "small" por default
 ```
 
-**Mapeamento atual usa chaves em português** (linhas 697-723):
-```typescript
-"peitoral": ["chest"],  // ❌ Nunca match com "chest" do banco
-"core": ["core"],       // ✅ Único que funciona
-```
+**Mínimos por Objetivo (linha 645-650):**
+| Objetivo | Large | Medium | Small |
+|----------|-------|--------|-------|
+| Hipertrofia | 10 | 6 | 6 |
+| Emagrecimento | 8 | 6 | 4 |
+| Saúde | 6 | 4 | 4 |
+| Performance | 8 | 6 | 6 |
 
-### Problema 3: Cintura Escapular não Vinculada a Costas
-
-**Requisito do usuário**: Quando "back" (Costas) é selecionado como prioridade:
-- Automaticamente incluir pelo menos 1 exercício de Cintura Escapular
-- Aplicar o boost de +25% também para `scapular_belt`
+**Resultado atual**: Core recebe apenas 6 séries mínimas em hipertrofia.
 
 ---
 
-## Mudanças Técnicas
+## Mudança Técnica
 
-### Mudança 1: Reescrever `BODY_AREA_TO_MUSCLES`
+### Mudança Única: Adicionar `core` aos Grupos Grandes
 
 **Arquivo**: `supabase/functions/generate-workout/index.ts`  
-**Linhas**: 697-723
+**Linha**: 682
 
-**Código novo:**
-
+**Antes:**
 ```typescript
-// ════════════════════════════════════════════════════════════════════
-// BODY AREA → MUSCLE GROUPS MAPPING
-// ════════════════════════════════════════════════════════════════════
-// Fonte de verdade: StepBodyAreas.tsx → BODY_AREA_OPTIONS
-// Valores salvos no banco: chest, shoulders, arms, back, core, glutes, legs
-// ════════════════════════════════════════════════════════════════════
-
-const BODY_AREA_TO_MUSCLES: Record<string, string[]> = {
-  // ═══ CHAVES PRIMÁRIAS (EN) - Valores salvos pelo onboarding ═══
-  "chest":     ["chest"],
-  "shoulders": ["shoulders"],
-  "arms":      ["biceps", "triceps"],
-  "back":      ["back", "scapular_belt"],  // ⭐ INCLUI CINTURA ESCAPULAR
-  "core":      ["core"],
-  "glutes":    ["glutes"],
-  "legs":      ["quadriceps", "hamstrings", "glutes", "calves"],
-  
-  // ═══ ALIASES (PT) - Compatibilidade com entradas alternativas ═══
-  "peitoral":      ["chest"],
-  "peito":         ["chest"],
-  "costas":        ["back", "scapular_belt"],  // ⭐ INCLUI CINTURA ESCAPULAR
-  "dorsal":        ["back"],
-  "ombros":        ["shoulders"],
-  "braços":        ["biceps", "triceps"],
-  "gluteos":       ["glutes"],
-  "glúteos":       ["glutes"],
-  "pernas":        ["quadriceps", "hamstrings", "glutes", "calves"],
-  "quadriceps":    ["quadriceps"],
-  "panturrilhas":  ["calves"],
-  "abdomen":       ["core"],
-  "abdômen":       ["core"],
-  "barriga":       ["core"],
-};
+const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes"];
 ```
 
-**Mudanças principais:**
-- Chaves primárias em **inglês** (match com banco)
-- `"back"` e `"costas"` agora incluem `"scapular_belt"` automaticamente
-- Aliases em português mantidos para compatibilidade futura
-
-### Mudança 2: Padronizar Nomenclatura para "Membros Inferiores"
-
-**Arquivo**: `supabase/functions/generate-workout/index.ts`  
-**Linhas**: 233-305
-
-**Alterações por frequência:**
-
-```text
-┌──────────────┬─────────────────────────────────────────────────────────────────────────────┐
-│ Frequência   │ Estrutura Antiga → Estrutura Nova                                           │
-├──────────────┼─────────────────────────────────────────────────────────────────────────────┤
-│ 3 dias mixed │ ["Full Body", "Superior", "Inferior"]                                       │
-│              │ → ["Full Body", "Superior", "Membros Inferiores"]                           │
-├──────────────┼─────────────────────────────────────────────────────────────────────────────┤
-│ 3 dias cons  │ ["Empurrar (...)", "Puxar (...)", "Pernas (...)"]                           │
-│              │ → ["Empurrar (...)", "Puxar (...)", "Membros Inferiores (...)"]             │
-├──────────────┼─────────────────────────────────────────────────────────────────────────────┤
-│ 4 dias todos │ ["Superior A", "Inferior A", "Superior B", "Inferior B"]                    │
-│              │ → ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]│
-├──────────────┼─────────────────────────────────────────────────────────────────────────────┤
-│ 5 dias todos │ ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]                     │
-│              │ → ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inf B"]│
-├──────────────┼─────────────────────────────────────────────────────────────────────────────┤
-│ 6 dias todos │ ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]  │
-│              │ → ["Empurrar A", "Puxar A", "Membros Inf A", "Empurrar B", "Puxar B", "MI B"]│
-└──────────────┴─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Mudança 3: Adicionar Log de Verificação de Prioridades
-
-**Arquivo**: `supabase/functions/generate-workout/index.ts`  
-**Após linha 750 (dentro de `buildVolumeTableWithPriorities`)**
-
+**Depois:**
 ```typescript
-// Log para debug de grupos prioritários
-if (bodyAreas && bodyAreas.length > 0) {
-  const priorityMuscles: string[] = [];
-  for (const area of bodyAreas) {
-    const mapped = BODY_AREA_TO_MUSCLES[area.toLowerCase().trim()];
-    if (mapped) {
-      priorityMuscles.push(...mapped);
-    } else {
-      console.warn(`[PRIORITY] Área desconhecida: "${area}" - não mapeada`);
-    }
-  }
-  const uniqueMuscles = [...new Set(priorityMuscles)];
-  console.log(`[PRIORITY] bodyAreas: [${bodyAreas.join(', ')}] → Músculos +25%: [${uniqueMuscles.join(', ')}]`);
-}
+const largeGroups = ["chest", "back", "quadriceps", "hamstrings", "glutes", "core"];
 ```
 
-### Mudança 4: Atualizar Documentação
+**Também atualizar a tabela de volume (linha 785):**
+
+**Antes:**
+```typescript
+{ name: "Core", nameEN: "core", category: "small" },
+```
+
+**Depois:**
+```typescript
+{ name: "Core", nameEN: "core", category: "large" },
+```
+
+---
+
+## Impacto
+
+| Objetivo | Core Antes | Core Depois |
+|----------|------------|-------------|
+| Hipertrofia | 6 séries/sem | **10 séries/sem** |
+| Emagrecimento | 4 séries/sem | **8 séries/sem** |
+| Saúde | 4 séries/sem | **6 séries/sem** |
+| Performance | 6 séries/sem | **8 séries/sem** |
+
+---
+
+## Atualização da Documentação
 
 **Arquivo**: `docs/PRESCRIPTION_GUIDELINES_V1.md`
 
-Adicionar nova seção:
+Atualizar os comentários e a documentação para refletir que Core agora é tratado como grupo grande:
 
 ```markdown
-### 3.1 Boost de Volume para Grupos Prioritários (+25%)
-
-**Constante**: `PRIORITY_BOOST = 1.25`
-
-Quando o usuário seleciona áreas de foco no onboarding, os grupos musculares correspondentes recebem +25% de volume.
-
-#### Mapeamento de Chaves (Banco → Músculos)
-
-| bodyArea (EN) | Grupos Musculares Afetados |
-|---------------|---------------------------|
-| chest         | chest |
-| shoulders     | shoulders |
-| arms          | biceps, triceps |
-| back          | back, scapular_belt ⭐ |
-| core          | core |
-| glutes        | glutes |
-| legs          | quadriceps, hamstrings, glutes, calves |
-
-⭐ **Regra Especial**: Quando "Costas" é prioridade, a Cintura Escapular também recebe o boost de +25%, garantindo pelo menos 1 exercício de deltóide posterior/romboides.
+## GRUPOS GRANDES (chest, back, quadriceps, hamstrings, glutes, core):
+- Hipertrofia: MÍNIMO 10 séries/semana
+- Emagrecimento: MÍNIMO 8 séries/semana
+- Saúde: MÍNIMO 6 séries/semana
+- Performance: MÍNIMO 8 séries/semana
 ```
-
----
-
-## Arquivos Afetados
-
-| Arquivo | Tipo de Mudança | Risco |
-|---------|-----------------|-------|
-| `supabase/functions/generate-workout/index.ts` | Reescrita de constantes + nomenclatura | **Baixo** |
-| `docs/PRESCRIPTION_GUIDELINES_V1.md` | Atualização de documentação | Nenhum |
 
 ---
 
 ## Validação Pós-Implementação
 
-1. **Deploy da Edge Function**
-2. **Gerar treino com `bodyAreas: ["back"]`** e verificar nos logs:
-   ```
-   [PRIORITY] bodyAreas: [back] → Músculos +25%: [back, scapular_belt]
-   ```
-3. **Confirmar tabela de volume** mostra `⭐ +25%` para Costas E Cintura Escapular
-4. **Verificar nomenclatura** dos treinos gerados usa "Membros Inferiores" consistentemente
+1. Gerar treino com objetivo **hipertrofia**
+2. Verificar nos logs/volume que Core aparece com mínimo de **10 séries**
+3. Confirmar que a validação pós-IA não emite mais warnings sobre volume baixo de Core
 
 ---
 
-## Mitigação de Riscos
+## Risco
 
 | Risco | Probabilidade | Mitigação |
 |-------|---------------|-----------|
-| Aliases PT deixam de funcionar | Muito baixa | Mantidos como fallback |
-| Nomenclatura quebra reordenação | Baixa | Atualizar `reorderWorkoutsByDayStructure` se necessário |
-| Volume calculado incorretamente | Muito baixa | Validador pós-IA já verifica ranges |
+| Treinos ficam muito longos | Baixa | Volume máximo já é limitado por duração da sessão |
+| IA não atinge o mínimo | Média | Validador pós-IA já emite warnings (pode ser reforçado depois) |
+
