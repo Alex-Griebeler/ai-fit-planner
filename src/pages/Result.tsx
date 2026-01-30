@@ -132,7 +132,7 @@ export default function Result() {
   const navigate = useNavigate();
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
-  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans } = useWorkoutPlans();
+  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans, deactivatePlan } = useWorkoutPlans();
   const { isPremium } = useSubscription();
   
   // Workout schedule - for reordering workouts based on suggestion
@@ -376,7 +376,12 @@ export default function Result() {
     // This takes precedence over existing plans - user wants to generate a NEW plan
     const savedSessionData = sessionStorage.getItem('onboardingData');
     if (savedSessionData) {
+      // Prevent duplicate generation even with sessionStorage present
+      if (hasStartedGeneration.current) {
+        return;
+      }
       hasStartedGeneration.current = true;
+      
       const parsedData: OnboardingData = JSON.parse(savedSessionData);
       
       // Sanitize trainingDays from sessionStorage (may be corrupted)
@@ -386,6 +391,13 @@ export default function Result() {
       // If it was corrupted, update sessionStorage
       if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
         sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
+      }
+      
+      // If there's an existing active plan, deactivate it before generating new one
+      if (activePlan) {
+        deactivatePlan(activePlan.id).catch(err => {
+          console.error('Error deactivating old plan:', err);
+        });
       }
       
       setData(parsedData);
