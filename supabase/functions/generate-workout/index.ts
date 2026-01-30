@@ -239,68 +239,68 @@ const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
       dayStructure: ["Full Body A", "Full Body B", "Full Body C"]
     },
     consecutive: {
-      split: "A/B/C Split (Empurrar/Puxar/Pernas)",
-      description: "Empurrar/Puxar/Pernas para evitar sobreposição muscular em dias seguidos",
-      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Pernas (Membros Inferiores/Core)"]
+      split: "A/B/C Split (Empurrar/Puxar/Membros Inferiores)",
+      description: "Empurrar/Puxar/Membros Inferiores para evitar sobreposição muscular em dias seguidos",
+      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Membros Inferiores (Pernas/Core)"]
     },
     mixed: {
       split: "Full Body + A/B",
       description: "Full Body no dia isolado, A/B nos dias consecutivos",
-      dayStructure: ["Full Body", "Superior", "Inferior"]
+      dayStructure: ["Full Body", "Superior", "Membros Inferiores"]
     }
   },
   // 4 dias/semana
   "4": {
     alternating: {
-      split: "Superior/Inferior 2x",
-      description: "Clássico Superior/Inferior com 2 frequências por grupamento",
-      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
+      split: "Superior/Membros Inferiores 2x",
+      description: "Clássico Superior/Membros Inferiores com 2 frequências por grupamento",
+      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
     },
     consecutive: {
-      split: "Superior/Inferior 2x (adaptado)",
-      description: "Alternar Superior/Inferior mesmo em dias seguidos - sem sobreposição",
-      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
+      split: "Superior/Membros Inferiores 2x (adaptado)",
+      description: "Alternar Superior/Membros Inferiores mesmo em dias seguidos - sem sobreposição",
+      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
     },
     mixed: {
-      split: "Superior/Inferior 2x",
-      description: "Superior/Inferior adaptado ao padrão misto",
-      dayStructure: ["Superior A", "Inferior A", "Superior B", "Inferior B"]
+      split: "Superior/Membros Inferiores 2x",
+      description: "Superior/Membros Inferiores adaptado ao padrão misto",
+      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
     }
   },
   // 5 dias/semana
   "5": {
     alternating: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
-      description: "Superior-Inferior-Empurrar-Puxar-Inferior",
-      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
+      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
+      description: "Superior-Membros Inferiores-Empurrar-Puxar-Membros Inferiores",
+      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
     },
     consecutive: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
       description: "Organizado para minimizar sobreposição em dias seguidos",
-      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
+      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
     },
     mixed: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
-      description: "Superior-Inferior-Empurrar-Puxar-Inferior adaptado",
-      dayStructure: ["Superior", "Inferior", "Empurrar", "Puxar", "Pernas"]
+      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
+      description: "Superior-Membros Inferiores-Empurrar-Puxar-Membros Inferiores adaptado",
+      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
     }
   },
   // 6 dias/semana
   "6": {
     alternating: {
-      split: "Empurrar/Puxar/Pernas 2x",
-      description: "Empurrar/Puxar/Pernas repetido 2x na semana",
-      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
+      split: "Empurrar/Puxar/Membros Inferiores 2x",
+      description: "Empurrar/Puxar/Membros Inferiores repetido 2x na semana",
+      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
     },
     consecutive: {
-      split: "Empurrar/Puxar/Pernas 2x",
-      description: "Empurrar/Puxar/Pernas organizado para evitar mesmo grupo em dias seguidos",
-      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
+      split: "Empurrar/Puxar/Membros Inferiores 2x",
+      description: "Empurrar/Puxar/Membros Inferiores organizado para evitar mesmo grupo em dias seguidos",
+      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
     },
     mixed: {
-      split: "Empurrar/Puxar/Pernas 2x",
-      description: "Empurrar/Puxar/Pernas 2x",
-      dayStructure: ["Empurrar A", "Puxar A", "Pernas A", "Empurrar B", "Puxar B", "Pernas B"]
+      split: "Empurrar/Puxar/Membros Inferiores 2x",
+      description: "Empurrar/Puxar/Membros Inferiores 2x",
+      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
     }
   }
 };
@@ -693,33 +693,38 @@ function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
 
 const PRIORITY_BOOST = 1.25; // +25% volume for priority groups
 
-// Mapping from bodyAreas (PT) to muscle groups (EN)
+// ════════════════════════════════════════════════════════════════════
+// BODY AREA → MUSCLE GROUPS MAPPING
+// ════════════════════════════════════════════════════════════════════
+// Fonte de verdade: StepBodyAreas.tsx → BODY_AREA_OPTIONS
+// Valores salvos no banco: chest, shoulders, arms, back, core, glutes, legs
+// ════════════════════════════════════════════════════════════════════
+
 const BODY_AREA_TO_MUSCLES: Record<string, string[]> = {
-  "peitoral": ["chest"],
-  "peito": ["chest"],
-  "costas": ["back"],
-  "dorsal": ["back"],
-  "ombros": ["shoulders"],
-  "deltoides": ["shoulders"],
-  "biceps": ["biceps"],
-  "bíceps": ["biceps"],
-  "triceps": ["triceps"],
-  "tríceps": ["triceps"],
-  "braços": ["biceps", "triceps"],
-  "quadriceps": ["quadriceps"],
-  "quadríceps": ["quadriceps"],
-  "pernas": ["quadriceps", "hamstrings", "glutes"],
-  "coxas": ["quadriceps", "hamstrings"],
-  "isquiotibiais": ["hamstrings"],
-  "posteriores": ["hamstrings"],
-  "gluteos": ["glutes"],
-  "glúteos": ["glutes"],
-  "bumbum": ["glutes"],
-  "panturrilhas": ["calves"],
-  "core": ["core"],
-  "abdomen": ["core"],
-  "abdômen": ["core"],
-  "barriga": ["core"],
+  // ═══ CHAVES PRIMÁRIAS (EN) - Valores salvos pelo onboarding ═══
+  "chest":     ["chest"],
+  "shoulders": ["shoulders"],
+  "arms":      ["biceps", "triceps"],
+  "back":      ["back", "scapular_belt"],  // ⭐ INCLUI CINTURA ESCAPULAR
+  "core":      ["core"],
+  "glutes":    ["glutes"],
+  "legs":      ["quadriceps", "hamstrings", "glutes", "calves"],
+  
+  // ═══ ALIASES (PT) - Compatibilidade com entradas alternativas ═══
+  "peitoral":      ["chest"],
+  "peito":         ["chest"],
+  "costas":        ["back", "scapular_belt"],  // ⭐ INCLUI CINTURA ESCAPULAR
+  "dorsal":        ["back"],
+  "ombros":        ["shoulders"],
+  "braços":        ["biceps", "triceps"],
+  "gluteos":       ["glutes"],
+  "glúteos":       ["glutes"],
+  "pernas":        ["quadriceps", "hamstrings", "glutes", "calves"],
+  "quadriceps":    ["quadriceps"],
+  "panturrilhas":  ["calves"],
+  "abdomen":       ["core"],
+  "abdômen":       ["core"],
+  "barriga":       ["core"],
 };
 
 /**
@@ -749,6 +754,21 @@ function buildVolumeTableWithPriorities(
   bodyAreas: string[]
 ): string {
   const hasPriority = bodyAreas && bodyAreas.length > 0;
+  
+  // ═══ LOG DE DEBUG PARA GRUPOS PRIORITÁRIOS ═══
+  if (bodyAreas && bodyAreas.length > 0) {
+    const priorityMuscles: string[] = [];
+    for (const area of bodyAreas) {
+      const mapped = BODY_AREA_TO_MUSCLES[area.toLowerCase().trim()];
+      if (mapped) {
+        priorityMuscles.push(...mapped);
+      } else {
+        console.warn(`[PRIORITY] Área desconhecida: "${area}" - não mapeada`);
+      }
+    }
+    const uniqueMuscles = [...new Set(priorityMuscles)];
+    console.log(`[PRIORITY] bodyAreas: [${bodyAreas.join(', ')}] → Músculos +25%: [${uniqueMuscles.join(', ')}]`);
+  }
   
   // Define all muscle groups with their categories
   const muscleRows: Array<{ name: string; nameEN: string; category: "large" | "medium" | "small"; allowZero?: boolean }> = [
