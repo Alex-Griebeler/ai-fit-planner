@@ -13,10 +13,10 @@ interface StepSessionDurationProps {
 }
 
 const DURATION_OPTIONS = [
-  { value: '30min', label: '30 minutos', desc: 'Treino moderado' },
-  { value: '45min', label: '45 minutos', desc: 'Treino completo' },
-  { value: '60min', label: '60 minutos', desc: 'Treino intenso' },
-  { value: '60plus', label: '+60 minutos', desc: 'Treino longo' },
+  { value: '30min', label: '30 minutos' },
+  { value: '45min', label: '45 minutos' },
+  { value: '60min', label: '60 minutos' },
+  { value: '60plus', label: '+60 minutos' },
 ] as const;
 
 export function StepSessionDuration({ data, updateData, onNext, onBack, totalSteps }: StepSessionDurationProps) {
@@ -35,7 +35,6 @@ export function StepSessionDuration({ data, updateData, onNext, onBack, totalSte
           <OptionCard
             key={option.value}
             title={option.label}
-            description={option.desc}
             icon={<Clock className="w-6 h-6" />}
             selected={data.sessionDuration === option.value}
             onClick={() => updateData('sessionDuration', option.value)}
