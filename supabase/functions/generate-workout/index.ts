@@ -1529,22 +1529,32 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 IMPORTANTE: TODO o output (planName, description, notes, etc.) DEVE ser em PORTUGUÊS BRASILEIRO.
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         🔴 REGRA CRÍTICA: NÚMERO DE TREINOS
+                         🔴🔴🔴 REGRA #0: NÚMERO EXATO DE TREINOS 🔴🔴🔴
 ═══════════════════════════════════════════════════════════════════════════════
 
-O array "workouts" DEVE conter EXATAMENTE o número de treinos igual aos dias de treino selecionados pelo usuário.
-- Se o usuário selecionou 6 dias → workouts DEVE ter EXATAMENTE 6 objetos
-- Se o usuário selecionou 3 dias → workouts DEVE ter EXATAMENTE 3 objetos
-- Se o usuário selecionou 4 dias → workouts DEVE ter EXATAMENTE 4 objetos
+⚠️ ESTA É A REGRA MAIS IMPORTANTE. VIOLÁ-LA INVALIDA TODO O PLANO.
 
-❌ PROIBIDO:
-- Gerar "Descanso Ativo" ou "Cardio Leve" como treino separado
-- Gerar mais treinos do que os dias selecionados
-- Gerar treinos com 0 exercícios
-- Adicionar dias extras de qualquer natureza
+O array "workouts" DEVE conter EXATAMENTE o número de objetos igual aos dias selecionados.
+O número será informado no prompt do usuário. Exemplos:
+- "6 dias" → workouts.length === 6 (EXATO, sem exceção)
+- "3 dias" → workouts.length === 3 (EXATO, sem exceção)
+- "4 dias" → workouts.length === 4 (EXATO, sem exceção)
 
-Se o usuário quer cardio em dia separado, NÃO inclua como workout.
-Cardio deve ser mencionado apenas no progressionPlan ou nas notas.
+CADA treino é um dia de treino de força com exercícios completos.
+
+❌ ABSOLUTAMENTE PROIBIDO:
+- Gerar "Descanso Ativo", "Recovery", "Cardio Leve" como objeto workout
+- Gerar MAIS treinos do que os dias selecionados
+- Gerar MENOS treinos do que os dias selecionados
+- Gerar treinos com array exercises vazio ou com menos de 4 exercícios
+- Adicionar dias de descanso ou cardio como workout separado
+
+✅ SE O USUÁRIO QUER CARDIO EM DIA SEPARADO:
+- MENCIONE no campo "progressionPlan" ou "coachNotes"
+- NÃO adicione como workout no array
+
+ANTES DE FINALIZAR: Conte quantos objetos estão no array workouts.
+Se diferente do número de dias, CORRIJA IMEDIATAMENTE.
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 1: VOLUME SEMANAL (DOCUMENTO TÉCNICO)
@@ -2692,26 +2702,30 @@ serve(async (req) => {
       }
     }
 
-    // === POST-PROCESSING: FILTER INVALID WORKOUTS ===
+    // === POST-PROCESSING: FORCE CORRECT NUMBER OF WORKOUTS ===
     const expectedDays = validatedData.trainingDays?.length || 3;
+    console.log(`Post-processing: Expected ${expectedDays} workouts based on trainingDays`);
     
     if (workoutPlan.workouts && Array.isArray(workoutPlan.workouts)) {
-      // 1. Filter out invalid workouts (0 exercises, rest days, cardio-only)
       const originalCount = workoutPlan.workouts.length;
-      workoutPlan.workouts = workoutPlan.workouts.filter((workout: any) => {
-        // Must have exercises
+      console.log(`Post-processing: AI generated ${originalCount} workouts`);
+      
+      // 1. Filter out INVALID workouts (0 exercises, rest days, cardio-only)
+      const validWorkouts = workoutPlan.workouts.filter((workout: any) => {
+        // Must have exercises array with at least 1 exercise
         if (!workout.exercises || !Array.isArray(workout.exercises) || workout.exercises.length === 0) {
-          console.log(`Filtered out workout "${workout.name}" - no exercises`);
+          console.log(`[FILTER] Removed "${workout.name}" - no exercises (exercises=${workout.exercises?.length || 0})`);
           return false;
         }
         // Skip rest days or cardio-only workouts
         const name = (workout.name || '').toLowerCase();
-        if (name.includes('descanso') || name.includes('rest') || 
-            (name.includes('cardio') && !name.includes('push') && !name.includes('pull') && !name.includes('legs'))) {
-          console.log(`Filtered out workout "${workout.name}" - rest/cardio day`);
+        const isRestDay = name.includes('descanso') || name.includes('rest') || name.includes('recuperação') || name.includes('recovery');
+        const isCardioOnly = name.includes('cardio') && !name.includes('push') && !name.includes('pull') && !name.includes('legs') && !name.includes('upper') && !name.includes('lower');
+        if (isRestDay || isCardioOnly) {
+          console.log(`[FILTER] Removed "${workout.name}" - rest/cardio-only day`);
           return false;
         }
-        // Must have warmup object
+        // Ensure warmup object exists
         if (!workout.warmup || typeof workout.warmup !== 'object') {
           workout.warmup = {
             description: "Aquecimento específico com 1-2 séries leves do primeiro exercício",
@@ -2722,18 +2736,51 @@ serve(async (req) => {
         return true;
       });
       
-      if (workoutPlan.workouts.length !== originalCount) {
-        console.log(`Post-processing: ${originalCount} workouts -> ${workoutPlan.workouts.length} after filtering`);
+      console.log(`Post-processing: After filtering invalid -> ${validWorkouts.length} workouts`);
+      
+      // 2. FORCE trim to expected number of days - THIS IS CRITICAL
+      let finalWorkouts;
+      if (validWorkouts.length > expectedDays) {
+        console.log(`[TRIM] Cutting from ${validWorkouts.length} to ${expectedDays} workouts`);
+        // Take unique workouts up to expectedDays
+        // Prioritize workouts with different names/focuses to ensure variety
+        const uniqueWorkouts = [];
+        const seenNames = new Set<string>();
+        
+        for (const workout of validWorkouts) {
+          // Create a simplified key for deduplication
+          const nameKey = (workout.name || '').toLowerCase().replace(/[^a-z]/g, '');
+          if (!seenNames.has(nameKey)) {
+            seenNames.add(nameKey);
+            uniqueWorkouts.push(workout);
+          }
+          if (uniqueWorkouts.length >= expectedDays) break;
+        }
+        
+        // If we still don't have enough unique ones, just take the first N
+        if (uniqueWorkouts.length < expectedDays) {
+          finalWorkouts = validWorkouts.slice(0, expectedDays);
+        } else {
+          finalWorkouts = uniqueWorkouts.slice(0, expectedDays);
+        }
+      } else {
+        finalWorkouts = validWorkouts;
       }
       
-      // 2. Trim to expected number of days if still too many
-      if (workoutPlan.workouts.length > expectedDays) {
-        console.log(`Trimming workouts from ${workoutPlan.workouts.length} to ${expectedDays}`);
-        workoutPlan.workouts = workoutPlan.workouts.slice(0, expectedDays);
-      }
+      // 3. Assign workoutPlan.workouts with the FINAL array
+      workoutPlan.workouts = finalWorkouts;
       
-      // 3. Update weeklyFrequency to match actual workout count
+      // 4. Update weeklyFrequency to match actual workout count
       workoutPlan.weeklyFrequency = workoutPlan.workouts.length;
+      
+      console.log(`Post-processing FINAL: ${originalCount} -> ${workoutPlan.workouts.length} workouts (expected: ${expectedDays})`);
+      
+      // 5. Validate the final count
+      if (workoutPlan.workouts.length !== expectedDays) {
+        console.warn(`[WARNING] Final workout count (${workoutPlan.workouts.length}) still differs from expected (${expectedDays})`);
+      }
+    } else {
+      console.error(`[ERROR] workoutPlan.workouts is not an array:`, typeof workoutPlan.workouts);
     }
 
     // === VALIDATE THE PLAN ===
