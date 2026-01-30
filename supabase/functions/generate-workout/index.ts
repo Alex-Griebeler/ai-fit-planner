@@ -688,6 +688,108 @@ function getMuscleCategory(muscle: string): "large" | "medium" | "small" {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                 PRIORITY BOOST (+25%) FOR USER-SELECTED BODY AREAS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const PRIORITY_BOOST = 1.25; // +25% volume for priority groups
+
+// Mapping from bodyAreas (PT) to muscle groups (EN)
+const BODY_AREA_TO_MUSCLES: Record<string, string[]> = {
+  "peitoral": ["chest"],
+  "peito": ["chest"],
+  "costas": ["back"],
+  "dorsal": ["back"],
+  "ombros": ["shoulders"],
+  "deltoides": ["shoulders"],
+  "biceps": ["biceps"],
+  "bíceps": ["biceps"],
+  "triceps": ["triceps"],
+  "tríceps": ["triceps"],
+  "braços": ["biceps", "triceps"],
+  "quadriceps": ["quadriceps"],
+  "quadríceps": ["quadriceps"],
+  "pernas": ["quadriceps", "hamstrings", "glutes"],
+  "coxas": ["quadriceps", "hamstrings"],
+  "isquiotibiais": ["hamstrings"],
+  "posteriores": ["hamstrings"],
+  "gluteos": ["glutes"],
+  "glúteos": ["glutes"],
+  "bumbum": ["glutes"],
+  "panturrilhas": ["calves"],
+  "core": ["core"],
+  "abdomen": ["core"],
+  "abdômen": ["core"],
+  "barriga": ["core"],
+};
+
+/**
+ * Check if a muscle group is a priority based on user's bodyAreas
+ */
+function isPriorityMuscle(muscle: string, bodyAreas: string[]): boolean {
+  if (!bodyAreas || bodyAreas.length === 0) return false;
+  
+  const normalizedAreas = bodyAreas.map(a => a.toLowerCase().trim());
+  const muscleNormalized = muscle.toLowerCase().trim();
+  
+  for (const area of normalizedAreas) {
+    const mappedMuscles = BODY_AREA_TO_MUSCLES[area] || [];
+    if (mappedMuscles.includes(muscleNormalized)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Build the volume table with priority boost (+25%) for selected areas
+ */
+function buildVolumeTableWithPriorities(
+  volumeRanges: CalculatedVolumeRanges, 
+  allowIsolation: boolean, 
+  bodyAreas: string[]
+): string {
+  const hasPriority = bodyAreas && bodyAreas.length > 0;
+  
+  // Define all muscle groups with their categories
+  const muscleRows: Array<{ name: string; nameEN: string; category: "large" | "medium" | "small"; allowZero?: boolean }> = [
+    { name: "Peitoral", nameEN: "chest", category: "large" },
+    { name: "Costas", nameEN: "back", category: "large" },
+    { name: "Cintura Escapular", nameEN: "scapular_belt", category: "medium" },
+    { name: "Quadríceps", nameEN: "quadriceps", category: "large" },
+    { name: "Isquiotibiais", nameEN: "hamstrings", category: "large" },
+    { name: "Glúteos", nameEN: "glutes", category: "large" },
+    { name: "Ombros", nameEN: "shoulders", category: "medium" },
+    { name: "Bíceps", nameEN: "biceps", category: "small", allowZero: !allowIsolation },
+    { name: "Tríceps", nameEN: "triceps", category: "small", allowZero: !allowIsolation },
+    { name: "Panturrilhas", nameEN: "calves", category: "small" },
+    { name: "Core", nameEN: "core", category: "small" },
+  ];
+  
+  let table = `| Grupamento       | Mínimo | Máximo | Prioridade |\n`;
+  table += `|------------------|--------|--------|------------|\n`;
+  
+  for (const muscle of muscleRows) {
+    const baseRange = volumeRanges[muscle.category];
+    const isPriority = isPriorityMuscle(muscle.nameEN, bodyAreas);
+    
+    // Apply +25% boost for priority groups
+    const minValue = muscle.allowZero ? 0 : baseRange.min;
+    const maxValue = isPriority 
+      ? Math.round(baseRange.max * PRIORITY_BOOST) 
+      : baseRange.max;
+    const adjustedMin = isPriority 
+      ? Math.round(baseRange.min * PRIORITY_BOOST) 
+      : minValue;
+    
+    const priorityMarker = isPriority ? "⭐ +25%" : "-";
+    
+    table += `| ${muscle.name.padEnd(16)} | ${adjustedMin.toString().padStart(6)} | ${maxValue.toString().padStart(6)} | ${priorityMarker.padStart(10)} |\n`;
+  }
+  
+  return table;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          PERIODIZAÇÃO DINÂMICA
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1385,27 +1487,8 @@ function validateWorkoutPlan(
     errors.push(`Volume de Peitoral não pode ser zero quando Costas tem ${backVolume} séries`);
   }
   
-  // Check if muscle is a priority area (allow +30% volume)
-  const isPriorityGroup = (muscle: string): boolean => {
-    const normalizedAreas = (userData.bodyAreas || []).map(a => a.toLowerCase());
-    const muscleAliases: Record<string, string[]> = {
-      "chest": ["peitoral", "peito", "chest"],
-      "back": ["costas", "dorsal", "back"],
-      "shoulders": ["ombros", "deltoides", "shoulders"],
-      "biceps": ["biceps", "bíceps"],
-      "triceps": ["triceps", "tríceps"],
-      "quadriceps": ["quadriceps", "quadríceps", "coxas", "pernas"],
-      "hamstrings": ["isquiotibiais", "posteriores", "hamstrings"],
-      "glutes": ["gluteos", "glúteos", "bumbum", "glutes"],
-      "calves": ["panturrilhas", "calves"],
-      "core": ["abdomen", "abdômen", "core", "barriga"],
-    };
-    
-    const aliases = muscleAliases[muscle.toLowerCase()] || [muscle.toLowerCase()];
-    return normalizedAreas.some(area => 
-      aliases.some(alias => area.includes(alias) || alias.includes(area))
-    );
-  };
+  // Check if muscle is a priority area using the shared function (allow +25% volume)
+  // Note: Using the global isPriorityMuscle function for consistency
   
   let missingGroups = 0;
   
@@ -1423,10 +1506,12 @@ function validateWorkoutPlan(
         return;
       }
       
-      // Priority groups can have +30% more volume
-      const priorityBoost = isPriorityGroup(muscle) ? 1.30 : 1.00;
+      // Priority groups have +25% more volume (aligned with prompt table)
+      const priorityBoost = isPriorityMuscle(muscle, userData.bodyAreas || []) ? PRIORITY_BOOST : 1.00;
       const effectiveMax = Math.round(baseRange.max * priorityBoost);
-      const effectiveMin = baseRange.min;
+      const effectiveMin = isPriorityMuscle(muscle, userData.bodyAreas || []) 
+        ? Math.round(baseRange.min * PRIORITY_BOOST) 
+        : baseRange.min;
       
       // Apply tolerance
       const minWithTolerance = Math.round(effectiveMin * (1 - TOLERANCE));
@@ -3578,26 +3663,14 @@ ${!densityStrategy.allowIsolation ? `
 **Aquecimento**: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.type === 'specific' ? 'específico' : 'geral + específico'})
 
 ### FAIXAS DE VOLUME SEMANAL OBRIGATÓRIAS:
-| Grupamento       | Mínimo | Máximo |
-|------------------|--------|--------|
-| Peitoral         | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Costas           | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Cintura Escapular| ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
-| Quadríceps       | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Isquiotibiais    | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Glúteos          | ${volumeRanges.large.min} | ${volumeRanges.large.max} |
-| Ombros           | ${volumeRanges.medium.min} | ${volumeRanges.medium.max} |
-| Bíceps           | ${densityStrategy.allowIsolation ? volumeRanges.small.min : 0} | ${volumeRanges.small.max} |
-| Tríceps          | ${densityStrategy.allowIsolation ? volumeRanges.small.min : 0} | ${volumeRanges.small.max} |
-| Panturrilhas     | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
-| Core             | ${volumeRanges.small.min} | ${volumeRanges.small.max} |
+${buildVolumeTableWithPriorities(volumeRanges, densityStrategy.allowIsolation, userData.bodyAreas || [])}
 
 ### ⚠️ REGRAS CRÍTICAS:
 - TODOS os grupamentos DEVEM estar DENTRO das faixas acima
 - Cintura Escapular: OBRIGATÓRIO pelo menos 1 exercício (crucifixo inverso, remada aberta)
 - Costas >= Peitoral em volume (equilíbrio postural)
-- Se há área prioritária: pode aumentar até +30% apenas naquela área
-- NUNCA reduzir outros grupos abaixo do mínimo
+${(userData.bodyAreas?.length ?? 0) > 0 ? `- ⭐ GRUPOS PRIORITÁRIOS já têm volume aumentado (+25%) na tabela acima` : ''}
+- NUNCA reduzir grupos não-prioritários abaixo do mínimo
 - Core INCLUI exercícios de lombar (Hiperextensão, Good Morning contam como core)
 ${!densityStrategy.allowIsolation ? '- Bíceps/Tríceps: ZERO séries diretas OK (trabalho indireto suficiente)' : ''}
 - O plano será VALIDADO contra estes limites`;
