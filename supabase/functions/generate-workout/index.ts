@@ -239,68 +239,68 @@ const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
       dayStructure: ["Full Body A", "Full Body B", "Full Body C"]
     },
     consecutive: {
-      split: "A/B/C Split (Empurrar/Puxar/Membros Inferiores)",
-      description: "Empurrar/Puxar/Membros Inferiores para evitar sobreposição muscular em dias seguidos",
-      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Membros Inferiores (Pernas/Core)"]
+      split: "A/B/C Split (Empurrar/Puxar/Inferiores)",
+      description: "Empurrar/Puxar/Inferiores para evitar sobreposição muscular em dias seguidos",
+      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Inferiores (Pernas/Core)"]
     },
     mixed: {
       split: "Full Body + A/B",
       description: "Full Body no dia isolado, A/B nos dias consecutivos",
-      dayStructure: ["Full Body", "Superior", "Membros Inferiores"]
+      dayStructure: ["Full Body", "Superiores", "Inferiores"]
     }
   },
   // 4 dias/semana
   "4": {
     alternating: {
-      split: "Superior/Membros Inferiores 2x",
-      description: "Clássico Superior/Membros Inferiores com 2 frequências por grupamento",
-      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
+      split: "Superiores/Inferiores 2x",
+      description: "Clássico Superiores/Inferiores com 2 frequências por grupamento",
+      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
     },
     consecutive: {
-      split: "Superior/Membros Inferiores 2x (adaptado)",
-      description: "Alternar Superior/Membros Inferiores mesmo em dias seguidos - sem sobreposição",
-      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
+      split: "Superiores/Inferiores 2x (adaptado)",
+      description: "Alternar Superiores/Inferiores mesmo em dias seguidos - sem sobreposição",
+      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
     },
     mixed: {
-      split: "Superior/Membros Inferiores 2x",
-      description: "Superior/Membros Inferiores adaptado ao padrão misto",
-      dayStructure: ["Superior A", "Membros Inferiores A", "Superior B", "Membros Inferiores B"]
+      split: "Superiores/Inferiores 2x",
+      description: "Superiores/Inferiores adaptado ao padrão misto",
+      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
     }
   },
   // 5 dias/semana
   "5": {
     alternating: {
-      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
-      description: "Superior-Membros Inferiores-Empurrar-Puxar-Membros Inferiores",
-      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+      description: "Superiores-Inferiores-Empurrar-Puxar-Inferiores",
+      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
     },
     consecutive: {
-      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
       description: "Organizado para minimizar sobreposição em dias seguidos",
-      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
+      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
     },
     mixed: {
-      split: "Híbrido (Sup-MI-Empurrar-Puxar-MI)",
-      description: "Superior-Membros Inferiores-Empurrar-Puxar-Membros Inferiores adaptado",
-      dayStructure: ["Superior", "Membros Inferiores A", "Empurrar", "Puxar", "Membros Inferiores B"]
+      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
+      description: "Superiores-Inferiores-Empurrar-Puxar-Inferiores adaptado",
+      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
     }
   },
   // 6 dias/semana
   "6": {
     alternating: {
-      split: "Empurrar/Puxar/Membros Inferiores 2x",
-      description: "Empurrar/Puxar/Membros Inferiores repetido 2x na semana",
-      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
+      split: "Empurrar/Puxar/Inferiores 2x",
+      description: "Empurrar/Puxar/Inferiores repetido 2x na semana",
+      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
     },
     consecutive: {
-      split: "Empurrar/Puxar/Membros Inferiores 2x",
-      description: "Empurrar/Puxar/Membros Inferiores organizado para evitar mesmo grupo em dias seguidos",
-      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
+      split: "Empurrar/Puxar/Inferiores 2x",
+      description: "Empurrar/Puxar/Inferiores organizado para evitar mesmo grupo em dias seguidos",
+      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
     },
     mixed: {
-      split: "Empurrar/Puxar/Membros Inferiores 2x",
-      description: "Empurrar/Puxar/Membros Inferiores 2x",
-      dayStructure: ["Empurrar A", "Puxar A", "Membros Inferiores A", "Empurrar B", "Puxar B", "Membros Inferiores B"]
+      split: "Empurrar/Puxar/Inferiores 2x",
+      description: "Empurrar/Puxar/Inferiores 2x",
+      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
     }
   }
 };
