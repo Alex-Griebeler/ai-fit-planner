@@ -618,6 +618,12 @@ function calculateVolumeRanges(params: {
   const adjustedMin = Math.round(weeklyMin * levelMultiplier);
   const adjustedMax = Math.round(Math.min(weeklyMax * combinedMultiplier, maxPossibleWeekly));
   
+  // ═══ LOG DE AUDITORIA DE MULTIPLICADORES ═══
+  console.log(`[LEVEL] Experience: ${experienceLevel} → Multiplier: ×${levelMultiplier}`);
+  console.log(`[RECOVERY] Sleep: ${sleepHours}, Stress: ${stressLevel} → Multiplier: ×${recoveryMultiplier}`);
+  console.log(`[VOLUME] Base: ${weeklyMin}-${weeklyMax} → Adjusted: ${adjustedMin}-${adjustedMax} (combined: ×${combinedMultiplier.toFixed(2)})`);
+
+  
   // Garantir range mínimo de 4 séries entre min e max
   const finalMin = adjustedMin;
   const finalMax = Math.max(adjustedMax, adjustedMin + 4);
