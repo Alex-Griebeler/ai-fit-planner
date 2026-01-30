@@ -18,7 +18,6 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
 
   const isLoading = profileLoading || onboardingLoading;
-  const isSavingAny = isUpdating || isSaving;
 
   if (isLoading) {
     return <LoadingScreen message="Carregando configurações..." />;

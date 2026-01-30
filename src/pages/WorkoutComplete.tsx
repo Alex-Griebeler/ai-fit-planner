@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Clock, Dumbbell, Flame, TrendingUp, ChevronRight, Home } from 'lucide-react';
@@ -37,6 +37,38 @@ export default function WorkoutComplete() {
   const [newAchievements, setNewAchievements] = useState<AchievementDefinition[]>([]);
   const [showConfetti, setShowConfetti] = useState(true);
   const [streakUpdated, setStreakUpdated] = useState(false);
+  const hasInitialized = useRef(false);
+
+  // Calculate total volume from session exercises_data
+  const calculateTotalVolume = useCallback((): number => {
+    if (!sessionData?.sessionId) return 0;
+    
+    // Find the current session in workoutSessions to get exercises_data
+    const currentSession = workoutSessions.find(s => s.id === sessionData.sessionId);
+    if (!currentSession?.exercises_data) return 0;
+    
+    try {
+      const exercises = currentSession.exercises_data as Array<{
+        completedSets?: number;
+        sets?: number;
+        reps?: string;
+        load?: string;
+      }>;
+      
+      if (!Array.isArray(exercises)) return 0;
+      
+      return exercises.reduce((total, exercise) => {
+        const sets = exercise.completedSets ?? exercise.sets ?? 0;
+        const reps = parseInt(exercise.reps?.split('-')[0] ?? '0', 10);
+        const load = parseFloat(exercise.load?.replace(/[^\d.]/g, '') ?? '0');
+        
+        // Volume = sets × reps × load (kg)
+        return total + (sets * reps * load);
+      }, 0);
+    } catch {
+      return 0;
+    }
+  }, [sessionData?.sessionId, workoutSessions]);
 
   // Calculate stats for achievements
   const achievementStats = useMemo((): AchievementStats => {
@@ -47,35 +79,37 @@ export default function WorkoutComplete() {
       totalSessions,
       currentStreak: (streak?.current_streak ?? 0) + (streakUpdated ? 0 : 1),
       longestStreak: streak?.longest_streak ?? 0,
-      totalVolume: 0, // TODO: Calculate from exercises_data
+      totalVolume: calculateTotalVolume(),
       workoutHour: now.getHours(),
       daysSinceLastWorkout: streak?.last_workout_date 
         ? Math.floor((now.getTime() - new Date(streak.last_workout_date).getTime()) / (1000 * 60 * 60 * 24))
         : undefined,
     };
-  }, [workoutSessions, streak, streakUpdated]);
+  }, [workoutSessions, streak, streakUpdated, calculateTotalVolume]);
+
+  // Memoized initialization function to avoid stale closures
+  const initializeCompletion = useCallback(async () => {
+    if (hasInitialized.current || streakUpdated) return;
+    hasInitialized.current = true;
+    
+    try {
+      // Update streak
+      await updateStreak();
+      setStreakUpdated(true);
+
+      // Check for new achievements with current stats
+      const unlocked = await checkAndUnlockAchievements(achievementStats);
+      setNewAchievements(unlocked);
+    } catch (error) {
+      console.error('Error updating completion data:', error);
+      hasInitialized.current = false; // Allow retry on error
+    }
+  }, [updateStreak, checkAndUnlockAchievements, achievementStats, streakUpdated]);
 
   // Update streak and check achievements on mount
   useEffect(() => {
-    const initializeCompletion = async () => {
-      if (streakUpdated) return;
-      
-      try {
-        // Update streak
-        await updateStreak();
-        setStreakUpdated(true);
-
-        // Check for new achievements
-        const unlocked = await checkAndUnlockAchievements(achievementStats);
-        setNewAchievements(unlocked);
-      } catch (error) {
-        console.error('Error updating completion data:', error);
-      }
-    };
-
     initializeCompletion();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initializeCompletion]);
 
   // Hide confetti after 3 seconds
   useEffect(() => {
