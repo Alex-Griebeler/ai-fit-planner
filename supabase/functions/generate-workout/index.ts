@@ -314,6 +314,111 @@ function getPatternLabel(pattern: 'alternating' | 'consecutive' | 'mixed'): stri
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//                          HELPER: GET SPLIT RULE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface GetSplitRuleParams {
+  trainingDays: string[];
+  splitPreference?: string | null;
+  experienceLevel?: string | null;
+}
+
+function getSplitRule(params: GetSplitRuleParams): SplitRule {
+  const { trainingDays, splitPreference, experienceLevel } = params;
+  const level = experienceLevel || 'beginner';
+  const dayPattern = analyzeDayPattern(trainingDays);
+  const freqKey = trainingDays.length.toString();
+  
+  // Check if user has a split preference (only for 3x/week intermediate/advanced)
+  const hasSplitPreference = splitPreference && 
+    trainingDays.length === 3 && 
+    level !== 'beginner';
+  
+  if (hasSplitPreference) {
+    const splitPreferenceMap: Record<string, SplitRule> = {
+      'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
+      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
+      'hybrid': {
+        split: "Full Body + Push/Pull Híbrido",
+        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
+      },
+      'no_preference': {
+        split: "Full Body 3x (Variedade Máxima)",
+        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
+        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
+        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
+      }
+    };
+    return splitPreferenceMap[splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
+  }
+  
+  // Automatic detection based on day pattern
+  return SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
+    || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                          REORDER WORKOUTS BY DAY STRUCTURE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Reordena os treinos gerados pela IA para seguir a ordem do dayStructure
+ * Ex: Se dayStructure = ["Empurrar A", "Puxar A", "Pernas A", ...]
+ *     e a IA gerou ["Puxar A", "Empurrar A", "Pernas A", ...]
+ *     esta função reordena para seguir dayStructure
+ */
+function reorderWorkoutsByDayStructure(workouts: any[], dayStructure: string[]): any[] {
+  if (!workouts || workouts.length === 0 || !dayStructure || dayStructure.length === 0) {
+    return workouts;
+  }
+  
+  console.log(`[REORDER] Input workouts: ${workouts.map(w => w.name).join(', ')}`);
+  console.log(`[REORDER] Expected order: ${dayStructure.join(', ')}`);
+  
+  // Normaliza o nome para comparação (remove parênteses, espaços extras, lowercase)
+  const normalizeName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/\s*\([^)]*\)\s*/g, '') // Remove parênteses e conteúdo
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+  
+  // Cria um mapa de índice esperado baseado no dayStructure
+  const expectedOrder = new Map<string, number>();
+  dayStructure.forEach((structureName, index) => {
+    expectedOrder.set(normalizeName(structureName), index);
+  });
+  
+  // Ordena os workouts baseado na posição esperada
+  const reordered = [...workouts].sort((a, b) => {
+    const aName = normalizeName(a.name || '');
+    const bName = normalizeName(b.name || '');
+    
+    // Encontra a melhor correspondência no dayStructure
+    let aIndex = expectedOrder.size; // Default: no final
+    let bIndex = expectedOrder.size;
+    
+    for (const [structureName, index] of expectedOrder.entries()) {
+      // Correspondência exata ou parcial (ex: "empurrar a" match "empurrar a (força)")
+      if (aName.includes(structureName) || structureName.includes(aName)) {
+        aIndex = Math.min(aIndex, index);
+      }
+      if (bName.includes(structureName) || structureName.includes(bName)) {
+        bIndex = Math.min(bIndex, index);
+      }
+    }
+    
+    return aIndex - bIndex;
+  });
+  
+  console.log(`[REORDER] Output workouts: ${reordered.map(w => w.name).join(', ')}`);
+  
+  return reordered;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //                          TEMPO POR SESSÃO
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2784,15 +2889,24 @@ serve(async (req) => {
         finalWorkouts = validWorkouts;
       }
       
-      // 3. Assign workoutPlan.workouts with the FINAL array
-      workoutPlan.workouts = finalWorkouts;
+      // 3. REORDER workouts to match the expected dayStructure (Empurrar → Puxar → Pernas)
+      const splitRule = getSplitRule({
+        trainingDays: validatedData.trainingDays || [],
+        splitPreference: validatedData.splitPreference,
+        experienceLevel: validatedData.experienceLevel,
+      });
       
-      // 4. Update weeklyFrequency to match actual workout count
+      const reorderedWorkouts = reorderWorkoutsByDayStructure(finalWorkouts, splitRule.dayStructure);
+      
+      // 4. Assign workoutPlan.workouts with the REORDERED array
+      workoutPlan.workouts = reorderedWorkouts;
+      
+      // 5. Update weeklyFrequency to match actual workout count
       workoutPlan.weeklyFrequency = workoutPlan.workouts.length;
       
       console.log(`Post-processing FINAL: ${originalCount} -> ${workoutPlan.workouts.length} workouts (expected: ${expectedDays})`);
       
-      // 5. Validate the final count
+      // 6. Validate the final count
       if (workoutPlan.workouts.length !== expectedDays) {
         console.warn(`[WARNING] Final workout count (${workoutPlan.workouts.length}) still differs from expected (${expectedDays})`);
       }
