@@ -2882,7 +2882,7 @@ function getAllowedLevels(userLevel: string): string[] {
 // Feature flags for gradual rollout
 const LEARNING_CONTEXT_V2_FLAGS = {
   enabled: true,           // Master switch
-  loggingOnly: true,       // Log but don't apply adjustments yet
+  loggingOnly: false,      // ✅ ATIVADO: Ajustes dinâmicos aplicados
   maxAdjustment: 0.15,     // Max ±15% adjustment
   minSessions: 5,          // Minimum sessions before applying adjustments
 };
