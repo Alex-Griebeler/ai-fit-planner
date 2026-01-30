@@ -1529,6 +1529,24 @@ const SYSTEM_PROMPT = `Você é um prescritor de exercícios físicos altamente 
 IMPORTANTE: TODO o output (planName, description, notes, etc.) DEVE ser em PORTUGUÊS BRASILEIRO.
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         🔴 REGRA CRÍTICA: NÚMERO DE TREINOS
+═══════════════════════════════════════════════════════════════════════════════
+
+O array "workouts" DEVE conter EXATAMENTE o número de treinos igual aos dias de treino selecionados pelo usuário.
+- Se o usuário selecionou 6 dias → workouts DEVE ter EXATAMENTE 6 objetos
+- Se o usuário selecionou 3 dias → workouts DEVE ter EXATAMENTE 3 objetos
+- Se o usuário selecionou 4 dias → workouts DEVE ter EXATAMENTE 4 objetos
+
+❌ PROIBIDO:
+- Gerar "Descanso Ativo" ou "Cardio Leve" como treino separado
+- Gerar mais treinos do que os dias selecionados
+- Gerar treinos com 0 exercícios
+- Adicionar dias extras de qualquer natureza
+
+Se o usuário quer cardio em dia separado, NÃO inclua como workout.
+Cardio deve ser mencionado apenas no progressionPlan ou nas notas.
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 1: VOLUME SEMANAL (DOCUMENTO TÉCNICO)
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2674,6 +2692,50 @@ serve(async (req) => {
       }
     }
 
+    // === POST-PROCESSING: FILTER INVALID WORKOUTS ===
+    const expectedDays = validatedData.trainingDays?.length || 3;
+    
+    if (workoutPlan.workouts && Array.isArray(workoutPlan.workouts)) {
+      // 1. Filter out invalid workouts (0 exercises, rest days, cardio-only)
+      const originalCount = workoutPlan.workouts.length;
+      workoutPlan.workouts = workoutPlan.workouts.filter((workout: any) => {
+        // Must have exercises
+        if (!workout.exercises || !Array.isArray(workout.exercises) || workout.exercises.length === 0) {
+          console.log(`Filtered out workout "${workout.name}" - no exercises`);
+          return false;
+        }
+        // Skip rest days or cardio-only workouts
+        const name = (workout.name || '').toLowerCase();
+        if (name.includes('descanso') || name.includes('rest') || 
+            (name.includes('cardio') && !name.includes('push') && !name.includes('pull') && !name.includes('legs'))) {
+          console.log(`Filtered out workout "${workout.name}" - rest/cardio day`);
+          return false;
+        }
+        // Must have warmup object
+        if (!workout.warmup || typeof workout.warmup !== 'object') {
+          workout.warmup = {
+            description: "Aquecimento específico com 1-2 séries leves do primeiro exercício",
+            duration: "3 minutos",
+            exercises: ["Mobilidade articular", "Série leve do primeiro exercício"]
+          };
+        }
+        return true;
+      });
+      
+      if (workoutPlan.workouts.length !== originalCount) {
+        console.log(`Post-processing: ${originalCount} workouts -> ${workoutPlan.workouts.length} after filtering`);
+      }
+      
+      // 2. Trim to expected number of days if still too many
+      if (workoutPlan.workouts.length > expectedDays) {
+        console.log(`Trimming workouts from ${workoutPlan.workouts.length} to ${expectedDays}`);
+        workoutPlan.workouts = workoutPlan.workouts.slice(0, expectedDays);
+      }
+      
+      // 3. Update weeklyFrequency to match actual workout count
+      workoutPlan.weeklyFrequency = workoutPlan.workouts.length;
+    }
+
     // === VALIDATE THE PLAN ===
     const validationWarnings = validateWorkoutPlan(
       workoutPlan,
@@ -3420,6 +3482,11 @@ ${catalogStr}
                               INSTRUÇÕES FINAIS
 ═══════════════════════════════════════════════════════════════════════════════
 
+🔴 REGRA #0 (CRÍTICA): O array "workouts" DEVE ter EXATAMENTE ${userData.trainingDays?.length || 3} treinos.
+   - NÃO adicione "Descanso Ativo", "Cardio Leve" ou qualquer dia extra como workout.
+   - Cardio em dia separado → mencione apenas no progressionPlan, NÃO como workout.
+   - Cada workout DEVE ter pelo menos 4 exercícios.
+
 Gere um plano de treino completo seguindo RIGOROSAMENTE:
 
 1. O SPLIT OBRIGATÓRIO: "${splitRule?.split || volumeRanges.recommendedSplit}" (definido acima)
@@ -3427,7 +3494,7 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 3. ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`} séries por treino
 4. A periodização "${periodizationConfig.type}" definida acima
 5. TODAS as adaptações para condições de saúde
-6. Priorização das áreas solicitadas (se houver)
+6. Priorização das áreas solicitadas: ${userData.bodyAreas?.length ? userData.bodyAreas.join(', ') + ' → aumentar volume 20-30%' : 'Nenhuma priorização específica'}
 7. USE APENAS EXERCÍCIOS DO CATÁLOGO
 8. INCLUA ALTERNATIVAS se houver lesão
 9. VARIE os intervalos de descanso CONFORME a faixa de repetições
