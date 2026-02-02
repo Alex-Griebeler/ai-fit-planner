@@ -1800,8 +1800,9 @@ function validateWorkoutPlan(
   
   let missingGroups = 0;
   
-  // Validate each muscle group with 15% tolerance
-  const TOLERANCE = 0.15;
+  // Tolerance: 10% for priority groups (stricter), 15% for non-priority
+  const TOLERANCE_PRIORITY = 0.10;
+  const TOLERANCE_NORMAL = 0.15;
   
   Object.entries(muscleGroups).forEach(([category, muscles]) => {
     const baseRange = dynamicRanges[category as keyof VolumeRanges] as VolumeRange;
@@ -1814,20 +1815,28 @@ function validateWorkoutPlan(
         return;
       }
       
+      const isPriority = isPriorityMuscle(muscle, userData.bodyAreas || []);
+      const tolerance = isPriority ? TOLERANCE_PRIORITY : TOLERANCE_NORMAL;
+      
       // Priority groups have +25% more volume (aligned with prompt table)
-      const priorityBoost = isPriorityMuscle(muscle, userData.bodyAreas || []) ? PRIORITY_BOOST : 1.00;
+      const priorityBoost = isPriority ? PRIORITY_BOOST : 1.00;
       const effectiveMax = Math.round(baseRange.max * priorityBoost);
-      const effectiveMin = isPriorityMuscle(muscle, userData.bodyAreas || []) 
+      const effectiveMin = isPriority 
         ? Math.round(baseRange.min * PRIORITY_BOOST) 
         : baseRange.min;
       
       // Apply tolerance
-      const minWithTolerance = Math.round(effectiveMin * (1 - TOLERANCE));
-      const maxWithTolerance = Math.round(effectiveMax * (1 + TOLERANCE));
+      const minWithTolerance = Math.round(effectiveMin * (1 - tolerance));
+      const maxWithTolerance = Math.round(effectiveMax * (1 + tolerance));
+      
+      // Log specific debug for Core when it's a priority
+      if (muscle === 'core' && isPriority) {
+        console.log(`[CORE VALIDATION] Volume: ${volume}, Min: ${effectiveMin}, MinWithTolerance: ${minWithTolerance}, IsPriority: ${isPriority}`);
+      }
       
       if (volume < minWithTolerance) {
         warnings.push(
-          `Volume baixo para ${muscle}: ${volume} séries (mínimo: ${effectiveMin})`
+          `Volume baixo para ${muscle}: ${volume} séries (mínimo: ${effectiveMin})${isPriority ? ' [PRIORIDADE +25%]' : ''}`
         );
       }
       
@@ -2646,10 +2655,18 @@ Peito → Peito → Ombro → Ombro ← CORRETO!
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## Quando há Foco Declarado:
-- AUMENTAR: 20-30% o volume do grupamento priorizado
+- AUMENTAR: **EXATAMENTE +25%** o volume do grupamento priorizado (PRIORITY_BOOST = 1.25)
+- A tabela de volume no prompt do usuário JÁ CONTÉM os valores com boost aplicado - SIGA À RISCA
 - POSICIONAR: grupamento no INÍCIO do treino
-- DISTRIBUIR: estímulos ao longo da semana
+- DISTRIBUIR: estímulos ao longo da semana (mínimo 2 dias por grupo prioritário)
 - IMPORTANTE: NÃO REDUZIR volume dos demais grupos abaixo do mínimo
+
+## REGRA CRÍTICA PARA CORE PRIORITÁRIO:
+Se Core está nas áreas prioritárias do usuário:
+- Mínimo OBRIGATÓRIO: **14 séries/semana** (11 base × 1.25)
+- Distribuir em **3-4 dias diferentes**, NÃO concentrar em dias de Inferiores apenas
+- CORE DEVE aparecer em dias de Superiores TAMBÉM (Upper A, Upper B, Push, Pull)
+- Exemplo 4x/semana: 3-4 séries em cada treino = 12-16 séries totais
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 6.1: CINTURA ESCAPULAR (OBRIGATÓRIA)
@@ -4115,7 +4132,7 @@ Gere um plano de treino completo seguindo RIGOROSAMENTE:
 3. ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`} séries por treino
 4. A periodização "${periodizationConfig.type}" definida acima
 5. TODAS as adaptações para condições de saúde
-6. Priorização das áreas solicitadas: ${userData.bodyAreas?.length ? userData.bodyAreas.join(', ') + ' → aumentar volume 20-30%' : 'Nenhuma priorização específica'}
+6. Priorização das áreas solicitadas: ${userData.bodyAreas?.length ? userData.bodyAreas.join(', ') + ' → USAR EXATAMENTE os valores +25% da tabela acima' : 'Nenhuma priorização específica'}
 7. USE APENAS EXERCÍCIOS DO CATÁLOGO
 8. INCLUA ALTERNATIVAS se houver lesão
 9. VARIE os intervalos de descanso CONFORME a faixa de repetições
