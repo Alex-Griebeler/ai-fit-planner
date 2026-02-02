@@ -1829,9 +1829,9 @@ function validateWorkoutPlan(
       const minWithTolerance = Math.round(effectiveMin * (1 - tolerance));
       const maxWithTolerance = Math.round(effectiveMax * (1 + tolerance));
       
-      // Log specific debug for Core when it's a priority
-      if (muscle === 'core' && isPriority) {
-        console.log(`[CORE VALIDATION] Volume: ${volume}, Min: ${effectiveMin}, MinWithTolerance: ${minWithTolerance}, IsPriority: ${isPriority}`);
+      // ALWAYS log Core validation details for debugging
+      if (muscle === 'core') {
+        console.log(`[CORE VALIDATION] Volume: ${volume}, Min: ${effectiveMin}, MinWithTolerance: ${minWithTolerance}, IsPriority: ${isPriority}, BodyAreas: [${(userData.bodyAreas || []).join(', ')}], BaseMin: ${baseRange.min}`);
       }
       
       if (volume < minWithTolerance) {
