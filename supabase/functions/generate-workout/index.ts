@@ -913,17 +913,18 @@ function calculateVolumeRanges(params: {
   // VOLUME MÍNIMO POR GRUPAMENTO - ALINHADO COM DOCUMENTO TÉCNICO
   // ═══════════════════════════════════════════════════════════════════════════
   //
-  // GRUPOS GRANDES (chest, back, quadriceps, hamstrings, glutes):
+  // GRUPOS GRANDES (chest, back, quadriceps, hamstrings, glutes, core):
   // - Hipertrofia: MÍNIMO 10 séries/semana (documento: "11+ prioridade máxima")
   // - Emagrecimento: MÍNIMO 8 séries/semana
   // - Saúde: MÍNIMO 6 séries/semana
   // - Performance: MÍNIMO 8 séries/semana
+  // - CORE é grupo GRANDE (conforme memória técnica core-volume-reclassification)
   //
   // GRUPOS MÉDIOS (shoulders, scapular_belt):
   // - Todos objetivos: MÍNIMO 6 séries/semana (documento: "8-10 prioridade média")
   // - Cintura escapular é OBRIGATÓRIA com no mínimo 1 exercício/semana
   //
-  // GRUPOS PEQUENOS (biceps, triceps, calves, core):
+  // GRUPOS PEQUENOS (biceps, triceps, calves):
   // - Hipertrofia/Performance: MÍNIMO 6 séries/semana 
   // - Saúde/Emagrecimento: MÍNIMO 4 séries/semana (podem ser cobertos por compostos)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2377,10 +2378,10 @@ O trabalho indireto de compostos é SUFICIENTE para grupos pequenos.
 Quando tempo é limitado e usuário NÃO selecionou áreas de foco:
 
 **PRIORIDADE MÁXIMA (manter 11+ séries/semana):**
-- Peito, Costas, Quadríceps, Glúteos
+- Peito, Costas, Quadríceps, Glúteos, Isquiotibiais, Core
 
 **PRIORIDADE MÉDIA (8-10 séries/semana):**
-- Ombros, Isquiotibiais, Core
+- Ombros, Cintura Escapular
 
 **SEM ISOLADOS (trabalho indireto):**
 - Bíceps: coberto por remadas e puxadas
