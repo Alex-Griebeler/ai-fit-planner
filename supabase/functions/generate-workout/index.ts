@@ -2236,14 +2236,15 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 ═══════════════════════════════════════════════════════════════════════════════
 | Dia | Tipo | Grupos |
 |-----|------|--------|
-| 1 | Upper A | Peitoral, Costas, Ombros, Bíceps, Tríceps |
-| 2 | Lower A | Quadríceps, Posteriores, Glúteos, Panturrilhas |
-| 3 | Upper B | Peitoral, Costas, Ombros, Bíceps, Tríceps |
-| 4 | Lower B | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 1 | Upper A | Peitoral, Costas, Ombros, Bíceps, Tríceps, CORE |
+| 2 | Lower A | Quadríceps, Posteriores, Glúteos, Panturrilhas, CORE |
+| 3 | Upper B | Peitoral, Costas, Ombros, Bíceps, Tríceps, CORE |
+| 4 | Lower B | Quadríceps, Posteriores, Glúteos, Panturrilhas, CORE |
 
 - Estímulos: 2x/semana por grupo ✅
 - Conflitos: NENHUM (alternância natural upper/lower)
 - Ideal para: Todos os níveis
+- ⭐ CORE: Distribuir 1-2 exercícios de core em CADA treino para atingir 11-14 séries/semana
 
 ═══════════════════════════════════════════════════════════════════════════════
 ### 5x/SEMANA - Híbrido (Sup + Inf + Puxar + Empurrar + Inf)
@@ -2258,22 +2259,23 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 
 - Estímulos: 2x/semana por grupo ✅
 - Conflitos: NENHUM
-- Core/Abdômen: Encaixar no Dia 3 (Puxar) ou Dia 4 (Empurrar)
+- Core/Abdômen: Distribuir em Dia 2 (Puxar), Dia 3 (Pernas) e Dia 4 (Empurrar) - mínimo 3 dias
 
 ═══════════════════════════════════════════════════════════════════════════════
 ### 6x/SEMANA - Empurrar/Puxar/Pernas 2x
 ═══════════════════════════════════════════════════════════════════════════════
 | Dia | Tipo | Grupos |
 |-----|------|--------|
-| 1 | Empurrar | Peitoral, Ombros, Tríceps |
-| 2 | Puxar | Costas, Bíceps |
-| 3 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 1 | Empurrar | Peitoral, Ombros, Tríceps, CORE |
+| 2 | Puxar | Costas, Bíceps, CORE |
+| 3 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas, CORE |
 | 4 | Empurrar | Peitoral, Ombros, Tríceps |
-| 5 | Puxar | Costas, Bíceps |
-| 6 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+| 5 | Puxar | Costas, Bíceps, CORE |
+| 6 | Pernas | Quadríceps, Posteriores, Glúteos, Panturrilhas, CORE |
 
 - Estímulos: 2x/semana por grupo ✅
 - Conflitos: NENHUM (sequência natural)
+- ⭐ CORE: Distribuir em 4-5 dias para atingir volume mínimo
 - Alternativa: Arnold Split (Peito/Costas, Ombros/Braços, Pernas) 2x
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -2343,6 +2345,33 @@ Porém, PREFERIR espaçar estímulos quando possível para otimizar recuperaçã
 - Exercícios de lombar (Hiperextensão, Good Morning) contam como séries de CORE
 - Se usuário tem lesão em "lower_back": NÃO prescrever exercícios de fortalecimento lombar
 - weeklyVolume.core = abdominais + oblíquos + lombar
+
+═══════════════════════════════════════════════════════════════════════════════
+## ⭐ REGRA CRÍTICA: DISTRIBUIÇÃO DE CORE ⭐
+═══════════════════════════════════════════════════════════════════════════════
+**CORE DEVE ser treinado em TODOS os dias de treino, não apenas em dias de "Inferiores"!**
+
+### Distribuição obrigatória por frequência:
+| Frequência | Exercícios de Core por Treino | Volume Total Semanal |
+|------------|-------------------------------|----------------------|
+| 2x/semana  | 2-3 exercícios (6-9 sets)     | 12-18 sets           |
+| 3x/semana  | 1-2 exercícios (3-5 sets)     | 9-15 sets            |
+| 4x/semana  | 1-2 exercícios (3-4 sets)     | 12-16 sets           |
+| 5x/semana  | 1 exercício (2-3 sets)        | 10-15 sets           |
+| 6x/semana  | 1 exercício (2-3 sets)        | 12-18 sets           |
+
+### Regra de prioridade Core (+25%):
+Se Core é área prioritária do usuário, AUMENTAR para:
+- Mínimo: 14 séries/semana (11 × 1.25)
+- Máximo: 20 séries/semana
+- Distribuir em 3-4 dias diferentes
+
+### Onde encaixar Core em cada split:
+- **Full Body**: Final de cada treino (1-2 exercícios)
+- **Upper/Lower**: AMBOS os dias (1-2 exercícios cada)
+- **Push/Pull/Legs**: Preferencialmente em Pull e Legs (1-2 cada)
+- **Híbrido 5x**: Distribuir em 3+ dias
+═══════════════════════════════════════════════════════════════════════════════
 
 ## EXEMPLOS DE ORGANIZAÇÃO PARA DIAS CONSECUTIVOS:
 - ✅ Seg=Peito/Tríceps → Ter=Costas/Bíceps → Qua=Pernas (sem sobreposição principal)
