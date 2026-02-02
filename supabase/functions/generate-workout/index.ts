@@ -631,13 +631,20 @@ function reorderExercisesWithinWorkout(
     _isCompound: ex.isCompound ?? !ex.name.toLowerCase().match(/rosca|curl|extensão|elevação lateral|elevação frontal|isolador|isolado|fly|crucifixo|voador|flexora|extensora|panturrilha|abdominal|prancha/i),
   }));
   
+  // Grupos que SEMPRE devem ficar no final (mesmo se priorizados pelo usuário)
+  const ALWAYS_LAST_GROUPS = ['core', 'abdômen', 'abdomen', 'abs', 'lombar', 'panturrilhas', 'panturrilha', 'calves'];
+  
   // Calcula a prioridade de ordenação para cada exercício
   const getExercisePriority = (ex: typeof enrichedExercises[0]): number => {
     const group = ex._inferredGroup.toLowerCase();
     let basePriority = MUSCLE_GROUP_PRIORITY[group] ?? 50;
     
+    // Core e Panturrilhas NUNCA recebem boost - sempre ficam no final
+    const isAlwaysLast = ALWAYS_LAST_GROUPS.includes(group);
+    
     // Boost para grupos prioritários do usuário (-100 para garantir que venham primeiro)
-    if (isPriorityGroup(group, userPriorities)) {
+    // MAS não para Core/Panturrilhas que devem manter sua posição final
+    if (!isAlwaysLast && isPriorityGroup(group, userPriorities)) {
       basePriority -= 100;
     }
     
