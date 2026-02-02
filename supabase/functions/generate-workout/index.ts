@@ -1733,11 +1733,11 @@ function validateWorkoutPlan(
   
   const weeklyVolume = plan.weeklyVolume || {};
   
-  // Muscle groups to validate
+  // Muscle groups to validate (core é LARGE conforme memória técnica)
   const muscleGroups = {
-    large: ["chest", "back", "quadriceps", "hamstrings", "glutes"],
+    large: ["chest", "back", "quadriceps", "hamstrings", "glutes", "core"],
     medium: ["shoulders", "scapular_belt"],
-    small: ["biceps", "triceps", "calves", "core"],
+    small: ["biceps", "triceps", "calves"],
   };
   
   // 5b. VALIDATE BACK vs CHEST RATIO (Pull/Push balance) - REGRA: 1.1:1 a 1.25:1
