@@ -80,20 +80,13 @@ export function useWorkoutPlans() {
     mutationFn: async (input: CreateWorkoutPlanInput) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // Para usuários free: deletar planos anteriores antes de criar novo
-      // (O trigger enforce_workout_plan_limit bloqueia se houver 1+ plano)
-      const { data: existingPlans } = await supabase
+      // Desativar planos anteriores (manter histórico)
+      // O trigger agora conta apenas planos ATIVOS
+      await supabase
         .from("workout_plans")
-        .select("id")
-        .eq("user_id", user.id);
-
-      if (existingPlans && existingPlans.length > 0) {
-        // Deleta todos os planos existentes para permitir novo
-        await supabase
-          .from("workout_plans")
-          .delete()
-          .eq("user_id", user.id);
-      }
+        .update({ is_active: false })
+        .eq("user_id", user.id)
+        .eq("is_active", true);
 
       // Cria novo plano ativo
       const { data, error } = await supabase
