@@ -144,14 +144,9 @@ const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
   "60plus": { min: 24, max: 32 },  // 60+min = ~28-32 séries realista
 };
 
-// Tabela de EXERCÍCIOS máximos por sessão (CRÍTICO para evitar treinos inviáveis)
-// Baseado em: tempo disponível / (~3 séries × 2min/série) + overhead de troca
-const SESSION_EXERCISES_LIMIT: Record<string, { min: number; max: number }> = {
-  "30min":  { min: 4, max: 5 },   // 4-5 exercícios × 3 séries = 12-15 séries
-  "45min":  { min: 5, max: 7 },   // 5-7 exercícios × 3 séries = 15-21 séries
-  "60min":  { min: 6, max: 8 },   // 6-8 exercícios × 3 séries = 18-24 séries
-  "60plus": { min: 7, max: 10 },  // 7-10 exercícios × 3 séries = 21-30 séries
-};
+// NOTA: Validação de volume agora é APENAS por número de SÉRIES, não por exercícios.
+// Isso dá flexibilidade para a IA distribuir como preferir (ex: 5×4 ou 7×3 = ~20 séries)
+// A tabela SESSION_SETS_PER_WORKOUT acima é a única restrição de capacidade.
 
 // Splits recomendados por frequência (consolidado)
 const RECOMMENDED_SPLITS: Record<string, string> = {
@@ -1952,26 +1947,10 @@ function validateWorkoutPlan(
     errors.push(`Estrutura weeklyVolume incompleta: ${missingGroups} grupos musculares não informados`);
   }
   
-  // 6. Validate exercise count per session (HARD LIMITS - usar SESSION_EXERCISES_LIMIT)
+  // 6. VALIDATE SESSION VOLUME BY SETS ONLY (Regra simplificada - apenas séries importam)
+  // A validação por número de exercícios foi REMOVIDA para dar flexibilidade à IA.
+  // O que importa é: total de séries cabe no tempo disponível?
   const sessionDurationKey = userData.sessionDuration || "45min";
-  const exerciseLimits = SESSION_EXERCISES_LIMIT[sessionDurationKey] || SESSION_EXERCISES_LIMIT["45min"];
-  const minExercises = exerciseLimits.min;
-  const maxExercises = exerciseLimits.max;
-  
-  for (const workout of plan.workouts || []) {
-    const exerciseCount = workout.exercises?.length || 0;
-    if (exerciseCount < minExercises - 1) {
-      warnings.push(`Treino "${workout.name}" tem apenas ${exerciseCount} exercícios (mínimo esperado: ${minExercises})`);
-    }
-    // HARD ERROR se exceder muito (>50% acima do máximo)
-    if (exerciseCount > maxExercises * 1.5) {
-      errors.push(`Treino "${workout.name}" tem ${exerciseCount} exercícios - INVIÁVEL para ${sessionDurationKey}! Máximo: ${maxExercises}`);
-    } else if (exerciseCount > maxExercises) {
-      warnings.push(`Treino "${workout.name}" tem ${exerciseCount} exercícios (máximo esperado: ${maxExercises})`);
-    }
-  }
-  
-  // 7. VALIDATE SESSION TIME - Verificar se séries cabem no tempo disponível
   // sessionDurationKey já definido acima
   const maxMinutes = getDurationMinutes(sessionDurationKey);
   const warmupMinutes = WARMUP_STRATEGY[sessionDurationKey]?.timeMinutes || 5;
@@ -4378,41 +4357,35 @@ ${catalogStr}
 🔴 REGRA #0 (CRÍTICA - LIMITES NÃO NEGOCIÁVEIS):
    O array "workouts" DEVE ter EXATAMENTE ${userData.trainingDays?.length || 3} treinos.
    
-   🚨 LIMITES POR SESSÃO PARA ${userData.sessionDuration || '45min'}:
-   - MÁXIMO DE EXERCÍCIOS: ${SESSION_EXERCISES_LIMIT[userData.sessionDuration || '45min']?.max || 7}
+   🚨 LIMITE DE VOLUME POR SESSÃO (${userData.sessionDuration || '45min'}):
    - MÁXIMO DE SÉRIES: ${SESSION_SETS_PER_WORKOUT[userData.sessionDuration || '45min']?.max || 20}
+   - MÍNIMO DE SÉRIES: ${SESSION_SETS_PER_WORKOUT[userData.sessionDuration || '45min']?.min || 14}
+   
+   💡 FLEXIBILIDADE: Distribua as séries como preferir (ex: 5 exercícios × 4 séries OU 7 exercícios × 3 séries).
+   O importante é respeitar o TOTAL DE SÉRIES, não o número de exercícios.
    
    ⛔ VIOLAÇÕES QUE REJEITAM O PLANO:
-   - Mais de ${SESSION_EXERCISES_LIMIT[userData.sessionDuration || '45min']?.max || 7} exercícios por sessão
    - Mais de ${SESSION_SETS_PER_WORKOUT[userData.sessionDuration || '45min']?.max || 20} séries por sessão
    - "Descanso Ativo", "Cardio Leve" como workout separado
    - Exercícios fora do catálogo
-   
-   ✅ EXEMPLO CORRETO PARA ${userData.sessionDuration || '45min'}:
-   ${userData.sessionDuration === '30min' 
-     ? '4-5 exercícios × 3 séries = 12-15 séries totais'
-     : userData.sessionDuration === '45min' || !userData.sessionDuration
-       ? '5-6 exercícios × 3 séries = 15-18 séries totais'
-       : '6-8 exercícios × 3 séries = 18-24 séries totais'}
 
 Gere um plano de treino completo seguindo RIGOROSAMENTE:
 
 1. O SPLIT OBRIGATÓRIO: "${splitRule?.split || volumeRanges.recommendedSplit}" (definido acima)
 2. Os RANGES DE VOLUME calculados acima
 3. ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`} séries por treino (⚠️ NUNCA EXCEDER!)
-4. MÁXIMO ${SESSION_EXERCISES_LIMIT[userData.sessionDuration || '45min']?.max || 7} exercícios por treino
-5. A periodização "${periodizationConfig.type}" definida acima
-6. TODAS as adaptações para condições de saúde
-7. Priorização das áreas solicitadas: ${userData.bodyAreas?.length ? userData.bodyAreas.join(', ') + ' → USAR EXATAMENTE os valores +25% da tabela acima' : 'Nenhuma priorização específica'}
-8. USE APENAS EXERCÍCIOS DO CATÁLOGO
-9. INCLUA ALTERNATIVAS se houver lesão
-10. VARIE os intervalos de descanso CONFORME a faixa de repetições
-11. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa (core inclui lombar)
-12. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
-13. Aquecimento: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.description})
-14. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"
-15. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos
-${!densityStrategy.allowIsolation ? `16. ❌ SEM ISOLADOS: Use APENAS exercícios compostos. Bíceps/Tríceps = trabalho indireto` : ''}
+4. A periodização "${periodizationConfig.type}" definida acima
+5. TODAS as adaptações para condições de saúde
+6. Priorização das áreas solicitadas: ${userData.bodyAreas?.length ? userData.bodyAreas.join(', ') + ' → USAR EXATAMENTE os valores +25% da tabela acima' : 'Nenhuma priorização específica'}
+7. USE APENAS EXERCÍCIOS DO CATÁLOGO
+8. INCLUA ALTERNATIVAS se houver lesão
+9. VARIE os intervalos de descanso CONFORME a faixa de repetições
+10. weeklyVolume DEVE ter TODOS os grupos DENTRO da faixa (core inclui lombar)
+11. VERIFIQUE que total de séries × tempo/série ≤ tempo disponível
+12. Aquecimento: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.description})
+13. progressionPlan DEVE refletir a periodização "${periodizationConfig.type}"
+14. Se dias são CONSECUTIVOS: EVITE mesmo grupamento principal em dias seguidos
+${!densityStrategy.allowIsolation ? `15. ❌ SEM ISOLADOS: Use APENAS exercícios compostos. Bíceps/Tríceps = trabalho indireto` : ''}
 ${userData.includeCardio ? `
 ## CARDIO SOLICITADO
 - Timing preferido: ${getCardioTimingLabel(userData.cardioTiming)}
