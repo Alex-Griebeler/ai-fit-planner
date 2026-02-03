@@ -3250,23 +3250,32 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
   - Peitoral, Costas, Ombros, Bíceps, Tríceps, Quadríceps, Posteriores, Glúteos, Panturrilhas, Core, Cintura Escapular
 - NUNCA use nomes em inglês (chest, back, shoulders, etc.) no campo muscleGroups
 
-## NOMENCLATURA DE TREINOS (OBRIGATÓRIO EM PORTUGUÊS):
-O campo "name" de cada treino DEVE seguir estas regras:
+## NOMENCLATURA DE TREINOS (REGRA CRÍTICA - OBRIGATÓRIO):
+O campo "name" de cada treino DEVE seguir estas regras EXATAS:
 - SEMPRE em português brasileiro
 - Usar: "Empurrar" (NÃO "Push"), "Puxar" (NÃO "Pull"), "Pernas" (NÃO "Legs")
-- Usar: "Superiores" e "Inferiores" (SEMPRE NO PLURAL, NÃO "Upper/Lower" ou "Superior/Inferior")
-- Exemplos CORRETOS:
+
+### REGRA CRÍTICA PARA SUPERIORES/INFERIORES:
+⚠️ NUNCA ADICIONE LETRAS (A, B, C) AOS NOMES "Superiores" E "Inferiores" ⚠️
+- CORRETO: "Superiores", "Inferiores" (SEMPRE assim, sem letras)
+- INCORRETO: "Superiores A", "Superiores B", "Inferiores A", "Inferiores B" ❌❌❌
+- Mesmo que o treino se repita na semana (ex: 4x Upper/Lower), o nome é SEMPRE "Superiores" ou "Inferiores" SEM LETRA
+
+### Exemplos CORRETOS de nomes:
   - "Empurrar A (Força)" ou "Empurrar A"
   - "Puxar B (Hipertrofia)" ou "Puxar B"
   - "Pernas A (Metabólico)" ou "Pernas A"
-  - "Superiores" e "Inferiores" (SEMPRE sem letra - NUNCA use A/B para Upper/Lower)
-  - "Full Body" (SEM letra quando é o único tipo de treino na semana - ex: 3x Full Body)
+  - "Superiores" (NUNCA "Superiores A" ou "Superiores B")
+  - "Inferiores" (NUNCA "Inferiores A" ou "Inferiores B")
+  - "Full Body" (SEM letra quando é o único tipo de treino na semana)
   - "Full Body A" e "Full Body B" (COM letra apenas quando há variantes A/B alternando)
-- Exemplos INCORRETOS:
+
+### Exemplos INCORRETOS (PROIBIDOS):
   - "Push A", "Pull B", "Legs A" ❌
   - "Upper A", "Lower B" ❌
   - "Superior A", "Inferior B" ❌ (singular não é aceito)
-  - "Superiores A", "Superiores B", "Inferiores A", "Inferiores B" ❌ (NUNCA usar letras em Upper/Lower)
+  - "Superiores A", "Superiores B" ❌❌❌ (PROIBIDO - nunca usar letras)
+  - "Inferiores A", "Inferiores B" ❌❌❌ (PROIBIDO - nunca usar letras)
 
 ## OBRIGATÓRIO:
 1. Retorne APENAS o JSON, sem texto adicional
