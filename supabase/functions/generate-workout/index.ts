@@ -1929,6 +1929,108 @@ function validateWorkoutPlan(
     }
   }
   
+  // 9. VALIDATE HYBRID SPLIT SPECIFIC RULES
+  if (plan.workouts?.length === 3) {
+    const workoutNames = plan.workouts.map((w: any) => w.name?.toLowerCase() || '');
+    const isHybridSplit = workoutNames.some((n: string) => n.includes('full body')) &&
+                          workoutNames.some((n: string) => n.includes('superior')) &&
+                          workoutNames.some((n: string) => n.includes('inferior'));
+    
+    if (isHybridSplit) {
+      const fbWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('full body'));
+      const supWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('superior'));
+      const infWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('inferior'));
+      
+      if (fbWorkout && supWorkout && infWorkout) {
+        const fbSets = fbWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
+        const supSets = supWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
+        const infSets = infWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
+        
+        // 9a. Validate volume distribution (FB should have fewer sets)
+        if (fbSets >= supSets && fbSets > 18) {
+          warnings.push(`[Híbrido] Full Body (${fbSets} séries) deveria ter MENOS séries que Superiores (${supSets})`);
+        }
+        if (fbSets >= infSets && fbSets > 18) {
+          warnings.push(`[Híbrido] Full Body (${fbSets} séries) deveria ter MENOS séries que Inferiores (${infSets})`);
+        }
+        
+        // 9b. Validate exercise repetition (compounds should repeat)
+        const fbExerciseNames = new Set(fbWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || []);
+        const supExerciseNames = supWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || [];
+        const infExerciseNames = infWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || [];
+        
+        // Check if upper compounds from FB appear in Superiores
+        const upperCompounds = ['supino', 'remada', 'desenvolvimento', 'desenv'];
+        const fbUpperCompounds = fbWorkout.exercises?.filter((ex: any) => 
+          upperCompounds.some(uc => ex.name?.toLowerCase().includes(uc))
+        ) || [];
+        
+        for (const fbEx of fbUpperCompounds) {
+          const fbName = fbEx.name?.toLowerCase().trim();
+          const foundInSup = supExerciseNames.some((supName: string) => supName === fbName);
+          if (!foundInSup) {
+            warnings.push(`[Híbrido] Exercício "${fbEx.name}" do Full Body não foi repetido no Superiores`);
+          }
+        }
+        
+        // Check if lower compounds from FB appear in Inferiores
+        const lowerCompounds = ['agachamento', 'stiff', 'leg press'];
+        const fbLowerCompounds = fbWorkout.exercises?.filter((ex: any) => 
+          lowerCompounds.some(lc => ex.name?.toLowerCase().includes(lc) && !ex.name?.toLowerCase().includes('leg press'))
+        ) || [];
+        
+        for (const fbEx of fbLowerCompounds) {
+          const fbName = fbEx.name?.toLowerCase().trim();
+          const foundInInf = infExerciseNames.some((infName: string) => infName === fbName);
+          if (!foundInInf) {
+            warnings.push(`[Híbrido] Exercício "${fbEx.name}" do Full Body não foi repetido no Inferiores`);
+          }
+        }
+        
+        // 9c. Validate muscle group separation
+        const legMuscles = ['quadríceps', 'quadriceps', 'isquio', 'posterior', 'glúteo', 'gluteo', 'panturrilha', 'calf'];
+        const upperMuscles = ['peitoral', 'peito', 'chest', 'costas', 'back', 'ombro', 'shoulder', 'bíceps', 'biceps', 'tríceps', 'triceps'];
+        
+        const supHasLegExercise = supWorkout.exercises?.some((ex: any) => 
+          legMuscles.some(lm => ex.muscleGroup?.toLowerCase().includes(lm))
+        );
+        
+        const infHasUpperExercise = infWorkout.exercises?.some((ex: any) => 
+          upperMuscles.some(um => ex.muscleGroup?.toLowerCase().includes(um))
+        );
+        
+        if (supHasLegExercise) {
+          warnings.push(`[Híbrido] Superiores contém exercício de pernas - PROIBIDO no split híbrido`);
+        }
+        if (infHasUpperExercise) {
+          warnings.push(`[Híbrido] Inferiores contém exercício de tronco/braços - PROIBIDO no split híbrido`);
+        }
+        
+        // 9d. Validate Core appears in all 3 days
+        const coreGroups = ['core', 'abdômen', 'abdomen', 'abdominal', 'lombar'];
+        const fbHasCore = fbWorkout.exercises?.some((ex: any) => 
+          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
+        );
+        const supHasCore = supWorkout.exercises?.some((ex: any) => 
+          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
+        );
+        const infHasCore = infWorkout.exercises?.some((ex: any) => 
+          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
+        );
+        
+        if (!fbHasCore) {
+          warnings.push(`[Híbrido] Full Body deve ter exercício de Core`);
+        }
+        if (!supHasCore) {
+          warnings.push(`[Híbrido] Superiores deve ter exercício de Core para atingir volume semanal`);
+        }
+        if (!infHasCore) {
+          warnings.push(`[Híbrido] Inferiores deve ter exercício de Core`);
+        }
+      }
+    }
+  }
+  
   return { 
     success: errors.length === 0, 
     warnings,
@@ -2787,6 +2889,7 @@ Quando splitPreference = 'hybrid' (3 dias/semana), seguir EXATAMENTE esta estrut
 - Peitoral, Costas, Ombros
 - Bíceps, Tríceps
 - Cintura Escapular (deltóide posterior, face pull)
+- Core (INCLUIR 1-2 exercícios de core no final)
 
 **INFERIORES = SOMENTE músculos das pernas:**
 - Quadríceps (agachamento, leg press, extensora)
@@ -2794,65 +2897,116 @@ Quando splitPreference = 'hybrid' (3 dias/semana), seguir EXATAMENTE esta estrut
 - Glúteos (elevação pélvica, abdução)
 - Adutores
 - Panturrilhas
-- Core (pode estar em ambos)
+- Core (INCLUIR 1-2 exercícios de core no final)
 
-### PASSO 1: EXERCÍCIOS COMPOSTOS BASE:
+### ⭐ REGRA CRÍTICA: VOLUME POR TIPO DE TREINO
 
-SUPERIORES (para Full Body e Dia 2):
-- 1 Supino (ex: Supino reto com barra)
-- 1 Remada (ex: Remada sentado peg. fechada)
-- 1 Desenvolvimento (ex: Desenvolvimento sentado com halter)
+O Full Body tem MENOS séries que Superiores/Inferiores porque:
+- Full Body = fundamentos (treino mais curto, ~15-18 séries)
+- Superiores/Inferiores = especializados (mais séries, ~19-24 séries)
 
-INFERIORES (para Full Body e Dia 3):
-- 1 Agachamento (ex: Agachamento pés paralelos com barra)
-- 1 Stiff ou Flexora (ex: Stiff com barra)
+**DISTRIBUIÇÃO DE SÉRIES HÍBRIDO (45min):**
+| Treino | Séries | Exercícios | Core |
+|--------|--------|------------|------|
+| Full Body | 15-18 | 5-6 | 1 |
+| Superiores | 19-22 | 6-7 | 1-2 |
+| Inferiores | 19-22 | 6-7 | 1-2 |
 
-### PASSO 2: Full Body (Dia 1):
-| Ordem | Exercício | Grupo |
-|-------|-----------|-------|
-| 1 | Agachamento | Quadríceps |
-| 2 | Supino | Peitoral |
-| 3 | Remada | Costas |
-| 4 | Stiff | Isquiotibiais |
-| 5 | Desenvolvimento | Ombros |
-| 6 | Core | Abdômen |
+### ⭐ CORE OBRIGATÓRIO EM TODOS OS DIAS
+- Core deve ter 4-6 séries SEMANAIS distribuídas nos 3 dias
+- Full Body: 1 exercício de core (2-3 séries)
+- Superiores: 1 exercício de core (2-3 séries) - OBRIGATÓRIO!
+- Inferiores: 1 exercício de core (2-3 séries)
+- Total Core = 6-9 séries/semana ✓
 
-### PASSO 3: SUPERIORES (Dia 2):
-🚫 PROIBIDO: Agachamento, Leg Press, Stiff, Flexora, Panturrilha (são de INFERIORES!)
-| Ordem | Exercício | Tipo |
-|-------|-----------|------|
-| 1 | ⚠️ MESMO Supino do Full Body | REPETIR |
-| 2 | ⚠️ MESMA Remada do Full Body | REPETIR |
-| 3 | ⚠️ MESMO Desenvolvimento do Full Body | REPETIR |
-| 4 | Puxada (qualquer variação) | Acessório |
-| 5 | Rosca Bíceps | Acessório |
-| 6 | Tríceps | Acessório |
-| 7 | Elevação Lateral ou Crucifixo Inverso | Acessório |
+### 🔄 EXERCÍCIOS COMPOSTOS BASE (ESCOLHER AGORA):
 
-### PASSO 4: INFERIORES (Dia 3):
-🚫 PROIBIDO: Supino, Remada, Puxada, Desenvolvimento, Rosca, Tríceps (são de SUPERIORES!)
-| Ordem | Exercício | Tipo |
-|-------|-----------|------|
-| 1 | ⚠️ MESMO Agachamento do Full Body | REPETIR |
-| 2 | ⚠️ MESMO Stiff/Flexora do Full Body | REPETIR |
-| 3 | Leg Press ou Extensora | Acessório |
-| 4 | Cadeira Flexora ou Elevação Pélvica | Acessório |
-| 5 | Abdução ou Adução | Acessório |
-| 6 | Panturrilha | Acessório |
-| 7 | Core | Final |
+Antes de montar qualquer treino, ESCOLHA:
 
-### ❌ ERROS A EVITAR:
-1. NÃO misture Remada + Flexora no mesmo treino "Puxar + Posteriores" (isso NÃO é híbrido)
-2. NÃO misture Supino + Agachamento no mesmo treino "Empurrar + Quads" (isso NÃO é híbrido)
-3. O Híbrido tem divisão CLARA: Superior = tronco/braços | Inferior = pernas
+SUPERIORES (usados no Full Body E no Superiores):
+- 1 Supino → ex: "Supino reto/Barra"
+- 1 Remada → ex: "Remada sentado peg. fechada/Máquina"  
+- 1 Desenvolvimento → ex: "Desenv. Sentado pegada aberta/Halter"
 
-### ✅ VALIDAÇÃO FINAL:
-Antes de retornar o JSON, verifique:
-1. Dia 2 (Superiores) tem ZERO exercícios de pernas?
-2. Dia 3 (Inferiores) tem ZERO exercícios de tronco/braços?
-3. Os compostos do Full Body REPETEM exatamente nos dias específicos?
+INFERIORES (usados no Full Body E no Inferiores):
+- 1 Agachamento → ex: "Agachamento pés paralelos barra"
+- 1 Stiff → ex: "Stiff com barra"
 
-Se falhar qualquer validação → CORRIGIR antes de retornar!
+### 📋 PASSO 1: Full Body (Dia 1) - BASE DO PLANO
+| Ordem | Exercício | Grupo | Séries |
+|-------|-----------|-------|--------|
+| 1 | [AGACHAMENTO escolhido] | Quadríceps | 3 |
+| 2 | [SUPINO escolhido] | Peitoral | 3 |
+| 3 | [REMADA escolhida] | Costas | 3 |
+| 4 | [STIFF escolhido] | Isquiotibiais | 3 |
+| 5 | [DESENVOLVIMENTO escolhido] | Ombros | 3 |
+| 6 | Prancha ou Abd. parcial | Core | 2-3 |
+
+**Total: 17-18 séries (~42 min)**
+
+### 📋 PASSO 2: SUPERIORES (Dia 2) - REPETIR + EXPANDIR
+
+⚠️⚠️⚠️ OS 3 PRIMEIROS EXERCÍCIOS DEVEM SER IDÊNTICOS AO FULL BODY ⚠️⚠️⚠️
+
+| Ordem | Exercício | Tipo | Séries |
+|-------|-----------|------|--------|
+| 1 | **[MESMO SUPINO do Full Body]** | REPETIR | 3 |
+| 2 | **[MESMA REMADA do Full Body]** | REPETIR | 3 |
+| 3 | **[MESMO DESENVOLVIMENTO do Full Body]** | REPETIR | 3 |
+| 4 | Puxada (qualquer variação) | Acessório | 3 |
+| 5 | Crucifixo ou Elevação Lateral | Acessório | 3 |
+| 6 | Rosca Bíceps | Acessório | 2-3 |
+| 7 | Tríceps Pulley | Acessório | 2-3 |
+| 8 | Core (diferente do FB) | Final | 2 |
+
+**Total: 21-23 séries (~50 min)**
+
+🚫 PROIBIDO em Superiores: Agachamento, Leg Press, Stiff, Flexora, Panturrilha, Glúteos
+
+### 📋 PASSO 3: INFERIORES (Dia 3) - REPETIR + EXPANDIR
+
+⚠️⚠️⚠️ OS 2 PRIMEIROS EXERCÍCIOS DEVEM SER IDÊNTICOS AO FULL BODY ⚠️⚠️⚠️
+
+| Ordem | Exercício | Tipo | Séries |
+|-------|-----------|------|--------|
+| 1 | **[MESMO AGACHAMENTO do Full Body]** | REPETIR | 3 |
+| 2 | **[MESMO STIFF do Full Body]** | REPETIR | 3 |
+| 3 | Leg Press ou Extensora | Acessório | 3 |
+| 4 | Cadeira Flexora | Acessório | 3 |
+| 5 | Elevação Pélvica ou Abdução | Acessório | 3 |
+| 6 | Panturrilha | Acessório | 3 |
+| 7 | Core (diferente dos anteriores) | Final | 2-3 |
+
+**Total: 20-22 séries (~50 min)**
+
+🚫 PROIBIDO em Inferiores: Supino, Remada, Puxada, Desenvolvimento, Rosca, Tríceps, Elevação Lateral
+
+### ❌ ERROS GRAVES A EVITAR:
+
+1. **Exercícios diferentes**: Se Full Body tem "Supino reto/Barra", Superiores DEVE ter "Supino reto/Barra" (EXATAMENTE IGUAL)
+2. **Mistura de grupos**: Stiff NÃO pode aparecer em Superiores. Remada NÃO pode aparecer em Inferiores.
+3. **Core só em Inferiores**: Core DEVE aparecer nos 3 dias
+4. **Volume igual**: Full Body deve ter MENOS séries que Sup/Inf (é fundamento, não especializado)
+5. **Nomes errados**: Usar "Empurrar", "Puxar", "Pernas" ao invés de "Superiores", "Inferiores"
+
+### ✅ CHECKLIST DE VALIDAÇÃO (EXECUTAR OBRIGATORIAMENTE):
+
+Antes de retornar o JSON, verificar CADA item:
+
+☐ 1. Full Body tem 15-18 séries? (menor que Sup/Inf)
+☐ 2. Superiores tem 19-24 séries?
+☐ 3. Inferiores tem 19-24 séries?
+☐ 4. Supino de Superiores = EXATAMENTE igual ao de Full Body?
+☐ 5. Remada de Superiores = EXATAMENTE igual ao de Full Body?
+☐ 6. Desenvolvimento de Superiores = EXATAMENTE igual ao de Full Body?
+☐ 7. Agachamento de Inferiores = EXATAMENTE igual ao de Full Body?
+☐ 8. Stiff de Inferiores = EXATAMENTE igual ao de Full Body?
+☐ 9. Superiores tem ZERO exercícios de pernas?
+☐ 10. Inferiores tem ZERO exercícios de tronco/braços (exceto Core)?
+☐ 11. Core aparece em TODOS os 3 dias?
+☐ 12. Nomes são "Full Body", "Superiores", "Inferiores"?
+
+❌ Se QUALQUER item falhar → CORRIGIR antes de retornar!
 
 ## APLICAÇÃO NO progressionPlan:
 - SEMPRE indicar: "Manter exercícios fixos, progredir em carga/reps"
@@ -4172,30 +4326,79 @@ ${healthSection}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
 ${userData.splitPreference === 'hybrid' ? `
-## ⚠️ REGRA CRÍTICA - HÍBRIDO (FB + SUPERIORES + INFERIORES)
+## 🔴🔴🔴 REGRA MÁXIMA PRIORIDADE - HÍBRIDO (FB + SUPERIORES + INFERIORES) 🔴🔴🔴
 
-### ESTRUTURA OBRIGATÓRIA:
-**Dia 1 - Full Body**: Composto de cada região principal
-  - SUPERIORES: 1 Empurrar (Supino) + 1 Puxar (Remada) + 1 Ombro (Desenvolvimento)
-  - INFERIORES: 1 Quadríceps (Agachamento) + 1 Posterior (Stiff)
-  - CORE: 1 exercício ao final
+### ⭐ VOLUME POR TREINO (DIFERENCIADO):
+| Treino | Séries Alvo | Exercícios | Por quê |
+|--------|-------------|------------|---------|
+| Full Body | 15-18 | 5-6 | Base/fundamento |
+| Superiores | 19-24 | 6-8 | Especializado |
+| Inferiores | 19-24 | 6-8 | Especializado |
 
-**Dia 2 - Superiores**: APENAS tronco e braços
-  - REPETIR os mesmos compostos de superior do Full Body (Supino, Remada, Desenvolvimento)
-  - ADICIONAR acessórios: Bíceps, Tríceps, Elevação Lateral, Crucifixo
-  - ❌ PROIBIDO: Qualquer exercício de perna (Agachamento, Leg Press, Stiff, Flexora)
+Full Body TEM que ter MENOS séries que Sup/Inf!
 
-**Dia 3 - Inferiores**: APENAS pernas e core
-  - REPETIR os mesmos compostos de inferior do Full Body (Agachamento, Stiff)
-  - ADICIONAR acessórios: Leg Press, Cadeira Extensora, Flexora, Panturrilha, Glúteos
-  - ❌ PROIBIDO: Qualquer exercício de tronco/braços (Supino, Remada, Bíceps, Tríceps)
+### ⭐ DISTRIBUIÇÃO DE CORE OBRIGATÓRIA:
+- Full Body: 1 exercício core (2-3 séries)
+- Superiores: 1 exercício core (2-3 séries) ← NÃO ESQUECER!
+- Inferiores: 1 exercício core (2-3 séries)
+- Total semanal Core: 6-9 séries ✓
 
-### CHECKLIST DE VALIDAÇÃO (executar antes de retornar JSON):
-1. ☐ Dia 2 tem ZERO exercícios de pernas?
-2. ☐ Dia 3 tem ZERO exercícios de tronco/braços?
-3. ☐ Supino do Dia 2 = Supino do Dia 1?
-4. ☐ Agachamento do Dia 3 = Agachamento do Dia 1?
-5. ☐ Nomes dos treinos são "Full Body", "Superiores", "Inferiores"?
+### 🔄 PASSO 1 - ESCOLHER COMPOSTOS BASE (ANTES DE TUDO):
+
+Escolha EXATAMENTE estes exercícios que serão REPETIDOS:
+- SUPINO → usar nos dias Full Body E Superiores
+- REMADA → usar nos dias Full Body E Superiores  
+- DESENVOLVIMENTO → usar nos dias Full Body E Superiores
+- AGACHAMENTO → usar nos dias Full Body E Inferiores
+- STIFF → usar nos dias Full Body E Inferiores
+
+### 📋 ESTRUTURA EXATA:
+
+**Full Body (15-18 séries):**
+1. [Agachamento] - 3 séries
+2. [Supino] - 3 séries
+3. [Remada] - 3 séries
+4. [Stiff] - 3 séries
+5. [Desenvolvimento] - 3 séries
+6. Core - 2-3 séries
+
+**Superiores (19-24 séries):**
+1. **[MESMO Supino]** - 3 séries ← COPIAR DO FB
+2. **[MESMA Remada]** - 3 séries ← COPIAR DO FB
+3. **[MESMO Desenvolvimento]** - 3 séries ← COPIAR DO FB
+4. Puxada (acessório) - 3 séries
+5. Crucifixo/Elevação Lat (acessório) - 3 séries
+6. Rosca Bíceps (acessório) - 3 séries
+7. Tríceps (acessório) - 3 séries
+8. Core - 2 séries
+
+🚫 PROIBIDO: Agachamento, Leg Press, Stiff, Flexora, Panturrilha
+
+**Inferiores (19-24 séries):**
+1. **[MESMO Agachamento]** - 3 séries ← COPIAR DO FB
+2. **[MESMO Stiff]** - 3 séries ← COPIAR DO FB
+3. Leg Press (acessório) - 3 séries
+4. Cadeira Extensora (acessório) - 3 séries
+5. Cadeira Flexora (acessório) - 3 séries
+6. Elevação Pélvica (acessório) - 3 séries
+7. Panturrilha (acessório) - 3 séries
+8. Core - 2 séries
+
+🚫 PROIBIDO: Supino, Remada, Puxada, Desenvolvimento, Bíceps, Tríceps
+
+### ✅ VALIDAÇÃO OBRIGATÓRIA (verificar CADA item):
+1. ☐ Full Body = 15-18 séries? (MENOR que Sup/Inf)
+2. ☐ Superiores = 19-24 séries?
+3. ☐ Inferiores = 19-24 séries?
+4. ☐ Supino de Superiores = EXATAMENTE o mesmo do Full Body?
+5. ☐ Remada de Superiores = EXATAMENTE a mesma do Full Body?
+6. ☐ Desenvolvimento de Superiores = EXATAMENTE o mesmo do Full Body?
+7. ☐ Agachamento de Inferiores = EXATAMENTE o mesmo do Full Body?
+8. ☐ Stiff de Inferiores = EXATAMENTE o mesmo do Full Body?
+9. ☐ Superiores tem ZERO exercício de pernas?
+10. ☐ Inferiores tem ZERO exercício de tronco/braços?
+11. ☐ Core aparece nos 3 dias?
+12. ☐ Nomes: "Full Body", "Superiores", "Inferiores"?
 ` : ''}
 ${dayPatternSection}
 
