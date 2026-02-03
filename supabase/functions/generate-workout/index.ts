@@ -2775,67 +2775,88 @@ múltiplas rotinas diferentes.
 - NUNCA trocar exercícios para progredir
 
 ═══════════════════════════════════════════════════════════════════════════════
-## 🔴🔴🔴 HÍBRIDO (FB + A + B) para 3x/semana - REGRA CRÍTICA 🔴🔴🔴
+## 🔴🔴🔴 HÍBRIDO (FB + SUPERIORES + INFERIORES) para 3x/semana 🔴🔴🔴
 ═══════════════════════════════════════════════════════════════════════════════
 
 Quando splitPreference = 'hybrid' (3 dias/semana), seguir EXATAMENTE esta estrutura:
 
-### PASSO 1: Defina os EXERCÍCIOS COMPOSTOS BASE (5-6 exercícios):
-Escolha exercícios compostos que serão a "espinha dorsal" do plano:
-SUPERIORES:
-- 1 Supino (ex: Supino reto com barra)
-- 1 Remada (ex: Remada sentado peg. Fechada)
-- 1 Desenvolvimento (ex: Desenvolvimento Sentado com Halter)
+### ⚠️ NOMES DOS TREINOS (OBRIGATÓRIO):
+- Dia 1: "Full Body"
+- Dia 2: "Superiores" (NÃO use "Empurrar", "Puxar", "Push", "Pull")
+- Dia 3: "Inferiores" (NÃO use "Pernas", "Legs", "Posteriores")
 
-INFERIORES:
+### DEFINIÇÃO DE GRUPOS MUSCULARES:
+
+**SUPERIORES = SOMENTE músculos do tronco e braços:**
+- Peitoral, Costas, Ombros
+- Bíceps, Tríceps
+- Cintura Escapular (deltóide posterior, face pull)
+
+**INFERIORES = SOMENTE músculos das pernas:**
+- Quadríceps (agachamento, leg press, extensora)
+- Isquiotibiais/Posteriores (stiff, flexora, mesa flexora)
+- Glúteos (elevação pélvica, abdução)
+- Adutores
+- Panturrilhas
+- Core (pode estar em ambos)
+
+### PASSO 1: EXERCÍCIOS COMPOSTOS BASE:
+
+SUPERIORES (para Full Body e Dia 2):
+- 1 Supino (ex: Supino reto com barra)
+- 1 Remada (ex: Remada sentado peg. fechada)
+- 1 Desenvolvimento (ex: Desenvolvimento sentado com halter)
+
+INFERIORES (para Full Body e Dia 3):
 - 1 Agachamento (ex: Agachamento pés paralelos com barra)
 - 1 Stiff ou Flexora (ex: Stiff com barra)
-- 1 Leg Press ou Extensora
 
-### PASSO 2: Full Body (Dia 1) - Base Fundamentos:
-Use EXATAMENTE os compostos definidos acima:
+### PASSO 2: Full Body (Dia 1):
 | Ordem | Exercício | Grupo |
 |-------|-----------|-------|
-| 1 | COMPOSTO: Agachamento (o mesmo do passo 1) | Quadríceps |
-| 2 | COMPOSTO: Supino (o mesmo do passo 1) | Peitoral |
-| 3 | COMPOSTO: Remada (o mesmo do passo 1) | Costas |
-| 4 | COMPOSTO: Stiff (o mesmo do passo 1) | Isquiotibiais |
-| 5 | COMPOSTO: Desenvolvimento (o mesmo do passo 1) | Ombros |
-| 6 | Core (Prancha ou Abd) | Core |
+| 1 | Agachamento | Quadríceps |
+| 2 | Supino | Peitoral |
+| 3 | Remada | Costas |
+| 4 | Stiff | Isquiotibiais |
+| 5 | Desenvolvimento | Ombros |
+| 6 | Core | Abdômen |
 
-### PASSO 3: SUPERIORES (Dia 2 - Treino A):
-OBRIGATÓRIO REPETIR os mesmos compostos SUPERIORES do Full Body!
-| Ordem | Exercício | Repetição? |
-|-------|-----------|------------|
-| 1 | ⚠️ MESMO SUPINO do Full Body | ✅ REPETIR EXATO |
-| 2 | ⚠️ MESMA REMADA do Full Body | ✅ REPETIR EXATO |
-| 3 | ⚠️ MESMO DESENVOLVIMENTO do Full Body | ✅ REPETIR EXATO |
-| 4 | Novo: Puxada (qualquer variação) | Acessório |
-| 5 | Novo: Rosca Bíceps | Acessório |
-| 6 | Novo: Tríceps (qualquer variação) | Acessório |
-| 7 | Novo: Elevação Lateral ou Crucifixo Inverso | Acessório |
+### PASSO 3: SUPERIORES (Dia 2):
+🚫 PROIBIDO: Agachamento, Leg Press, Stiff, Flexora, Panturrilha (são de INFERIORES!)
+| Ordem | Exercício | Tipo |
+|-------|-----------|------|
+| 1 | ⚠️ MESMO Supino do Full Body | REPETIR |
+| 2 | ⚠️ MESMA Remada do Full Body | REPETIR |
+| 3 | ⚠️ MESMO Desenvolvimento do Full Body | REPETIR |
+| 4 | Puxada (qualquer variação) | Acessório |
+| 5 | Rosca Bíceps | Acessório |
+| 6 | Tríceps | Acessório |
+| 7 | Elevação Lateral ou Crucifixo Inverso | Acessório |
 
-### PASSO 4: INFERIORES (Dia 3 - Treino B):
-OBRIGATÓRIO REPETIR os mesmos compostos INFERIORES do Full Body!
-| Ordem | Exercício | Repetição? |
-|-------|-----------|------------|
-| 1 | ⚠️ MESMO AGACHAMENTO do Full Body | ✅ REPETIR EXATO |
-| 2 | ⚠️ MESMO STIFF ou Flexora do Full Body | ✅ REPETIR EXATO |
-| 3 | Novo: Leg Press ou Extensora | Acessório |
-| 4 | Novo: Cadeira Flexora ou Elevação Pélvica | Acessório |
-| 5 | Novo: Abdução ou Adução | Acessório |
-| 6 | Novo: Panturrilha | Acessório |
-| 7 | Core (qualquer variação) | Final |
+### PASSO 4: INFERIORES (Dia 3):
+🚫 PROIBIDO: Supino, Remada, Puxada, Desenvolvimento, Rosca, Tríceps (são de SUPERIORES!)
+| Ordem | Exercício | Tipo |
+|-------|-----------|------|
+| 1 | ⚠️ MESMO Agachamento do Full Body | REPETIR |
+| 2 | ⚠️ MESMO Stiff/Flexora do Full Body | REPETIR |
+| 3 | Leg Press ou Extensora | Acessório |
+| 4 | Cadeira Flexora ou Elevação Pélvica | Acessório |
+| 5 | Abdução ou Adução | Acessório |
+| 6 | Panturrilha | Acessório |
+| 7 | Core | Final |
 
-### VALIDAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR:
-Verifique que:
-1. O Supino do Full Body é IDÊNTICO ao Supino do Dia 2 (Superiores)
-2. A Remada do Full Body é IDÊNTICA à Remada do Dia 2 (Superiores)
-3. O Desenvolvimento do Full Body é IDÊNTICO ao do Dia 2 (Superiores)
-4. O Agachamento do Full Body é IDÊNTICO ao do Dia 3 (Inferiores)
-5. O Stiff/Flexora do Full Body é IDÊNTICO ao do Dia 3 (Inferiores)
+### ❌ ERROS A EVITAR:
+1. NÃO misture Remada + Flexora no mesmo treino "Puxar + Posteriores" (isso NÃO é híbrido)
+2. NÃO misture Supino + Agachamento no mesmo treino "Empurrar + Quads" (isso NÃO é híbrido)
+3. O Híbrido tem divisão CLARA: Superior = tronco/braços | Inferior = pernas
 
-Se algum composto NÃO REPETIR EXATAMENTE → CORRIGIR antes de retornar o JSON!
+### ✅ VALIDAÇÃO FINAL:
+Antes de retornar o JSON, verifique:
+1. Dia 2 (Superiores) tem ZERO exercícios de pernas?
+2. Dia 3 (Inferiores) tem ZERO exercícios de tronco/braços?
+3. Os compostos do Full Body REPETEM exatamente nos dias específicos?
+
+Se falhar qualquer validação → CORRIGIR antes de retornar!
 
 ## APLICAÇÃO NO progressionPlan:
 - SEMPRE indicar: "Manter exercícios fixos, progredir em carga/reps"
