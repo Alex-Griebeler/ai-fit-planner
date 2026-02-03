@@ -2682,17 +2682,18 @@ Para treinos de 2-3x/semana com tempo limitado (30-45min) e objetivo de HIPERTRO
 ### ⚠️ EXCEÇÃO PARA GRUPOS PEQUENOS PRIORIZADOS:
 **IMPORTANTE: Esta exceção NÃO se aplica a sessões de 30min!**
 
-Em sessões de 45min+ (apenas):
+### EXCEÇÃO PARA GRUPOS PEQUENOS PRIORIZADOS:
+Em sessões de 45min+ OU em sessões de 30min com 4+ dias/semana:
 Se o usuário selecionou um grupo PEQUENO (Braços, Bíceps, Tríceps, Panturrilhas) como PRIORIDADE no onboarding:
 - Esse grupo DEVE receber volume direto (mínimo 6 séries/semana)
 - Posicionar exercício desse grupo nas posições 1-3 do treino
 - O volume dos grandes grupos pode ser ajustado para caber no orçamento
 
-### 🚫 REGRA ABSOLUTA PARA 30min:
-- **PROIBIDO** priorizar grupos pequenos em sessões de 30min
-- Mesmo se o usuário tiver selecionado, IGNORAR essa prioridade
-- Grupos pequenos recebem APENAS trabalho indireto em 30min
-- Não há exceções!
+### 🚫 REGRA PARA 30min COM BAIXA FREQUÊNCIA:
+- **PROIBIDO** priorizar grupos pequenos em sessões de 30min COM 3 dias/semana ou menos
+- Mesmo se o usuário tiver selecionado, IGNORAR essa prioridade nesse cenário
+- Grupos pequenos recebem APENAS trabalho indireto
+- Com 4+ dias/semana em 30min, a priorização de grupos pequenos É PERMITIDA
 
 ### TRABALHO INDIRETO (quando pequenos NÃO são prioridade):
 - Bíceps: 100% coberto por remadas e puxadas
@@ -4156,11 +4157,13 @@ function buildUserPrompt(
     learningContextMultiplier: learningContextMultiplier,
   });
 
-  // FALLBACK: Em sessões de 30min, remover grupos pequenos das prioridades
-  // (mesmo se passou pelo onboarding com dados legados)
+  // FALLBACK: Em sessões de 30min COM BAIXA FREQUÊNCIA (≤3x/semana), remover grupos pequenos das prioridades
+  // Com 4+ dias/semana, mesmo em 30min, há volume semanal suficiente para grupos pequenos
   const SMALL_MUSCLE_GROUPS_30MIN = ["arms", "biceps", "triceps", "braços", "bíceps", "tríceps"];
   const isShortSession = userData.sessionDuration === "30min";
-  const filteredFocusAreas = isShortSession
+  const trainingFrequency = userData.trainingDays?.length || 0;
+  const shouldIgnoreSmallGroups = isShortSession && trainingFrequency <= 3;
+  const filteredFocusAreas = shouldIgnoreSmallGroups
     ? (userData.bodyAreas || []).filter(area => !SMALL_MUSCLE_GROUPS_30MIN.includes(area.toLowerCase()))
     : (userData.bodyAreas || []);
 

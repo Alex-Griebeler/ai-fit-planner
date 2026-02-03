@@ -27,9 +27,13 @@ const SMALL_MUSCLE_GROUPS = ['arms', 'biceps', 'triceps'];
 
 export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: StepBodyAreasProps) {
   const isShortSession = data.sessionDuration === '30min';
+  const trainingFrequency = data.trainingDays?.length || 0;
   
-  // Filtra opções: em 30min, remove grupos pequenos
-  const availableOptions = isShortSession 
+  // Bloqueia grupos pequenos em 30min APENAS se frequência ≤ 3x/semana
+  // Com 4+ dias, mesmo em 30min, há volume semanal suficiente para grupos pequenos
+  const shouldBlockSmallGroups = isShortSession && trainingFrequency <= 3;
+  
+  const availableOptions = shouldBlockSmallGroups
     ? BODY_AREA_OPTIONS.filter(opt => !opt.isSmall)
     : BODY_AREA_OPTIONS;
   const toggleArea = (area: string) => {
@@ -48,9 +52,9 @@ export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: 
       subtitle="Selecione as áreas que você mais quer trabalhar"
       onBack={onBack}
     >
-      {isShortSession && (
+      {shouldBlockSmallGroups && (
         <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg py-2 px-3 mb-4">
-          ⚠️ Treinos de 30min focam em grandes grupos. Braços recebem trabalho indireto via exercícios compostos.
+          ⚠️ Treinos de 30min com até 3x/semana focam em grandes grupos. Braços recebem trabalho indireto via exercícios compostos.
         </p>
       )}
       
