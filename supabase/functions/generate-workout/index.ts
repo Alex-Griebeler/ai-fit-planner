@@ -2665,39 +2665,71 @@ O trabalho indireto de compostos é SUFICIENTE para grupos pequenos.
 | Composto secundário    | 90s             | 60-75s         |
 | Isolador (se permitido)| 60-90s          | 45-60s         |
 
-## PRIORIZAÇÃO DE GRANDES GRUPOS (sem preferência específica)
-Quando tempo é limitado e usuário NÃO selecionou áreas de foco:
+## 🏋️ HIERARQUIA DE VOLUME PARA HIPERTROFIA (REGRA CRÍTICA)
 
-**PRIORIDADE MÁXIMA (manter volume):**
-- Peito, Costas, Quadríceps, Glúteos, Isquiotibiais
+Para treinos de 2-3x/semana com tempo limitado (30-45min) e objetivo de HIPERTROFIA:
 
-**SEM ISOLADOS (trabalho indireto via compostos):**
-- Bíceps: coberto por remadas e puxadas
-- Tríceps: coberto por supino e desenvolvimento
-- Panturrilha: coberto por agachamentos e leg press
+### ORDEM DE PRIORIDADE OBRIGATÓRIA:
+1️⃣ **PRIMEIRO**: Garantir volume MÍNIMO para grupos GRANDES (10+ séries/semana cada):
+   - Peito, Costas, Quadríceps, Glúteos, Isquiotibiais, Core
 
-## EXEMPLO TREINO FULL BODY 45min CORRETO:
+2️⃣ **SEGUNDO**: Atingir volume para grupos MÉDIOS (6+ séries/semana):
+   - Ombros, Cintura Escapular
+
+3️⃣ **SOMENTE SE SOBRAR ORÇAMENTO**: Incluir grupos PEQUENOS:
+   - Bíceps, Tríceps, Panturrilhas
+
+### ⚠️ EXCEÇÃO OBRIGATÓRIA:
+Se o usuário selecionou um grupo PEQUENO (Braços, Bíceps, Tríceps, Panturrilhas) como PRIORIDADE no onboarding:
+- Esse grupo DEVE receber volume direto (mínimo 6 séries/semana)
+- Posicionar exercício desse grupo nas posições 1-3 do treino
+- O volume dos grandes grupos pode ser ajustado para caber no orçamento
+
+### TRABALHO INDIRETO (quando pequenos NÃO são prioridade):
+- Bíceps: 100% coberto por remadas e puxadas
+- Tríceps: 100% coberto por supino e desenvolvimento
+- Panturrilha: parcialmente coberto por agachamentos e leg press
+
+### 💡 SÉRIES POR EXERCÍCIO - FLEXIBILIDADE:
+Para otimizar distribuição de volume em tempo limitado:
+- **2 séries por exercício É VÁLIDO** para exercícios de suporte
+- **3 séries** = padrão para compostos principais
+- **4 séries** = apenas para grupos prioritários do usuário
+- Use 2 séries para encaixar mais grupos quando o tempo é curto
+
+## EXEMPLO TREINO FULL BODY 45min (HIPERTROFIA, SEM PRIORIDADE ESPECÍFICA):
 Aquecimento: 1 série leve do primeiro exercício [2min]
 
-1. Supino Reto/Barra: 3x10 (75s) → Peito
-2. Remada Sentada: 3x10 (75s) → Costas
-3. Leg Press: 3x12 (75s) → Quadríceps
-4. Stiff/Romeno: 3x10 (75s) → Posteriores/Glúteos
-5. Desenvolvimento Halteres: 3x10 (60s) → Ombros
-6. Prancha Frontal: 3x30s (45s) → Core
+1. Supino Reto/Barra: 3x10 (75s) → Peito [grupo GRANDE]
+2. Remada Sentada: 3x10 (75s) → Costas [grupo GRANDE]
+3. Leg Press: 3x12 (75s) → Quadríceps [grupo GRANDE]
+4. Stiff/Romeno: 3x10 (75s) → Posteriores/Glúteos [grupo GRANDE]
+5. Desenvolvimento Halteres: 2x10 (60s) → Ombros [grupo MÉDIO, 2 séries OK]
+6. Prancha Frontal: 2x30s (45s) → Core [grupo GRANDE, 2 séries OK]
 
-= 6 exercícios, 18 séries, ~40-43min ✅ VIÁVEL!
+= 6 exercícios, 16 séries, ~38-40min ✅ VIÁVEL!
+❌ SEM Bíceps/Tríceps direto (trabalho indireto suficiente)
+
+## EXEMPLO COM BRAÇOS COMO PRIORIDADE (usuário selecionou):
+1. Supino Reto: 3x10 → Peito
+2. Remada Sentada: 3x10 → Costas  
+3. Rosca Direta: 3x12 → Bíceps ⭐ [PRIORIDADE]
+4. Tríceps Pulley: 3x12 → Tríceps ⭐ [PRIORIDADE]
+5. Leg Press: 2x12 → Quadríceps [2 séries para caber]
+6. Prancha: 2x30s → Core
+
+= 6 exercícios, 16 séries ✅ Braços priorizados, grandes grupos reduzidos
 
 ## VERIFICAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR CADA TREINO:
-1. Contar número de EXERCÍCIOS → deve ser ≤ limite da tabela
-2. Somar TODAS as séries do treino → deve ser ≤ limite da tabela
-3. Se exceder: REMOVER exercícios menos prioritários
+1. Somar TODAS as séries do treino → deve ser ≤ limite da tabela
+2. Verificar se grupos GRANDES atingiram mínimo semanal
+3. Se exceder: REDUZIR/REMOVER grupos pequenos PRIMEIRO (exceto se priorizados)
 
 ## SE ULTRAPASSAR OS LIMITES:
-1. PRIMEIRO: Reduzir séries dos isoladores (de 4→3, de 3→2)
-2. DEPOIS: Remover exercícios isoladores completamente
-3. Se ainda excede: Remover exercício de menor prioridade
-4. NUNCA: Manter mais exercícios que o limite permite
+1. PRIMEIRO: Reduzir séries dos grupos pequenos (de 3→2, de 2→0)
+2. DEPOIS: Reduzir séries dos grupos médios (de 3→2)
+3. NUNCA: Reduzir grupos grandes abaixo do mínimo
+4. EXCEÇÃO: Grupos pequenos PRIORIZADOS pelo usuário são tratados como grandes
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 3.2: PERIODIZAÇÃO DINÂMICA
