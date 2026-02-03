@@ -15,14 +15,15 @@ import {
   StepSessionDuration,
   StepExerciseTypes,
   StepExperience,
-  StepSplitPreference,
-  StepVariation,
+  // StepSplitPreference, // Removido: modelo low-cost usa split automático
+  // StepVariation, // Removido: modelo low-cost usa variação baixa fixa
   StepBodyAreas,
   StepHealth,
   StepSleepStress,
 } from '@/components/onboarding/steps';
 
-const TOTAL_STEPS = 13;
+// Modelo LOW-COST GYM: 11 steps (removidos Split e Variação)
+const TOTAL_STEPS = 11;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -34,18 +35,8 @@ export default function Onboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Compute if split step should be shown (for step 9)
-  const shouldShowSplitStep = useMemo(() => 
-    data.experienceLevel !== 'beginner' && data.trainingDays.length === 3,
-    [data.experienceLevel, data.trainingDays.length]
-  );
-
-  // Skip step 9 automatically if conditions not met
-  useEffect(() => {
-    if (step === 9 && !shouldShowSplitStep) {
-      setStep(10);
-    }
-  }, [step, shouldShowSplitStep]);
+  // MODELO LOW-COST: splitPreference e variationPreference são fixos
+  // Não precisamos mais calcular shouldShowSplitStep
 
   // Preenche dados do perfil e onboarding salvos
   useEffect(() => {
@@ -152,19 +143,13 @@ export default function Onboarding() {
         return <StepExerciseTypes {...stepProps} />;
       case 8:
         return <StepExperience {...stepProps} />;
+      // MODELO LOW-COST: Steps 9-10 removidos (Split e Variação)
+      // Variação é sempre 'low' e split é automático
       case 9:
-        // Will be skipped by useEffect if conditions not met
-        if (!shouldShowSplitStep) {
-          return null;
-        }
-        return <StepSplitPreference {...stepProps} />;
-      case 10:
-        return <StepVariation {...stepProps} />;
-      case 11:
         return <StepBodyAreas {...stepProps} />;
-      case 12:
+      case 10:
         return <StepHealth {...stepProps} />;
-      case 13:
+      case 11:
         return <StepSleepStress {...stepProps} onFinish={handleFinish} isLoading={isLoading} />;
       default:
         return null;

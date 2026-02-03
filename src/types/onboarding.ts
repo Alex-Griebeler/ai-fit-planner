@@ -75,8 +75,8 @@ export const initialOnboardingData: OnboardingData = {
   includeCardio: false,
   cardioTiming: null,
   experienceLevel: null,
-  splitPreference: null,
-  variationPreference: null,
+  splitPreference: null, // Ignorado no modelo low-cost (automático)
+  variationPreference: 'low', // Fixo em 'low' para modelo low-cost
   bodyAreas: [],
   hasHealthConditions: false,
   injuryAreas: [],
