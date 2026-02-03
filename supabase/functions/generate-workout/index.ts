@@ -2774,28 +2774,65 @@ múltiplas rotinas diferentes.
 - Ajustar esforço (RR → RPE)
 - NUNCA trocar exercícios para progredir
 
-## HÍBRIDO (FB + A + B) para 3x/semana (splitPreference = 'hybrid'):
+═══════════════════════════════════════════════════════════════════════════════
+## 🔴🔴🔴 HÍBRIDO (FB + A + B) para 3x/semana - REGRA CRÍTICA 🔴🔴🔴
+═══════════════════════════════════════════════════════════════════════════════
 
-Estrutura FIXA quando usuário seleciona Híbrido:
+Quando splitPreference = 'hybrid' (3 dias/semana), seguir EXATAMENTE esta estrutura:
 
-Dia 1 - Full Body Base:
-├── Compostos SUPERIORES: Supino, Remada, Desenvolvimento
-├── Compostos INFERIORES: Agachamento, Stiff
-└── Volume: ~12-15 séries totais
+### PASSO 1: Defina os EXERCÍCIOS COMPOSTOS BASE (4-5 exercícios):
+Escolha 4-5 exercícios compostos que serão a "espinha dorsal" do plano inteiro:
+- 1 Supino (ex: Supino reto/Barra)
+- 1 Remada ou Puxada (ex: Remada sentado peg. Fechada)
+- 1 Desenvolvimento (ex: Desenvolvimento Sentado/Halter)
+- 1 Agachamento ou Leg Press (ex: Agachamento pés paralelos barra)
+- 1 Stiff ou Mesa Flexora (ex: Stiff com barra)
 
-Dia 2 - Treino A (Push + Quadríceps):
-├── REPETIR compostos: Supino (variação), Desenvolvimento
-├── ADICIONAR: Leg Press, Extensora
-├── ADICIONAR acessórios: Tríceps, Elevação Lateral
-└── Volume: compostos + 4-6 séries extras (se houver tempo)
+### PASSO 2: Full Body (Dia 1) - Base Fundamentos:
+Use EXATAMENTE os 4-5 compostos definidos acima + Core:
+| Ordem | Exercício | Grupo |
+|-------|-----------|-------|
+| 1 | COMPOSTO: Agachamento (o mesmo do passo 1) | Quadríceps |
+| 2 | COMPOSTO: Supino (o mesmo do passo 1) | Peitoral |
+| 3 | COMPOSTO: Remada (o mesmo do passo 1) | Costas |
+| 4 | COMPOSTO: Stiff (o mesmo do passo 1) | Isquiotibiais |
+| 5 | COMPOSTO: Desenvolvimento (o mesmo do passo 1) | Ombros |
+| 6 | Core (Prancha ou Abd) | Core |
+| 7 | Cintura Escapular (Crucifixo inverso) | Cintura Escapular |
 
-Dia 3 - Treino B (Pull + Posterior):
-├── REPETIR compostos: Remada, Puxada
-├── ADICIONAR: Flexora, Mesa Flexora ou Stiff
-├── ADICIONAR acessórios: Rosca, Panturrilha
-└── Volume: compostos + 4-6 séries extras (se houver tempo)
+### PASSO 3: Empurrar + Quadríceps (Dia 2):
+OBRIGATÓRIO REPETIR os mesmos compostos de Empurrar e Quads do Full Body!
+| Ordem | Exercício | Repetição? |
+|-------|-----------|------------|
+| 1 | ⚠️ MESMO SUPINO do Full Body | ✅ REPETIR |
+| 2 | ⚠️ MESMO AGACHAMENTO ou Leg Press do Full Body | ✅ REPETIR |
+| 3 | ⚠️ MESMO DESENVOLVIMENTO do Full Body | ✅ REPETIR |
+| 4 | Novo: Extensora ou Leg Press (se agachamento já está) | Acessório |
+| 5 | Novo: Tríceps (qualquer variação) | Acessório |
+| 6 | Novo: Elevação Lateral (ombros) | Acessório |
+| 7 | Core (qualquer variação) | Final |
 
-NOTA: Os exercícios compostos REPETEM garantindo 2 estímulos semanais por grupo.
+### PASSO 4: Puxar + Posteriores (Dia 3):
+OBRIGATÓRIO REPETIR os mesmos compostos de Puxar e Posterior do Full Body!
+| Ordem | Exercício | Repetição? |
+|-------|-----------|------------|
+| 1 | ⚠️ MESMA REMADA do Full Body | ✅ REPETIR |
+| 2 | ⚠️ MESMO STIFF ou Mesa Flexora do Full Body | ✅ REPETIR |
+| 3 | Novo: Puxada (qualquer variação) | Acessório |
+| 4 | Novo: Elevação Pélvica ou Cadeira Flexora | Acessório |
+| 5 | Novo: Rosca Bíceps | Acessório |
+| 6 | Novo: Panturrilha | Acessório |
+| 7 | Core (qualquer variação) | Final |
+
+### VALIDAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR:
+Verifique que:
+1. O Supino do Full Body é IDÊNTICO ao Supino do Dia 2
+2. O Agachamento/Leg Press do Full Body aparece no Dia 2
+3. O Desenvolvimento do Full Body é IDÊNTICO ao do Dia 2
+4. A Remada do Full Body é IDÊNTICA à do Dia 3
+5. O Stiff/Flexora do Full Body aparece no Dia 3
+
+Se algum composto NÃO REPETIR → CORRIGIR antes de retornar o JSON!
 
 ## APLICAÇÃO NO progressionPlan:
 - SEMPRE indicar: "Manter exercícios fixos, progredir em carga/reps"
