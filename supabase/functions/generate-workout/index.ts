@@ -2679,11 +2679,20 @@ Para treinos de 2-3x/semana com tempo limitado (30-45min) e objetivo de HIPERTRO
 3️⃣ **SOMENTE SE SOBRAR ORÇAMENTO**: Incluir grupos PEQUENOS:
    - Bíceps, Tríceps, Panturrilhas
 
-### ⚠️ EXCEÇÃO OBRIGATÓRIA:
+### ⚠️ EXCEÇÃO PARA GRUPOS PEQUENOS PRIORIZADOS:
+**IMPORTANTE: Esta exceção NÃO se aplica a sessões de 30min!**
+
+Em sessões de 45min+ (apenas):
 Se o usuário selecionou um grupo PEQUENO (Braços, Bíceps, Tríceps, Panturrilhas) como PRIORIDADE no onboarding:
 - Esse grupo DEVE receber volume direto (mínimo 6 séries/semana)
 - Posicionar exercício desse grupo nas posições 1-3 do treino
 - O volume dos grandes grupos pode ser ajustado para caber no orçamento
+
+### 🚫 REGRA ABSOLUTA PARA 30min:
+- **PROIBIDO** priorizar grupos pequenos em sessões de 30min
+- Mesmo se o usuário tiver selecionado, IGNORAR essa prioridade
+- Grupos pequenos recebem APENAS trabalho indireto em 30min
+- Não há exceções!
 
 ### TRABALHO INDIRETO (quando pequenos NÃO são prioridade):
 - Bíceps: 100% coberto por remadas e puxadas
@@ -2710,7 +2719,8 @@ Aquecimento: 1 série leve do primeiro exercício [2min]
 = 6 exercícios, 16 séries, ~38-40min ✅ VIÁVEL!
 ❌ SEM Bíceps/Tríceps direto (trabalho indireto suficiente)
 
-## EXEMPLO COM BRAÇOS COMO PRIORIDADE (usuário selecionou):
+## EXEMPLO 45min COM BRAÇOS COMO PRIORIDADE (usuário selecionou):
+**NOTA: Este exemplo só é válido para sessões de 45min ou mais!**
 1. Supino Reto: 3x10 → Peito
 2. Remada Sentada: 3x10 → Costas  
 3. Rosca Direta: 3x12 → Bíceps ⭐ [PRIORIDADE]
@@ -2719,6 +2729,7 @@ Aquecimento: 1 série leve do primeiro exercício [2min]
 6. Prancha: 2x30s → Core
 
 = 6 exercícios, 16 séries ✅ Braços priorizados, grandes grupos reduzidos
+⚠️ NÃO usar este modelo para sessões de 30min!
 
 ## VERIFICAÇÃO OBRIGATÓRIA ANTES DE FINALIZAR CADA TREINO:
 1. Somar TODAS as séries do treino → deve ser ≤ limite da tabela
@@ -4145,16 +4156,24 @@ function buildUserPrompt(
     learningContextMultiplier: learningContextMultiplier,
   });
 
+  // FALLBACK: Em sessões de 30min, remover grupos pequenos das prioridades
+  // (mesmo se passou pelo onboarding com dados legados)
+  const SMALL_MUSCLE_GROUPS_30MIN = ["arms", "biceps", "triceps", "braços", "bíceps", "tríceps"];
+  const isShortSession = userData.sessionDuration === "30min";
+  const filteredFocusAreas = isShortSession
+    ? (userData.bodyAreas || []).filter(area => !SMALL_MUSCLE_GROUPS_30MIN.includes(area.toLowerCase()))
+    : (userData.bodyAreas || []);
+
   // Calculate density strategy for time-limited sessions
   const densityStrategy = calculateDensityStrategy({
     sessionDuration: userData.sessionDuration || "45min",
     goal: userData.goal,
     experienceLevel: level,
-    focusAreas: userData.bodyAreas || []
+    focusAreas: filteredFocusAreas  // Usa áreas filtradas
   });
 
   // Determine if user has focus preference for isolation exercises
-  const hasUserPreference = userData.bodyAreas && userData.bodyAreas.length > 0;
+  const hasUserPreference = filteredFocusAreas.length > 0;
 
   // Group exercises by muscle group
   const exercisesByMuscle: Record<string, Exercise[]> = {};
