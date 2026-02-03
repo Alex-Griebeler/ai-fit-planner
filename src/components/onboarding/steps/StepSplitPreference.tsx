@@ -21,8 +21,8 @@ const SPLIT_OPTIONS = [
   },
   { 
     value: 'hybrid', 
-    label: 'Híbrido (FB + A + B)', 
-    desc: '1 dia Full Body + A (superiores) + B (inferiores)',
+    label: 'Híbrido (FB + Sup + Inf)', 
+    desc: '1 dia Full Body + Superiores + Inferiores',
     icon: Layers,
   },
 ] as const;
