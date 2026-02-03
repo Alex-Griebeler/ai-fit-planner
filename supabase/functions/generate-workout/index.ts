@@ -3259,15 +3259,14 @@ O campo "name" de cada treino DEVE seguir estas regras:
   - "Empurrar A (Força)" ou "Empurrar A"
   - "Puxar B (Hipertrofia)" ou "Puxar B"
   - "Pernas A (Metabólico)" ou "Pernas A"
-  - "Superiores" e "Inferiores" (SEM letra quando são repetidos identicamente na semana - ex: 4x A-B-A-B)
-  - "Superiores A" e "Inferiores B" (COM letra APENAS quando há variantes A/B com exercícios diferentes)
+  - "Superiores" e "Inferiores" (SEMPRE sem letra - NUNCA use A/B para Upper/Lower)
   - "Full Body" (SEM letra quando é o único tipo de treino na semana - ex: 3x Full Body)
   - "Full Body A" e "Full Body B" (COM letra apenas quando há variantes A/B alternando)
 - Exemplos INCORRETOS:
   - "Push A", "Pull B", "Legs A" ❌
   - "Upper A", "Lower B" ❌
   - "Superior A", "Inferior B" ❌ (singular não é aceito)
-  - "Superiores A", "Inferiores A" ❌ quando os treinos são idênticos na semana
+  - "Superiores A", "Superiores B", "Inferiores A", "Inferiores B" ❌ (NUNCA usar letras em Upper/Lower)
 
 ## OBRIGATÓRIO:
 1. Retorne APENAS o JSON, sem texto adicional
