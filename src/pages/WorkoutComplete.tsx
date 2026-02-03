@@ -9,16 +9,28 @@ import { EffortScale, AchievementBadge } from '@/components/gamification';
 import { useStreak } from '@/hooks/useStreak';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useWorkoutSessions } from '@/hooks/useWorkoutSessions';
+import { usePrescriptionFeedback } from '@/hooks/usePrescriptionFeedback';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { AchievementDefinition, AchievementStats } from '@/lib/achievements';
 
+interface ExerciseData {
+  name: string;
+  prescribedSets: number;
+  completedSets: number;
+  prescribedReps?: string;
+  loadUsed?: string | null;
+}
+
 interface SessionData {
   sessionId: string;
+  workoutPlanId?: string;
+  workoutDay?: string;
   durationMinutes: number;
   completedSets: number;
   totalSets: number;
   workoutName: string;
+  exercises?: ExerciseData[];
 }
 
 export default function WorkoutComplete() {
@@ -28,6 +40,7 @@ export default function WorkoutComplete() {
   const { streak, updateStreak } = useStreak();
   const { checkAndUnlockAchievements, totalUnlocked } = useAchievements();
   const { sessions: workoutSessions } = useWorkoutSessions();
+  const { saveFeedback } = usePrescriptionFeedback();
 
   const sessionData = location.state as SessionData | null;
 
@@ -136,6 +149,31 @@ export default function WorkoutComplete() {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Save per-exercise feedback for Learning Context V2
+      if (sessionData.workoutPlanId && sessionData.workoutDay && sessionData.exercises?.length) {
+        try {
+          await saveFeedback({
+            workoutPlanId: sessionData.workoutPlanId,
+            workoutSessionId: sessionData.sessionId,
+            exercises: sessionData.exercises.map(ex => ({
+              exerciseName: ex.name,
+              workoutDay: sessionData.workoutDay!,
+              prescribedSets: ex.prescribedSets,
+              completedSets: ex.completedSets,
+              prescribedReps: ex.prescribedReps,
+              loadUsed: ex.loadUsed || undefined,
+              // For now, all exercises inherit the session RPE
+              // Individual RPE can be added in future iterations
+              exerciseRpe: perceivedEffort,
+            })),
+          });
+          console.log('Exercise feedback saved for Learning Context V2');
+        } catch (feedbackError) {
+          // Non-blocking - continue even if feedback fails
+          console.warn('Failed to save exercise feedback:', feedbackError);
+        }
+      }
 
       navigate('/dashboard');
     } catch (error) {
