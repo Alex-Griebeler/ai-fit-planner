@@ -333,27 +333,45 @@ const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
       isFixedRoutine: true
     }
   },
-  // 5 dias/semana - Híbrido com repetições fixas
+  // 5 dias/semana - Híbrido com CONSISTÊNCIA CRUZADA entre Superiores e Empurrar/Puxar
   "5": {
     alternating: {
       split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
-      description: "Híbrido: os dois treinos de Inferiores são IDÊNTICOS",
+      description: "Híbrido: exercícios de empurrar do Dia 1 = Dia 3 (Empurrar), exercícios de puxar do Dia 1 = Dia 4 (Puxar), Inferiores 1 = Inferiores 2",
       dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
-      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      specialInstruction: `ROTINA FIXA COM CONSISTÊNCIA CRUZADA:
+- Inferiores 1 (Dia 2) = Inferiores 2 (Dia 5): exercícios IDÊNTICOS
+- Os exercícios de EMPURRAR (Peitoral, Ombros, Tríceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 3 (Empurrar)
+- Os exercícios de PUXAR (Costas, Bíceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 4 (Puxar)
+- O Dia 3 (Empurrar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- O Dia 4 (Puxar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- Progressão via carga.`,
       isFixedRoutine: true
     },
     consecutive: {
       split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
-      description: "Híbrido organizado para minimizar sobreposição",
+      description: "Híbrido: exercícios de empurrar do Dia 1 = Dia 3 (Empurrar), exercícios de puxar do Dia 1 = Dia 4 (Puxar), Inferiores idênticos",
       dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
-      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      specialInstruction: `ROTINA FIXA COM CONSISTÊNCIA CRUZADA:
+- Inferiores 1 (Dia 2) = Inferiores 2 (Dia 5): exercícios IDÊNTICOS
+- Os exercícios de EMPURRAR (Peitoral, Ombros, Tríceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 3 (Empurrar)
+- Os exercícios de PUXAR (Costas, Bíceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 4 (Puxar)
+- O Dia 3 (Empurrar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- O Dia 4 (Puxar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- Progressão via carga.`,
       isFixedRoutine: true
     },
     mixed: {
       split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
-      description: "Híbrido adaptado",
+      description: "Híbrido: exercícios de empurrar do Dia 1 = Dia 3, exercícios de puxar do Dia 1 = Dia 4, Inferiores idênticos",
       dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
-      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      specialInstruction: `ROTINA FIXA COM CONSISTÊNCIA CRUZADA:
+- Inferiores 1 (Dia 2) = Inferiores 2 (Dia 5): exercícios IDÊNTICOS
+- Os exercícios de EMPURRAR (Peitoral, Ombros, Tríceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 3 (Empurrar)
+- Os exercícios de PUXAR (Costas, Bíceps) do Dia 1 (Superiores) DEVEM ser IDÊNTICOS aos do Dia 4 (Puxar)
+- O Dia 3 (Empurrar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- O Dia 4 (Puxar) pode ter exercícios ADICIONAIS além dos do Dia 1 (compostos extras, isoladores)
+- Progressão via carga.`,
       isFixedRoutine: true
     }
   },
@@ -2068,10 +2086,92 @@ function validateWorkoutPlan(
     }
   }
   
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 10. VALIDATE CROSS-CONSISTENCY FOR 5x/WEEK (Superiores ↔ Empurrar/Puxar)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Para 5x/semana: exercícios de empurrar do Superiores = Empurrar, puxar do Superiores = Puxar
+  
+  const workouts = plan.workouts || [];
+  const frequency = workouts.length;
+  
+  if (frequency === 5) {
+    // Find the specific workouts by label
+    const findWorkoutByLabel = (partialLabel: string): any => {
+      return workouts.find((w: any) => {
+        const name = (w.name || '').toLowerCase();
+        return name.includes(partialLabel.toLowerCase());
+      });
+    };
+    
+    const superioresWorkout = findWorkoutByLabel('superiores');
+    const empurrarWorkout = findWorkoutByLabel('empurrar');
+    const puxarWorkout = findWorkoutByLabel('puxar');
+    
+    if (superioresWorkout && empurrarWorkout && puxarWorkout) {
+      // Define which muscle groups are "push" and which are "pull"
+      const isPushGroup = (group: string): boolean => {
+        const g = (group || '').toLowerCase();
+        return ['peitoral', 'peito', 'chest', 'ombros', 'ombro', 'shoulders', 'deltoides', 'tríceps', 'triceps'].some(
+          p => g.includes(p)
+        );
+      };
+      
+      const isPullGroup = (group: string): boolean => {
+        const g = (group || '').toLowerCase();
+        return ['costas', 'back', 'dorsal', 'bíceps', 'biceps', 'cintura escapular', 'scapular'].some(
+          p => g.includes(p)
+        );
+      };
+      
+      // Extract push exercises from Superiores
+      const superioresPushExercises = (superioresWorkout.exercises || [])
+        .filter((ex: any) => isPushGroup(ex.muscleGroup))
+        .map((ex: any) => ex.name?.toLowerCase().trim());
+      
+      // Extract pull exercises from Superiores
+      const superioresPullExercises = (superioresWorkout.exercises || [])
+        .filter((ex: any) => isPullGroup(ex.muscleGroup))
+        .map((ex: any) => ex.name?.toLowerCase().trim());
+      
+      // Extract exercises from Empurrar
+      const empurrarExercises = (empurrarWorkout.exercises || [])
+        .map((ex: any) => ex.name?.toLowerCase().trim());
+      
+      // Extract exercises from Puxar
+      const puxarExercises = (puxarWorkout.exercises || [])
+        .map((ex: any) => ex.name?.toLowerCase().trim());
+      
+      // Validate: All push exercises from Superiores should be in Empurrar
+      for (const pushEx of superioresPushExercises) {
+        if (!empurrarExercises.includes(pushEx)) {
+          warnings.push(
+            `[5x CONSISTÊNCIA] Exercício de empurrar "${pushEx}" do Superiores NÃO aparece no dia Empurrar. ` +
+            `DEVEM ser idênticos.`
+          );
+        }
+      }
+      
+      // Validate: All pull exercises from Superiores should be in Puxar
+      for (const pullEx of superioresPullExercises) {
+        if (!puxarExercises.includes(pullEx)) {
+          warnings.push(
+            `[5x CONSISTÊNCIA] Exercício de puxar "${pullEx}" do Superiores NÃO aparece no dia Puxar. ` +
+            `DEVEM ser idênticos.`
+          );
+        }
+      }
+      
+      console.log(`[5x CROSS-CONSISTENCY] Superiores Push: ${superioresPushExercises.length} exercícios`);
+      console.log(`[5x CROSS-CONSISTENCY] Superiores Pull: ${superioresPullExercises.length} exercícios`);
+      console.log(`[5x CROSS-CONSISTENCY] Empurrar total: ${empurrarExercises.length} exercícios`);
+      console.log(`[5x CROSS-CONSISTENCY] Puxar total: ${puxarExercises.length} exercícios`);
+    }
+  }
+  
   // Log fixed routine validation summary
   console.log(`[FIXED ROUTINE] Groups found: ${[...workoutsByLabel.keys()].join(', ')}`);
-  for (const [label, workouts] of workoutsByLabel.entries()) {
-    console.log(`  - "${label}": ${workouts.length} workouts (should be identical)`);
+  for (const [label, workoutsGroup] of workoutsByLabel.entries()) {
+    console.log(`  - "${label}": ${workoutsGroup.length} workouts (should be identical)`);
   }
   
   return { 
@@ -2903,6 +3003,19 @@ Este sistema foi projetado para ACADEMIAS LOW-COST onde:
 - Dia 2 (Inferiores): Agachamento, Leg Press, Stiff, Panturrilha
 - Dia 3 (Superiores): Supino, Remada, Desenvolvimento, Rosca, Tríceps ← IDÊNTICO ao Dia 1
 - Dia 4 (Inferiores): Agachamento, Leg Press, Stiff, Panturrilha ← IDÊNTICO ao Dia 2
+
+**5x Híbrido com CONSISTÊNCIA CRUZADA (REGRA ESPECIAL):**
+- Dia 1 (Superiores): Supino, Supino Inclinado, Remada, Puxada, Desenvolvimento, Rosca, Tríceps
+- Dia 2 (Inferiores): Agachamento, Leg Press, Stiff, Extensora, Panturrilha
+- Dia 3 (Empurrar): **Supino, Supino Inclinado, Desenvolvimento** ← IDÊNTICOS ao Dia 1 (exercícios de empurrar) + Crucifixo, Elevação Lateral, Tríceps Testa (ADICIONAIS permitidos)
+- Dia 4 (Puxar): **Remada, Puxada, Rosca** ← IDÊNTICOS ao Dia 1 (exercícios de puxar) + Face Pull, Rosca Martelo (ADICIONAIS permitidos)
+- Dia 5 (Inferiores): ← IDÊNTICO ao Dia 2
+
+⚠️ REGRA CRÍTICA PARA 5x:
+- Os exercícios de EMPURRAR do Dia 1 (Superiores) = Dia 3 (Empurrar)
+- Os exercícios de PUXAR do Dia 1 (Superiores) = Dia 4 (Puxar)
+- Os dois dias de Inferiores são IDÊNTICOS
+- Dias 3 e 4 podem ter exercícios EXTRAS (isoladores, compostos secundários)
 
 **6x PPL Fixo:**
 - Dia 1 (Empurrar): Supino, Supino Inclinado, Desenvolvimento, Elevação Lateral, Tríceps
