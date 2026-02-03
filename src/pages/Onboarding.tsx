@@ -4,10 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
 import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
-import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
 import { toast } from 'sonner';
-import { Loader2, Lock, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import {
   StepName,
   StepPersonalData,
@@ -18,51 +16,23 @@ import {
   StepExerciseTypes,
   StepExperience,
   StepSplitPreference,
+  StepVariation,
   StepBodyAreas,
   StepHealth,
   StepSleepStress,
 } from '@/components/onboarding/steps';
 
-const TOTAL_STEPS = 12;
+const TOTAL_STEPS = 13;
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { profile, updateProfile, isUpdating: isUpdatingProfile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding, saveOnboardingData, isSaving } = useOnboardingData();
-  const { activePlan, isLoading: isLoadingPlans } = useWorkoutPlans();
   
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialOnboardingData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
-
-  // TESTING MODE: Bloqueio desativado temporariamente
-  // TODO: Reativar após testes
-  const isPlanLocked = false;
-  // const isPlanLocked = useMemo(() => {
-  //   if (!activePlan?.expires_at) return false;
-  //   return new Date(activePlan.expires_at) > new Date();
-  // }, [activePlan]);
-
-  const formatExpirationRemaining = (): string => {
-    if (!activePlan?.expires_at) return '';
-    const now = new Date();
-    const expiresAt = new Date(activePlan.expires_at);
-    const diff = expiresAt.getTime() - now.getTime();
-    if (diff <= 0) return '';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(days / 7);
-    const remainingDays = days % 7;
-    
-    if (weeks > 0 && remainingDays > 0) {
-      return `${weeks} semana${weeks > 1 ? 's' : ''} e ${remainingDays} dia${remainingDays > 1 ? 's' : ''}`;
-    } else if (weeks > 0) {
-      return `${weeks} semana${weeks > 1 ? 's' : ''}`;
-    } else {
-      return `${days} dia${days > 1 ? 's' : ''}`;
-    }
-  };
 
   // Compute if split step should be shown (for step 9)
   const shouldShowSplitStep = useMemo(() => 
@@ -189,10 +159,12 @@ export default function Onboarding() {
         }
         return <StepSplitPreference {...stepProps} />;
       case 10:
-        return <StepBodyAreas {...stepProps} />;
+        return <StepVariation {...stepProps} />;
       case 11:
-        return <StepHealth {...stepProps} />;
+        return <StepBodyAreas {...stepProps} />;
       case 12:
+        return <StepHealth {...stepProps} />;
+      case 13:
         return <StepSleepStress {...stepProps} onFinish={handleFinish} isLoading={isLoading} />;
       default:
         return null;
@@ -200,49 +172,13 @@ export default function Onboarding() {
   };
 
   // Estado de loading inicial enquanto busca dados do banco
-  if (isLoadingProfile || isLoadingOnboarding || isLoadingPlans) {
+  if (isLoadingProfile || isLoadingOnboarding) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando seus dados...</p>
         </div>
-      </div>
-    );
-  }
-
-  // Bloquear se o plano não expirou
-  if (isPlanLocked) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center px-6 max-w-sm"
-        >
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-muted/50 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            Plano ativo
-          </h1>
-          <p className="text-muted-foreground mb-2">
-            Seu plano atual foi otimizado para este período de treino.
-          </p>
-          <div className="flex items-center justify-center gap-2 text-sm text-primary mb-6">
-            <Clock className="w-4 h-4" />
-            <span>Próxima atualização em {formatExpirationRemaining()}</span>
-          </div>
-          <p className="text-xs text-muted-foreground/60 mb-8">
-            Para resultados melhores, siga seu plano atual até o fim do ciclo.
-          </p>
-          <Button
-            onClick={() => navigate('/result')}
-            className="w-full"
-          >
-            Ver meu plano atual
-          </Button>
-        </motion.div>
       </div>
     );
   }

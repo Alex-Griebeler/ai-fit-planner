@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { OnboardingData } from '@/types/onboarding';
 import { toast } from 'sonner';
 import { Save, Loader2 } from 'lucide-react';
@@ -49,6 +50,7 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
     trainingDays: [] as string[],
     sessionDuration: '' as OnboardingData['sessionDuration'] | '',
     experienceLevel: '' as OnboardingData['experienceLevel'] | '',
+    variationPreference: '' as OnboardingData['variationPreference'] | '',
   });
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
         trainingDays: data.trainingDays || [],
         sessionDuration: data.sessionDuration || '',
         experienceLevel: data.experienceLevel || '',
+        variationPreference: data.variationPreference || '',
       });
     }
   }, [data]);
@@ -78,6 +81,7 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
         trainingDays: formData.trainingDays,
         sessionDuration: formData.sessionDuration || null,
         experienceLevel: formData.experienceLevel || null,
+        variationPreference: formData.variationPreference || null,
       });
       toast.success('Preferências de treino atualizadas!');
     } catch (error) {
@@ -158,6 +162,29 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
                 <Label htmlFor={level.value} className="font-normal cursor-pointer">{level.label}</Label>
               </div>
             ))}
+          </RadioGroup>
+        </div>
+
+        {/* Preferência de Variação */}
+        <div className="space-y-3">
+          <Label>Preferência de Variação</Label>
+          <RadioGroup
+            value={formData.variationPreference || ''}
+            onValueChange={(value) => setFormData({ ...formData, variationPreference: value as OnboardingData['variationPreference'] })}
+            className="flex flex-wrap gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="low" id="variation-low" />
+              <Label htmlFor="variation-low" className="font-normal cursor-pointer">Baixa</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="moderate" id="variation-moderate" />
+              <Label htmlFor="variation-moderate" className="font-normal cursor-pointer">Moderada</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="high" id="variation-high" />
+              <Label htmlFor="variation-high" className="font-normal cursor-pointer">Alta</Label>
+            </div>
           </RadioGroup>
         </div>
 

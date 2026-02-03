@@ -2,7 +2,7 @@ import { OnboardingData } from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { OptionCard } from '../OptionCard';
 import { Button } from '@/components/ui/button';
-import { Dumbbell, Layers } from 'lucide-react';
+import { Dumbbell, Target, Layers, Shuffle } from 'lucide-react';
 
 interface StepSplitPreferenceProps {
   data: OnboardingData;
@@ -16,14 +16,26 @@ const SPLIT_OPTIONS = [
   { 
     value: 'fullbody', 
     label: 'Full Body 3x', 
-    desc: 'Mesma rotina completa repetindo 3x na semana',
+    desc: 'Treino completo cada dia, ideal para recuperação entre sessões',
     icon: Dumbbell,
   },
   { 
+    value: 'push_pull_legs', 
+    label: 'Push/Pull/Legs', 
+    desc: 'Divisão por padrão de movimento, foco em cada grupo muscular',
+    icon: Target,
+  },
+  { 
     value: 'hybrid', 
-    label: 'Híbrido (FB + Sup + Inf)', 
-    desc: '1 dia Full Body + Superiores + Inferiores',
+    label: 'Híbrido (FB + A/B)', 
+    desc: '1 dia completo + 2 especializados, garante 2 estímulos por grupo',
     icon: Layers,
+  },
+  { 
+    value: 'no_preference', 
+    label: 'Sem Preferência', 
+    desc: 'Full Body variado - exercícios diferentes cada dia, sem repetição',
+    icon: Shuffle,
   },
 ] as const;
 

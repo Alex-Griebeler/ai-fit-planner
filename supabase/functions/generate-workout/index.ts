@@ -40,7 +40,7 @@ const OnboardingSchema = z.object({
   cardioTiming: z.enum(["post_workout", "separate_day", "ai_decides"]).nullable().optional(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
   splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid", "no_preference"]).nullable().optional(),
-  variationPreference: z.enum(["high", "moderate", "low"]).nullable().optional(),
+  variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
   injuryAreas: z.array(z.enum([
@@ -136,13 +136,12 @@ const GOAL_VOLUME_RANGES: Record<string, VolumeRange> = {
 };
 
 // Tabela do documento técnico: Séries POR TREINO conforme duração
-// REALISTA: 45min = ~2.4min/série (45-5 aquec)/15 = 2.66min OK, /20 = 2min apertado
-// Cálculo: 45min - 3min aquec = 42min líquidos / 2.5min por série = ~16-17 séries
+// CORRIGIDO: 45min = 19-24, 60min = 25-30 conforme documento técnico
 const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
-  "30min":  { min: 10, max: 14 },  // 27min líquidos / 2min = ~13 séries
-  "45min":  { min: 15, max: 20 },  // 42min líquidos / 2.3min = ~18 séries
-  "60min":  { min: 20, max: 26 },  // 55min líquidos / 2.5min = ~22 séries
-  "60plus": { min: 24, max: 32 },  // 70min líquidos / 2.5min = ~28 séries
+  "30min":  { min: 12, max: 18 },
+  "45min":  { min: 19, max: 24 },
+  "60min":  { min: 25, max: 30 },
+  "60plus": { min: 28, max: 36 },
 };
 
 // Splits recomendados por frequência (consolidado)
@@ -339,14 +338,18 @@ function getSplitRule(params: GetSplitRuleParams): SplitRule {
   if (hasSplitPreference) {
     const splitPreferenceMap: Record<string, SplitRule> = {
       'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
+      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
       'hybrid': {
-        split: "Full Body + Superiores + Inferiores",
-        description: "Full Body fundamentos + dias especializados em Superiores e Inferiores para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Superiores", "Inferiores"]
+        split: "Full Body + Push/Pull Híbrido",
+        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
       },
-      // Backward compatibility: treat legacy values as fullbody
-      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].alternating,
-      'no_preference': SPLIT_RULES_BY_PATTERN["3"].alternating,
+      'no_preference': {
+        split: "Full Body 3x (Variedade Máxima)",
+        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
+        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
+        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
+      }
     };
     return splitPreferenceMap[splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
   }
@@ -789,9 +792,13 @@ function calculateDensityStrategy(params: {
   // Para 45min+: mais flexível
   const allowIsolation = isShortSession ? userWantsIsolation : true;
   
-  // Capacidade realista por sessão - UNIFICADO com SESSION_SETS_PER_WORKOUT
-  // Usa os mesmos valores da tabela do documento técnico para consistência
-  const sessionCapacity = SESSION_SETS_PER_WORKOUT;
+  // Capacidade realista por sessão com descanso reduzido
+  const sessionCapacity: Record<string, { min: number; max: number }> = {
+    "30min": { min: 12, max: 14 },
+    "45min": { min: 18, max: 22 },
+    "60min": { min: 24, max: 28 },
+    "60plus": { min: 28, max: 34 }
+  };
   
   const warmupStrategy = WARMUP_STRATEGY[sessionDuration] || WARMUP_STRATEGY["45min"];
   
@@ -1930,164 +1937,6 @@ function validateWorkoutPlan(
     }
   }
   
-  // 9. VALIDATE HYBRID SPLIT SPECIFIC RULES
-  if (plan.workouts?.length === 3) {
-    const workoutNames = plan.workouts.map((w: any) => w.name?.toLowerCase() || '');
-    const isHybridSplit = workoutNames.some((n: string) => n.includes('full body')) &&
-                          workoutNames.some((n: string) => n.includes('superior')) &&
-                          workoutNames.some((n: string) => n.includes('inferior'));
-    
-    if (isHybridSplit) {
-      const fbWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('full body'));
-      const supWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('superior'));
-      const infWorkout = plan.workouts.find((w: any) => w.name?.toLowerCase().includes('inferior'));
-      
-      if (fbWorkout && supWorkout && infWorkout) {
-        const fbSets = fbWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
-        const supSets = supWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
-        const infSets = infWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
-        
-        // 9a. Validate volume EQUALIZATION across sessions (all should be similar, within session limits)
-        // FB, Superiores, and Inferiores should all have comparable volume per session
-        const avgSets = (fbSets + supSets + infSets) / 3;
-        const maxDeviation = 0.25; // 25% tolerance
-        
-        if (Math.abs(fbSets - avgSets) / avgSets > maxDeviation) {
-          warnings.push(`[Híbrido] Full Body (${fbSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
-        }
-        if (Math.abs(supSets - avgSets) / avgSets > maxDeviation) {
-          warnings.push(`[Híbrido] Superiores (${supSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
-        }
-        if (Math.abs(infSets - avgSets) / avgSets > maxDeviation) {
-          warnings.push(`[Híbrido] Inferiores (${infSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
-        }
-        
-        // Log session volume for debugging
-        console.log(`[Híbrido] Volume por sessão - FB: ${fbSets}, Sup: ${supSets}, Inf: ${infSets}, Média: ${avgSets.toFixed(1)}`);
-        
-        // 9b. Validate exercise repetition (compounds should repeat)
-        const fbExerciseNames = new Set(fbWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || []);
-        const supExerciseNames = supWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || [];
-        const infExerciseNames = infWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || [];
-        
-        // Check if upper compounds from FB appear in Superiores
-        const upperCompounds = ['supino', 'remada', 'desenvolvimento', 'desenv'];
-        const fbUpperCompounds = fbWorkout.exercises?.filter((ex: any) => 
-          upperCompounds.some(uc => ex.name?.toLowerCase().includes(uc))
-        ) || [];
-        
-        for (const fbEx of fbUpperCompounds) {
-          const fbName = fbEx.name?.toLowerCase().trim();
-          const foundInSup = supExerciseNames.some((supName: string) => supName === fbName);
-          if (!foundInSup) {
-            warnings.push(`[Híbrido] Exercício "${fbEx.name}" do Full Body não foi repetido no Superiores`);
-          }
-        }
-        
-        // Check if lower compounds from FB appear in Inferiores
-        const lowerCompounds = ['agachamento', 'stiff', 'leg press'];
-        const fbLowerCompounds = fbWorkout.exercises?.filter((ex: any) => 
-          lowerCompounds.some(lc => ex.name?.toLowerCase().includes(lc) && !ex.name?.toLowerCase().includes('leg press'))
-        ) || [];
-        
-        for (const fbEx of fbLowerCompounds) {
-          const fbName = fbEx.name?.toLowerCase().trim();
-          const foundInInf = infExerciseNames.some((infName: string) => infName === fbName);
-          if (!foundInInf) {
-            warnings.push(`[Híbrido] Exercício "${fbEx.name}" do Full Body não foi repetido no Inferiores`);
-          }
-        }
-        
-        // 9c. Validate muscle group separation
-        const legMuscles = ['quadríceps', 'quadriceps', 'isquio', 'posterior', 'glúteo', 'gluteo', 'panturrilha', 'calf'];
-        const upperMuscles = ['peitoral', 'peito', 'chest', 'costas', 'back', 'ombro', 'shoulder', 'bíceps', 'biceps', 'tríceps', 'triceps'];
-        
-        const supHasLegExercise = supWorkout.exercises?.some((ex: any) => 
-          legMuscles.some(lm => ex.muscleGroup?.toLowerCase().includes(lm))
-        );
-        
-        const infHasUpperExercise = infWorkout.exercises?.some((ex: any) => 
-          upperMuscles.some(um => ex.muscleGroup?.toLowerCase().includes(um))
-        );
-        
-        if (supHasLegExercise) {
-          warnings.push(`[Híbrido] Superiores contém exercício de pernas - PROIBIDO no split híbrido`);
-        }
-        if (infHasUpperExercise) {
-          warnings.push(`[Híbrido] Inferiores contém exercício de tronco/braços - PROIBIDO no split híbrido`);
-        }
-        
-        // 9d. Validate Core appears in all 3 days
-        const coreGroups = ['core', 'abdômen', 'abdomen', 'abdominal', 'lombar'];
-        const fbHasCore = fbWorkout.exercises?.some((ex: any) => 
-          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
-        );
-        const supHasCore = supWorkout.exercises?.some((ex: any) => 
-          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
-        );
-        const infHasCore = infWorkout.exercises?.some((ex: any) => 
-          coreGroups.some(cg => ex.muscleGroup?.toLowerCase().includes(cg) || ex.name?.toLowerCase().includes('prancha') || ex.name?.toLowerCase().includes('abd'))
-        );
-        
-        if (!fbHasCore) {
-          warnings.push(`[Híbrido] Full Body deve ter exercício de Core`);
-        }
-        if (!supHasCore) {
-          warnings.push(`[Híbrido] Superiores deve ter exercício de Core para atingir volume semanal`);
-        }
-        if (!infHasCore) {
-          warnings.push(`[Híbrido] Inferiores deve ter exercício de Core`);
-        }
-      }
-    }
-  }
-  
-  // 10. VALIDATE ACTUAL WEEKLY VOLUME BY MUSCLE GROUP
-  // Calculate real volume from exercises and compare to minimums
-  const actualWeeklyVolume = calculateActualWeeklyVolume(plan);
-  const declaredVolume = plan.weeklyVolume || {};
-  
-  console.log(`Volume comparison - Calculated: ${JSON.stringify(actualWeeklyVolume)}`);
-  console.log(`Volume comparison - AI declared: ${JSON.stringify(declaredVolume)}`);
-  
-  // Define minimum weekly volumes based on goal
-  const minWeeklyByGoal: Record<string, Record<string, number>> = {
-    hypertrophy: { chest: 10, back: 10, quadriceps: 10, hamstrings: 8, glutes: 8, shoulders: 6, core: 10, scapular_belt: 6, biceps: 6, triceps: 6, calves: 6 },
-    weight_loss: { chest: 8, back: 8, quadriceps: 8, hamstrings: 6, glutes: 6, shoulders: 6, core: 8, scapular_belt: 4, biceps: 4, triceps: 4, calves: 4 },
-    health: { chest: 6, back: 6, quadriceps: 6, hamstrings: 4, glutes: 4, shoulders: 4, core: 6, scapular_belt: 4, biceps: 4, triceps: 4, calves: 4 },
-    performance: { chest: 8, back: 8, quadriceps: 8, hamstrings: 6, glutes: 6, shoulders: 6, core: 8, scapular_belt: 4, biceps: 6, triceps: 6, calves: 4 },
-  };
-  
-  const goalMins = minWeeklyByGoal[userData.goal || 'health'] || minWeeklyByGoal.health;
-  const densityStrat = calculateDensityStrategy({
-    sessionDuration: userData.sessionDuration || "45min",
-    goal: userData.goal,
-    experienceLevel: userData.experienceLevel || 'beginner',
-    focusAreas: userData.bodyAreas || []
-  });
-  
-  // Validate each muscle group's weekly volume
-  for (const [muscle, minVolume] of Object.entries(goalMins)) {
-    const actualVolume = actualWeeklyVolume[muscle] || 0;
-    const isPriority = isPriorityMuscle(muscle, userData.bodyAreas || []);
-    
-    // For small groups without isolation allowed, skip strict minimums (indirect work counts)
-    const isSmallGroup = ['biceps', 'triceps', 'calves'].includes(muscle);
-    if (isSmallGroup && !densityStrat.allowIsolation && !isPriority) {
-      continue; // Skip - indirect work is sufficient
-    }
-    
-    // Apply tolerance (15% for normal, 10% for priority)
-    const tolerance = isPriority ? 0.10 : 0.15;
-    const minWithTolerance = Math.round(minVolume * (1 - tolerance));
-    
-    if (actualVolume < minWithTolerance) {
-      warnings.push(
-        `Volume semanal insuficiente para ${muscle}: ${actualVolume} séries calculadas (mínimo: ${minVolume})${isPriority ? ' [PRIORIDADE]' : ''}`
-      );
-    }
-  }
-  
   return { 
     success: errors.length === 0, 
     warnings,
@@ -2250,13 +2099,13 @@ O volume semanal (séries por grupamento) é determinado pela INTERSEÇÃO de:
 | Saúde         | 6   | 14  | Submáximo, foco em técnica |
 | Performance   | 8   | 18  | Foco em intensidade |
 
-### TABELA 3: Séries por TREINO (conforme duração) - REALISTA
+### TABELA 3: Séries por TREINO (conforme duração)
 | Duração  | Séries/Treino | Exercícios |
 |----------|---------------|------------|
-| 30 min   | 10-14         | 4-5 exercícios |
-| 45 min   | 15-20         | 5-7 exercícios |
-| 60 min   | 20-26         | 6-8 exercícios |
-| 60+ min  | 24-32         | 7-10 exercícios |
+| 30 min   | 12-18         | 4-6 exercícios |
+| 45 min   | 19-24         | 5-7 exercícios |
+| 60 min   | 25-30         | 6-8 exercícios |
+| 60+ min  | 28-36         | 7-10 exercícios |
 
 ### AJUSTES:
 - **Nível**: Iniciante ×0.85 | Intermediário ×1.0 | Avançado ×1.10
@@ -2380,19 +2229,16 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 - ⚠️ CONFLITO: Se dias consecutivos, há repetição
 - OBRIGATÓRIO: Treinar em dias ALTERNADOS (Seg/Qua/Sex ou Ter/Qui/Sáb)
 
-**OPÇÃO B - Full Body + Superiores + Inferiores (INTERMEDIÁRIOS/AVANÇADOS):**
-| Dia | Tipo | Grupos | Volume |
-|-----|------|--------|--------|
-| 1 | Full Body | Todos os grandes grupos (compostos) | 15-20 séries |
-| 2 | Superiores | Peitoral, Costas, Ombros, Bíceps, Tríceps, Core | 15-20 séries |
-| 3 | Inferiores | Quadríceps, Posteriores, Glúteos, Panturrilhas, Core | 15-20 séries |
+**OPÇÃO B - Full Body + A/B (INTERMEDIÁRIOS/AVANÇADOS):**
+| Dia | Tipo | Grupos |
+|-----|------|--------|
+| 1 | Full Body | Todos (volume reduzido) |
+| 2 | Upper (A) | Peitoral, Costas, Ombros, Bíceps, Tríceps |
+| 3 | Lower (B) | Quadríceps, Posteriores, Glúteos, Panturrilhas |
 
 - Estímulos: 2x/semana por grupo ✅
-- ⭐ REGRA CRÍTICA: EQUALIZAR volume por sessão (todas com ~15-20 séries para 45min)
-- FB estabelece os compostos fundamentais que REPETEM em Sup/Inf
-- O volume semanal é a SOMA das 3 sessões, não concentrado em uma
-- Core deve aparecer em TODOS os 3 dias para atingir 10+ séries/semana
-
+- ⚠️ CONFLITO: FB → A (membros superiores consecutivos)
+- RECOMENDADO: Dias alternados (Seg/Qua/Sex)
 
 ═══════════════════════════════════════════════════════════════════════════════
 ### 4x/SEMANA - Upper/Lower A/B
@@ -2581,12 +2427,12 @@ Quando tempo é limitado e usuário NÃO selecionou áreas de foco:
 - Panturrilha: coberto por agachamentos e leg press
 
 ## CAPACIDADE REALISTA POR SESSÃO:
-| Duração | Aquecimento   | Séries/Sessão | Tempo Líquido | Tempo/Série |
-|---------|---------------|---------------|---------------|-------------|
-| 30min   | 2min (espec.) | 10-14         | ~28min        | ~2min       |
-| 45min   | 3min (espec.) | 15-20         | ~42min        | ~2.3min     |
-| 60min   | 5min (geral)  | 20-26         | ~55min        | ~2.3min     |
-| 60+min  | 5min (geral)  | 24-32         | ~70min        | ~2.4min     |
+| Duração | Aquecimento   | Séries/Sessão | Com Descanso Reduzido |
+|---------|---------------|---------------|----------------------|
+| 30min   | 2min (espec.) | 10-12         | 12-14                |
+| 45min   | 3min (espec.) | 16-18         | 18-22                |
+| 60min   | 5min (geral)  | 22-24         | 24-28                |
+| 60+min  | 5min (geral)  | 28-32         | 30-36                |
 
 ## EXEMPLO TREINO 30min SEM ISOLADOS (Hipertrofia, 3x/semana):
 Aquecimento: 1 série leve de Supino (60-70% carga) [2min]
@@ -2676,87 +2522,6 @@ Exemplo 4x/semana Hipertrofia:
 - O campo "periodization" no JSON DEVE ser o tipo definido no prompt do usuário
 - O campo "progressionPlan" DEVE refletir as semanas de progressão
 - O campo "periodizationDescription" DEVE explicar a estratégia
-
-═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 3.3: HIERARQUIA DE COMPOSTOS vs ISOLADOS (CRÍTICO)
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🔴 REGRA FUNDAMENTAL: GRANDES GRUPOS PRIMEIRO, ISOLADOS SÓ SE SOBRAR ESPAÇO
-
-A prescrição segue uma HIERARQUIA RÍGIDA de prioridades:
-
-### PASSO 1: VOLUME MÍNIMO DOS GRANDES GRUPOS (OBRIGATÓRIO)
-Antes de adicionar QUALQUER exercício isolador, GARANTIR que os GRANDES grupos 
-atingiram seu volume MÍNIMO semanal com exercícios COMPOSTOS:
-
-| Grupo Grande    | Volume Mínimo (Hipertrofia) | Exercícios Compostos |
-|-----------------|-----------------------------|-----------------------|
-| Peitoral        | 10-12 séries/semana         | Supino (variações)    |
-| Costas          | 12-14 séries/semana         | Remada, Puxada        |
-| Quadríceps      | 10-12 séries/semana         | Agachamento, Leg Press|
-| Glúteos/Isquios | 8-10 séries/semana          | Stiff, Elevação Pélvica|
-| Ombros          | 8-10 séries/semana          | Desenvolvimento       |
-| Core            | 10-14 séries/semana         | Prancha, Abdominais   |
-
-### PASSO 2: VERIFICAR ESPAÇO DISPONÍVEL
-Após garantir volume dos grandes grupos, calcular séries restantes:
-- Séries disponíveis = Limite da sessão - Séries já alocadas para compostos
-- Se < 3 séries restantes → NÃO adicionar isolados
-
-### PASSO 3: ISOLADOS APENAS COM JUSTIFICATIVA
-Exercícios isolados para grupos pequenos (Bíceps, Tríceps, Panturrilha) 
-SÓ SÃO PERMITIDOS quando:
-
-✅ PERMITIDO adicionar isolados:
-1. O usuário PRIORIZOU o grupo no onboarding (bodyAreas contém "arms", "biceps", "triceps")
-2. O volume mínimo de TODOS os grandes grupos JÁ foi atingido
-3. Sobram ≥3 séries no orçamento da sessão
-
-❌ PROIBIDO adicionar isolados:
-1. Se algum grupo grande está ABAIXO do mínimo
-2. Se a sessão já está no limite de séries (30min = 10-14, 45min = 15-20)
-3. Se o usuário NÃO priorizou grupos pequenos
-
-### EXEMPLO: Sessão de 45min, Hipertrofia, SEM prioridade em braços
-
-**ORÇAMENTO:** 15-20 séries disponíveis
-
-**ALOCAÇÃO CORRETA:**
-| Grupo       | Exercício           | Séries | Acumulado |
-|-------------|---------------------|--------|-----------|
-| Peito       | Supino Reto         | 3      | 3         |
-| Peito       | Supino Inclinado    | 3      | 6         |
-| Costas      | Remada              | 3      | 9         |
-| Costas      | Puxada              | 3      | 12        |
-| Ombros      | Desenvolvimento     | 3      | 15        |
-| Core        | Prancha             | 3      | 18        |
-
-**Total: 18 séries (dentro do limite)**
-**Bíceps/Tríceps: 0 séries diretas** (trabalho indireto via compostos é SUFICIENTE)
-
-### EXEMPLO: Sessão de 45min, Hipertrofia, COM prioridade em braços
-
-**ORÇAMENTO:** 15-20 séries disponíveis
-
-**ALOCAÇÃO CORRETA:**
-| Grupo       | Exercício           | Séries | Acumulado |
-|-------------|---------------------|--------|-----------|
-| Peito       | Supino Reto         | 3      | 3         |
-| Costas      | Remada              | 3      | 6         |
-| Ombros      | Desenvolvimento     | 3      | 9         |
-| **Bíceps**  | Rosca Direta        | 3      | 12        |
-| **Tríceps** | Tríceps Pulley      | 3      | 15        |
-| Core        | Prancha             | 2      | 17        |
-
-**Total: 17 séries (prioridade em braços atendida)**
-
-### ⚠️ TRABALHO INDIRETO É SUFICIENTE PARA GRUPOS PEQUENOS
-Quando NÃO há prioridade declarada:
-- Bíceps recebe ~6-8 séries INDIRETAS por semana via Remadas e Puxadas
-- Tríceps recebe ~6-8 séries INDIRETAS por semana via Supino e Desenvolvimento
-- Panturrilha recebe estímulo via Agachamento e Leg Press
-
-Isso é SUFICIENTE para manutenção e crescimento lento em usuários que não priorizaram esses grupos.
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 4: ORDEM DOS EXERCÍCIOS (CRÍTICO)
@@ -2975,184 +2740,58 @@ LIGEIRAMENTE SUPERIOR ao de EMPURRAR.
 - Redução máxima de 10%, não 25%
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 7.1: MÍNIMA VARIAÇÃO DE EXERCÍCIOS
+                         SEÇÃO 7.1: VARIAÇÃO DE EXERCÍCIOS
 ═══════════════════════════════════════════════════════════════════════════════
 
-## CONTEXTO OPERACIONAL
-Este sistema é usado em academias low cost onde a simplicidade operacional 
-é crítica. O professor foca na ORIENTAÇÃO DA EXECUÇÃO, não em gerenciar 
-múltiplas rotinas diferentes.
+## DEFINIÇÕES:
+- **Exercícios BASE**: Multiarticulares principais (Supino, Agachamento, Remada, etc.)
+- **Exercícios ACESSÓRIOS**: Isoladores e variações secundárias
 
-## REGRA OBRIGATÓRIA: EXERCÍCIOS FIXOS (MÍNIMA VARIAÇÃO)
+## NÍVEIS DE VARIAÇÃO:
 
-### Full Body (qualquer frequência):
-- Gerar APENAS 1 rotina única
-- Esta rotina se REPETE idêntica em todos os dias da semana
-- Exemplo 3x: Dia A = Dia B = Dia C (mesmos exercícios, mesma ordem)
-- Gerar apenas UM objeto de treino no JSON, não três
+### ALTA VARIAÇÃO (variationPreference = high):
+- Exercícios ACESSÓRIOS: Trocar a cada SEMANA
+- Exercícios BASE: Manter 2-3 semanas, depois variar angulação/equipamento
+- Dentro da mesma semana: Usar variações diferentes do mesmo padrão
+  - Ex: Supino Reto (Dia A) → Supino Inclinado (Dia B) → Crucifixo (Dia C)
+- Priorizar catálogo diverso de exercícios para evitar monotonia
+- progressionPlan DEVE indicar troca semanal de acessórios
 
-### Divisão A/B (4x/semana):
-- Treino A: IDÊNTICO nos dois dias em que aparecer
-- Treino B: IDÊNTICO nos dois dias em que aparecer
-- Não criar "variações" de A ou B
+### MODERADA (variationPreference = moderate):
+- Exercícios ACESSÓRIOS: Trocar a cada 2 SEMANAS
+- Exercícios BASE: Manter 3-4 semanas
+- Dentro da mesma semana: Pode repetir exercícios entre dias diferentes
+- progressionPlan DEVE indicar troca quinzenal de acessórios
 
-### PPL (6x/semana):
-- Push: IDÊNTICO nos dois dias
-- Pull: IDÊNTICO nos dois dias  
-- Legs: IDÊNTICO nos dois dias
+### BAIXA VARIAÇÃO (variationPreference = low):
+- Exercícios BASE E ACESSÓRIOS: Manter 4 semanas mínimo
+- Dentro da mesma semana: Repetir os mesmos exercícios é aceitável
+- Foco em progressão de carga, não em variação de estímulo
+- progressionPlan DEVE focar em progressão de carga/volume
 
-## PROIBIDO:
-- Criar variações diferentes do mesmo treino na mesma semana
-- Trocar exercícios entre dias do mesmo "tipo"
-- Usar lógica de "alta variação" ou "variedade máxima"
-- Usar exercícios diferentes para "aumentar estímulo"
+## REGRA ESPECIAL: VARIEDADE MÁXIMA (splitPreference = no_preference)
 
-## PROGRESSÃO PERMITIDA:
-- Aumentar carga (kg)
-- Aumentar repetições dentro do range prescrito
-- Ajustar esforço (RR → RPE)
-- NUNCA trocar exercícios para progredir
+Quando o usuário seleciona "Sem Preferência" em 3 dias de treino:
+- USAR Full Body 3x com regra CRÍTICA:
+- **NENHUM EXERCÍCIO pode ser repetido durante a semana inteira**
+- Cada dia (A, B, C) DEVE usar exercícios DIFERENTES para o mesmo grupamento
+- Exemplo para Peitoral:
+  - Dia A: Supino Reto com Barra
+  - Dia B: Supino Inclinado com Halteres
+  - Dia C: Crucifixo na Máquina
+- Esta regra SOBREPÕE a preferência de variação normal
+- Objetivo: Maximizar variedade de estímulos em 3 treinos
 
-═══════════════════════════════════════════════════════════════════════════════
-## 🔴🔴🔴 HÍBRIDO (FB + SUPERIORES + INFERIORES) para 3x/semana 🔴🔴🔴
-═══════════════════════════════════════════════════════════════════════════════
+## APLICAÇÃO NO JSON:
 
-Quando splitPreference = 'hybrid' (3 dias/semana), seguir EXATAMENTE esta estrutura:
+O campo "notes" de cada exercício pode incluir:
+- "Manter por X semanas" (para base)
+- "Trocar após Xª semana por [alternativa]" (para acessórios)
 
-### ⚠️ NOMES DOS TREINOS (OBRIGATÓRIO):
-- Dia 1: "Full Body"
-- Dia 2: "Superiores" (NÃO use "Empurrar", "Puxar", "Push", "Pull")
-- Dia 3: "Inferiores" (NÃO use "Pernas", "Legs", "Posteriores")
-
-### DEFINIÇÃO DE GRUPOS MUSCULARES:
-
-**SUPERIORES = SOMENTE músculos do tronco e braços:**
-- Peitoral, Costas, Ombros
-- Bíceps, Tríceps
-- Cintura Escapular (deltóide posterior, face pull)
-- Core (INCLUIR 1-2 exercícios de core no final)
-
-**INFERIORES = SOMENTE músculos das pernas:**
-- Quadríceps (agachamento, leg press, extensora)
-- Isquiotibiais/Posteriores (stiff, flexora, mesa flexora)
-- Glúteos (elevação pélvica, abdução)
-- Adutores
-- Panturrilhas
-- Core (INCLUIR 1-2 exercícios de core no final)
-
-### ⭐ REGRA CRÍTICA: VOLUME POR TIPO DE TREINO
-
-O Full Body tem MENOS séries que Superiores/Inferiores porque:
-- Full Body = fundamentos (treino mais curto, ~15-18 séries)
-- Superiores/Inferiores = especializados (mais séries, ~19-24 séries)
-
-**DISTRIBUIÇÃO DE SÉRIES HÍBRIDO (45min):**
-| Treino | Séries | Exercícios | Core |
-|--------|--------|------------|------|
-| Full Body | 15-18 | 5-6 | 1 |
-| Superiores | 19-22 | 6-7 | 1-2 |
-| Inferiores | 19-22 | 6-7 | 1-2 |
-
-### ⭐ CORE OBRIGATÓRIO EM TODOS OS DIAS
-- Core deve ter 4-6 séries SEMANAIS distribuídas nos 3 dias
-- Full Body: 1 exercício de core (2-3 séries)
-- Superiores: 1 exercício de core (2-3 séries) - OBRIGATÓRIO!
-- Inferiores: 1 exercício de core (2-3 séries)
-- Total Core = 6-9 séries/semana ✓
-
-### 🔄 EXERCÍCIOS COMPOSTOS BASE (ESCOLHER AGORA):
-
-Antes de montar qualquer treino, ESCOLHA:
-
-SUPERIORES (usados no Full Body E no Superiores):
-- 1 Supino → ex: "Supino reto/Barra"
-- 1 Remada → ex: "Remada sentado peg. fechada/Máquina"  
-- 1 Desenvolvimento → ex: "Desenv. Sentado pegada aberta/Halter"
-
-INFERIORES (usados no Full Body E no Inferiores):
-- 1 Agachamento → ex: "Agachamento pés paralelos barra"
-- 1 Stiff → ex: "Stiff com barra"
-
-### 📋 PASSO 1: Full Body (Dia 1) - BASE DO PLANO
-| Ordem | Exercício | Grupo | Séries |
-|-------|-----------|-------|--------|
-| 1 | [AGACHAMENTO escolhido] | Quadríceps | 3 |
-| 2 | [SUPINO escolhido] | Peitoral | 3 |
-| 3 | [REMADA escolhida] | Costas | 3 |
-| 4 | [STIFF escolhido] | Isquiotibiais | 3 |
-| 5 | [DESENVOLVIMENTO escolhido] | Ombros | 3 |
-| 6 | Prancha ou Abd. parcial | Core | 2-3 |
-
-**Total: 17-18 séries (~42 min)**
-
-### 📋 PASSO 2: SUPERIORES (Dia 2) - REPETIR + EXPANDIR
-
-⚠️⚠️⚠️ OS 3 PRIMEIROS EXERCÍCIOS DEVEM SER IDÊNTICOS AO FULL BODY ⚠️⚠️⚠️
-
-| Ordem | Exercício | Tipo | Séries |
-|-------|-----------|------|--------|
-| 1 | **[MESMO SUPINO do Full Body]** | REPETIR | 3 |
-| 2 | **[MESMA REMADA do Full Body]** | REPETIR | 3 |
-| 3 | **[MESMO DESENVOLVIMENTO do Full Body]** | REPETIR | 3 |
-| 4 | Puxada (qualquer variação) | Acessório | 3 |
-| 5 | Crucifixo ou Elevação Lateral | Acessório | 3 |
-| 6 | Rosca Bíceps | Acessório | 2-3 |
-| 7 | Tríceps Pulley | Acessório | 2-3 |
-| 8 | Core (diferente do FB) | Final | 2 |
-
-**Total: 21-23 séries (~50 min)**
-
-🚫 PROIBIDO em Superiores: Agachamento, Leg Press, Stiff, Flexora, Panturrilha, Glúteos
-
-### 📋 PASSO 3: INFERIORES (Dia 3) - REPETIR + EXPANDIR
-
-⚠️⚠️⚠️ OS 2 PRIMEIROS EXERCÍCIOS DEVEM SER IDÊNTICOS AO FULL BODY ⚠️⚠️⚠️
-
-| Ordem | Exercício | Tipo | Séries |
-|-------|-----------|------|--------|
-| 1 | **[MESMO AGACHAMENTO do Full Body]** | REPETIR | 3 |
-| 2 | **[MESMO STIFF do Full Body]** | REPETIR | 3 |
-| 3 | Leg Press ou Extensora | Acessório | 3 |
-| 4 | Cadeira Flexora | Acessório | 3 |
-| 5 | Elevação Pélvica ou Abdução | Acessório | 3 |
-| 6 | Panturrilha | Acessório | 3 |
-| 7 | Core (diferente dos anteriores) | Final | 2-3 |
-
-**Total: 20-22 séries (~50 min)**
-
-🚫 PROIBIDO em Inferiores: Supino, Remada, Puxada, Desenvolvimento, Rosca, Tríceps, Elevação Lateral
-
-### ❌ ERROS GRAVES A EVITAR:
-
-1. **Exercícios diferentes**: Se Full Body tem "Supino reto/Barra", Superiores DEVE ter "Supino reto/Barra" (EXATAMENTE IGUAL)
-2. **Mistura de grupos**: Stiff NÃO pode aparecer em Superiores. Remada NÃO pode aparecer em Inferiores.
-3. **Core só em Inferiores**: Core DEVE aparecer nos 3 dias
-4. **Volume igual**: Full Body deve ter MENOS séries que Sup/Inf (é fundamento, não especializado)
-5. **Nomes errados**: Usar "Empurrar", "Puxar", "Pernas" ao invés de "Superiores", "Inferiores"
-
-### ✅ CHECKLIST DE VALIDAÇÃO (EXECUTAR OBRIGATORIAMENTE):
-
-Antes de retornar o JSON, verificar CADA item:
-
-☐ 1. Full Body tem 15-18 séries? (menor que Sup/Inf)
-☐ 2. Superiores tem 19-24 séries?
-☐ 3. Inferiores tem 19-24 séries?
-☐ 4. Supino de Superiores = EXATAMENTE igual ao de Full Body?
-☐ 5. Remada de Superiores = EXATAMENTE igual ao de Full Body?
-☐ 6. Desenvolvimento de Superiores = EXATAMENTE igual ao de Full Body?
-☐ 7. Agachamento de Inferiores = EXATAMENTE igual ao de Full Body?
-☐ 8. Stiff de Inferiores = EXATAMENTE igual ao de Full Body?
-☐ 9. Superiores tem ZERO exercícios de pernas?
-☐ 10. Inferiores tem ZERO exercícios de tronco/braços (exceto Core)?
-☐ 11. Core aparece em TODOS os 3 dias?
-☐ 12. Nomes são "Full Body", "Superiores", "Inferiores"?
-
-❌ Se QUALQUER item falhar → CORRIGIR antes de retornar!
-
-## APLICAÇÃO NO progressionPlan:
-- SEMPRE indicar: "Manter exercícios fixos, progredir em carga/reps"
-- Semana 1-4: Mesmos exercícios, aumentar carga gradualmente
-- Após 4 semanas: Considerar troca de acessórios (não compostos)
+O campo progressionPlan DEVE refletir a estratégia de variação:
+- week1: "Semana base - aprender movimentos"
+- week2: "Manter exercícios, aumentar carga" ou "Trocar acessórios"
+- etc.
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 8: MÉTODOS DE INTENSIFICAÇÃO
@@ -3499,33 +3138,10 @@ serve(async (req) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
-      
-      // 3. Fetch previous plan ratings for feedback integration
-      const { data: previousPlanRatings } = await supabase
-        .from('workout_plans')
-        .select('user_rating, rating_notes, plan_name, rated_at')
-        .eq('user_id', userId)
-        .not('user_rating', 'is', null)
-        .order('rated_at', { ascending: false })
-        .limit(3);
-      
-      // 4. Fetch per-exercise feedback (prescription_feedback)
-      const { data: exerciseFeedback } = await supabase
-        .from('prescription_feedback')
-        .select('exercise_name, difficulty_rating, exercise_rpe, completed_sets, prescribed_sets, notes')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(50);
 
-      // 5. Build Learning Context V2 if we have data
+      // 3. Build Learning Context V2 if we have data
       if (recentSessions && recentSessions.length > 0) {
-        learningContextV2 = buildLearningContextV2(
-          recentSessions, 
-          loadHistory || [], 
-          plannedFrequency,
-          previousPlanRatings || [],
-          exerciseFeedback || []
-        );
+        learningContextV2 = buildLearningContextV2(recentSessions, loadHistory || [], plannedFrequency);
         learningContext = learningContextV2.promptContext;
         
         console.log(`Learning Context V2 built:`, {
@@ -3737,19 +3353,12 @@ serve(async (req) => {
       const reorderedWorkouts = reorderWorkoutsByDayStructure(finalWorkouts, splitRule.dayStructure);
       
       // 3b. REORDER EXERCISES within each workout (prioritize user's body areas + large groups)
-      // AND FIX exercise.order to match new position (1-indexed)
       const userPriorities = validatedData.bodyAreas || [];
       const workoutsWithReorderedExercises = reorderedWorkouts.map((workout: any) => {
         if (workout.exercises && Array.isArray(workout.exercises)) {
-          const reorderedExercises = reorderExercisesWithinWorkout(workout.exercises, userPriorities);
-          // Update order field to match new position (1-indexed)
-          const exercisesWithFixedOrder = reorderedExercises.map((ex: any, idx: number) => ({
-            ...ex,
-            order: idx + 1,
-          }));
           return {
             ...workout,
-            exercises: exercisesWithFixedOrder,
+            exercises: reorderExercisesWithinWorkout(workout.exercises, userPriorities),
           };
         }
         return workout;
@@ -3872,22 +3481,6 @@ interface LoadData {
   created_at: string;
 }
 
-interface PlanRatingData {
-  user_rating: number;
-  rating_notes: string | null;
-  plan_name: string;
-  rated_at: string;
-}
-
-interface ExerciseFeedbackData {
-  exercise_name: string;
-  difficulty_rating: string | null;
-  exercise_rpe: number | null;
-  completed_sets: number;
-  prescribed_sets: number;
-  notes: string | null;
-}
-
 interface LearningContextV2Metrics {
   sessionsAnalyzed: number;
   avgRpe: number | null;
@@ -3921,8 +3514,6 @@ interface LearningContextV2 {
     loads: LoadData[];
     progressions: string[];
     stagnations: string[];
-    planRatings: PlanRatingData[];
-    exerciseFeedback: ExerciseFeedbackData[];
   };
 }
 
@@ -4034,9 +3625,7 @@ function calculateVolumeAdjustment(metrics: LearningContextV2Metrics): LearningC
 function buildLearningContextV2(
   sessions: SessionData[], 
   loadHistory: LoadData[],
-  plannedFrequency: number,
-  planRatings: PlanRatingData[] = [],
-  exerciseFeedback: ExerciseFeedbackData[] = []
+  plannedFrequency: number
 ): LearningContextV2 {
   // Calculate metrics
   const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
@@ -4105,33 +3694,8 @@ function buildLearningContextV2(
     }
   });
   
-  // Analyze exercise feedback for difficult/easy exercises
-  const difficultExercises: string[] = [];
-  const easyExercises: string[] = [];
-  
-  exerciseFeedback.forEach(fb => {
-    if (fb.difficulty_rating === 'too_hard' || (fb.exercise_rpe && fb.exercise_rpe >= 9)) {
-      if (!difficultExercises.includes(fb.exercise_name)) {
-        difficultExercises.push(fb.exercise_name);
-      }
-    } else if (fb.difficulty_rating === 'too_easy' || (fb.exercise_rpe && fb.exercise_rpe <= 4)) {
-      if (!easyExercises.includes(fb.exercise_name)) {
-        easyExercises.push(fb.exercise_name);
-      }
-    }
-  });
-  
   // Calculate adjustments
   const adjustments = calculateVolumeAdjustment(metrics);
-  
-  // Adjust based on plan ratings (low ratings = need significant changes)
-  if (planRatings.length > 0) {
-    const avgRating = planRatings.reduce((sum, r) => sum + r.user_rating, 0) / planRatings.length;
-    if (avgRating <= 2) {
-      // Very low satisfaction - recommend significant changes
-      adjustments.deloadRecommended = true;
-    }
-  }
   
   // Check guardrails
   const guardrails: LearningContextV2Guardrails = {
@@ -4147,31 +3711,15 @@ function buildLearningContextV2(
     guardrails.canApplyAdjustments = true;
   }
   
-  // Build prompt context (with plan ratings and exercise feedback)
-  const promptContext = buildPromptContext(
-    metrics, 
-    adjustments, 
-    guardrails, 
-    progressions, 
-    stagnations,
-    planRatings,
-    difficultExercises,
-    easyExercises
-  );
+  // Build prompt context
+  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations);
   
   return {
     metrics,
     adjustments,
     guardrails,
     promptContext,
-    rawData: { 
-      sessions, 
-      loads: loadHistory, 
-      progressions, 
-      stagnations,
-      planRatings,
-      exerciseFeedback 
-    },
+    rawData: { sessions, loads: loadHistory, progressions, stagnations },
   };
 }
 
@@ -4180,10 +3728,7 @@ function buildPromptContext(
   adjustments: LearningContextV2Adjustments,
   guardrails: LearningContextV2Guardrails,
   progressions: string[],
-  stagnations: string[],
-  planRatings: PlanRatingData[] = [],
-  difficultExercises: string[] = [],
-  easyExercises: string[] = []
+  stagnations: string[]
 ): string {
   let context = `
 ## 🧠 HISTÓRICO DO USUÁRIO (LEARNING CONTEXT V2)
@@ -4207,43 +3752,6 @@ function buildPromptContext(
   
   if (metrics.avgSessionDuration !== null) {
     context += `\n- Duração média: ${metrics.avgSessionDuration} min`;
-  }
-
-  // Plan ratings feedback section
-  if (planRatings.length > 0) {
-    const avgRating = planRatings.reduce((sum, r) => sum + r.user_rating, 0) / planRatings.length;
-    const lastRating = planRatings[0];
-    
-    context += `\n\n### ⭐ Avaliação de Planos Anteriores:`;
-    context += `\n- Média de satisfação: ${avgRating.toFixed(1)}/5`;
-    context += `\n- Último plano "${lastRating.plan_name}": ${lastRating.user_rating}/5`;
-    
-    if (lastRating.rating_notes) {
-      context += `\n- Feedback: "${lastRating.rating_notes}"`;
-    }
-    
-    if (avgRating <= 2) {
-      context += `\n- ⚠️ BAIXA SATISFAÇÃO: Fazer MUDANÇAS SIGNIFICATIVAS na estrutura do próximo plano`;
-    } else if (avgRating <= 3) {
-      context += `\n- ⚡ SATISFAÇÃO MODERADA: Ajustar exercícios problemáticos e manter estrutura geral`;
-    } else {
-      context += `\n- ✅ BOA SATISFAÇÃO: Manter abordagem similar com progressões naturais`;
-    }
-  }
-  
-  // Exercise-specific feedback
-  if (difficultExercises.length > 0) {
-    context += `\n\n### 🔴 Exercícios Muito Difíceis (reduzir ou substituir):`;
-    difficultExercises.slice(0, 5).forEach(ex => {
-      context += `\n- ${ex}`;
-    });
-  }
-  
-  if (easyExercises.length > 0) {
-    context += `\n\n### 🟢 Exercícios Muito Fáceis (aumentar intensidade):`;
-    easyExercises.slice(0, 5).forEach(ex => {
-      context += `\n- ${ex}`;
-    });
   }
 
   if (progressions.length > 0) {
@@ -4284,15 +3792,6 @@ function buildPromptContext(
   if (adjustments.deloadRecommended) {
     recommendations.push("🛑 DELOAD RECOMENDADO: Alta fadiga acumulada detectada");
   }
-  
-  // Recommendations based on exercise feedback
-  if (difficultExercises.length >= 3) {
-    recommendations.push(`🔴 SUBSTITUIR exercícios difíceis: ${difficultExercises.slice(0, 3).join(', ')}`);
-  }
-  
-  if (easyExercises.length >= 3) {
-    recommendations.push(`🟢 INTENSIFICAR exercícios fáceis: ${easyExercises.slice(0, 3).join(', ')}`);
-  }
 
   if (recommendations.length > 0) {
     context += `\n\n### 🎯 Recomendações Baseadas em Dados:`;
@@ -4301,9 +3800,9 @@ function buildPromptContext(
     });
   }
   
-  // V2: Show calculated adjustments
+  // V2: Show calculated adjustments (logging mode - informational only)
   context += `\n
-### 📊 Ajuste Calculado (V2):
+### 📊 Ajuste Calculado (V2 - Logging Only):
 - Multiplicador de volume: ${adjustments.volumeMultiplier}x
 - Direção de intensidade: ${adjustments.intensityShift}
 - Confiança: ${(adjustments.confidenceScore * 100).toFixed(0)}%
@@ -4314,9 +3813,6 @@ function buildPromptContext(
 - Se RPE está alto: PRIORIZE recuperação sobre volume
 - Se há estagnação: INCLUA variações dos exercícios estagnados
 - Se taxa de conclusão é baixa: REDUZA número de exercícios por sessão
-- Se satisfação baixa: MUDE estrutura do treino significativamente
-- Exercícios difíceis: SUBSTITUIR por alternativas mais acessíveis
-- Exercícios fáceis: AUMENTAR séries/carga ou usar métodos avançados
 `;
 
   return context;
@@ -4440,9 +3936,9 @@ ${userData.healthDescription ? `
       'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
       'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
       'hybrid': {
-        split: "Full Body + Superiores + Inferiores",
-        description: "Full Body fundamentos + dias especializados em Superiores e Inferiores para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Superiores", "Inferiores"]
+        split: "Full Body + Push/Pull Híbrido",
+        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
       },
       'no_preference': {
         split: "Full Body 3x (Variedade Máxima)",
@@ -4588,7 +4084,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 - Aceita cardio: ${userData.includeCardio ? 'SIM' : 'NÃO'}
 ${userData.includeCardio && userData.cardioTiming ? `- Timing do cardio: ${getCardioTimingLabel(userData.cardioTiming)}` : ''}
 - Nível: ${getLevelLabel(userData.experienceLevel)}
-- Lógica de variação: MÍNIMA (rotinas fixas, progressão por carga)
+- Preferência de variação: ${getVariationLabel(userData.variationPreference)}
 
 ## ÁREAS PRIORITÁRIAS
 ${userData.bodyAreas?.length > 0 
@@ -4602,71 +4098,13 @@ ${healthSection}
 - Estresse: ${getStressLabel(userData.stressLevel)}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
-${userData.splitPreference === 'hybrid' ? `
-## 🔴🔴🔴 HÍBRIDO (FB + SUPERIORES + INFERIORES) - INSTRUÇÕES CRÍTICAS 🔴🔴🔴
-
-### ⭐ VOLUME REALISTA POR TREINO (45 minutos):
-| Treino | Séries | Exercícios | Tempo estimado |
-|--------|--------|------------|----------------|
-| Full Body | 15-17 | 5-6 | ~40-45min |
-| Superiores | 17-20 | 6-7 | ~42-48min |
-| Inferiores | 17-20 | 6-7 | ~42-48min |
-
-⚠️ ATENÇÃO: Superiores/Inferiores NÃO podem ter 24+ séries em 45min!
-
-### 📌 EXERCÍCIOS COMPOSTOS OBRIGATÓRIOS (REPETIR EXATAMENTE):
-
-PRIMEIRO escolha estes 5 exercícios ESPECÍFICOS do catálogo:
-1. Um exercício de SUPINO (ex: "Supino reto/Barra")
-2. Uma REMADA (ex: "Remada sentado peg. Fechada e romana/Puxador baixo")
-3. Um DESENVOLVIMENTO (ex: "Desenv. Sentado pegada aberta/Halter")
-4. Um AGACHAMENTO (ex: "Agachamento pés paralelos barra")
-5. Um STIFF (ex: "Stiff com barra")
-
-ESSES NOMES devem aparecer IDÊNTICOS nos treinos indicados.
-
-### 📋 ESTRUTURA OBRIGATÓRIA:
-
-**Full Body (~16 séries, 5-6 exercícios):**
-1. [AGACHAMENTO ESCOLHIDO] - 3 séries (ex: Agachamento pés paralelos barra)
-2. [SUPINO ESCOLHIDO] - 3 séries (ex: Supino reto/Barra)
-3. [REMADA ESCOLHIDA] - 3 séries (ex: Remada sentado/Puxador baixo)
-4. [STIFF ESCOLHIDO] - 3 séries (ex: Stiff com barra)
-5. [DESENVOLVIMENTO ESCOLHIDO] - 3 séries (ex: Desenv. Sentado/Halter)
-6. Core (Prancha ou Abd.) - 2 séries
-TOTAL: 17 séries
-
-**Superiores (~18 séries, 6-7 exercícios):**
-1. [MESMO SUPINO DO FB] - 3 séries ← NOME IDÊNTICO
-2. [MESMA REMADA DO FB] - 3 séries ← NOME IDÊNTICO
-3. [MESMO DESENVOLVIMENTO DO FB] - 3 séries ← NOME IDÊNTICO
-4. Puxada frontal (acessório novo) - 3 séries
-5. Crucifixo inverso (acessório novo) - 2 séries
-6. Rosca Bíceps (acessório novo) - 2 séries
-7. Core (Abd. ou Prancha) - 2 séries
-TOTAL: 18 séries | 🚫 ZERO EXERCÍCIO DE PERNAS
-
-**Inferiores (~18 séries, 6-7 exercícios):**
-1. [MESMO AGACHAMENTO DO FB] - 3 séries ← NOME IDÊNTICO
-2. [MESMO STIFF DO FB] - 3 séries ← NOME IDÊNTICO
-3. Leg Press (acessório novo) - 3 séries
-4. Cadeira Flexora (acessório novo) - 3 séries
-5. Elevação Pélvica (acessório novo) - 3 séries
-6. Panturrilha (acessório novo) - 2 séries
-7. Core (Abd. ou Prancha) - 2 séries
-TOTAL: 19 séries | 🚫 ZERO EXERCÍCIO DE TRONCO/BRAÇOS
-
-### ✅ CHECKLIST ANTES DE RETORNAR JSON:
-□ Supino do Superiores = EXATAMENTE o mesmo nome do Full Body?
-□ Remada do Superiores = EXATAMENTE o mesmo nome do Full Body?
-□ Desenvolvimento do Superiores = EXATAMENTE o mesmo nome do Full Body?
-□ Agachamento do Inferiores = EXATAMENTE o mesmo nome do Full Body?
-□ Stiff do Inferiores = EXATAMENTE o mesmo nome do Full Body?
-□ Superiores: ZERO exercícios de pernas? (buscar por: Agach, Leg, Stiff, Flex, Pantur)
-□ Inferiores: ZERO exercícios de tronco/braços? (buscar por: Supino, Remada, Pux, Rosca, Tríceps)
-□ Core aparece nos 3 treinos?
-□ Nomes dos treinos: "Full Body", "Superiores", "Inferiores" (exatos)?
-□ Total de séries: FB ≤17, Sup ≤20, Inf ≤20?
+${userData.splitPreference === 'no_preference' ? `
+## ⚠️ REGRA CRÍTICA - VARIEDADE MÁXIMA
+- Split: Full Body 3x
+- **NENHUM exercício pode se repetir na semana**
+- Cada dia (A, B, C) DEVE ter exercícios DIFERENTES para cada grupamento
+- Exemplo: Supino Reto (A) → Supino Inclinado (B) → Crucifixo (C)
+- Esta regra é OBRIGATÓRIA e sobrepõe outras preferências de variação
 ` : ''}
 ${dayPatternSection}
 
@@ -4780,9 +4218,13 @@ function getLevelLabel(level: string | null): string {
   return labels[level || "beginner"] || "INICIANTE";
 }
 
-function getVariationLabel(_variation: string | null): string {
-  // Sistema agora usa SEMPRE mínima variação (modelo low cost)
-  return "MÍNIMA - rotinas fixas, progressão por carga";
+function getVariationLabel(variation: string | null): string {
+  const labels: Record<string, string> = {
+    high: "ALTA - troca semanal de acessórios",
+    moderate: "MODERADA - troca a cada 2 semanas",
+    low: "BAIXA - treino fixo 4 semanas",
+  };
+  return labels[variation || "moderate"] || "MODERADA";
 }
 
 function getCardioTimingLabel(timing: string | null | undefined): string {

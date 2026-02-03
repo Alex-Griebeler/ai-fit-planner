@@ -7,6 +7,7 @@ export { StepSessionDuration } from './StepSessionDuration';
 export { StepExerciseTypes } from './StepExerciseTypes';
 export { StepExperience } from './StepExperience';
 export { StepSplitPreference } from './StepSplitPreference';
+export { StepVariation } from './StepVariation';
 export { StepBodyAreas } from './StepBodyAreas';
 export { StepHealth } from './StepHealth';
 export { StepSleepStress } from './StepSleepStress';

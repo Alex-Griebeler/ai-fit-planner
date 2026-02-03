@@ -270,26 +270,13 @@ export default function WorkoutExecution() {
       try {
         await completeSession(currentSession.id);
         const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
-        
-        // Prepare exercise data for feedback collection
-        const exercisesForFeedback = workout?.exercises.map((ex, idx) => ({
-          name: ex.name,
-          prescribedSets: ex.sets,
-          completedSets: completedSets[idx] || 0,
-          prescribedReps: ex.reps,
-          loadUsed: localLoads[ex.name] || null,
-        })) || [];
-        
         navigate('/workout-complete', {
           state: {
             sessionId: currentSession.id,
-            workoutPlanId: activePlan?.id,
-            workoutDay: workout?.day,
             durationMinutes: duration,
             completedSets: progressStats.completedSets,
             totalSets: progressStats.totalSets,
             workoutName: workout?.name ?? 'Treino',
-            exercises: exercisesForFeedback,
           },
         });
       } catch (error) {
@@ -299,7 +286,7 @@ export default function WorkoutExecution() {
     } else {
       navigate('/dashboard');
     }
-  }, [currentSession, completeSession, workoutStartTime, navigate, progressStats, workout, completedSets, localLoads, activePlan]);
+  }, [currentSession, completeSession, workoutStartTime, navigate, progressStats, workout]);
 
   // Navigate between exercises
   const goToNextExercise = useCallback(() => {

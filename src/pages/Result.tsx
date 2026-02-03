@@ -169,32 +169,6 @@ export default function Result() {
   const [expandedWorkouts, setExpandedWorkouts] = useState<Record<number, boolean>>({});
   const [showWarnings, setShowWarnings] = useState(false);
 
-  // Calcular se o plano expirou
-  const isPlanExpired = (): boolean => {
-    if (!activePlan?.expires_at) return true; // Sem expiração = pode regenerar
-    return new Date(activePlan.expires_at) <= new Date();
-  };
-
-  const formatPlanExpirationRemaining = (): string => {
-    if (!activePlan?.expires_at) return '';
-    const now = new Date();
-    const expiresAt = new Date(activePlan.expires_at);
-    const diff = expiresAt.getTime() - now.getTime();
-    if (diff <= 0) return '';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(days / 7);
-    const remainingDays = days % 7;
-    
-    if (weeks > 0 && remainingDays > 0) {
-      return `${weeks} semana${weeks > 1 ? 's' : ''} e ${remainingDays} dia${remainingDays > 1 ? 's' : ''}`;
-    } else if (weeks > 0) {
-      return `${weeks} semana${weeks > 1 ? 's' : ''}`;
-    } else {
-      return `${days} dia${days > 1 ? 's' : ''}`;
-    }
-  };
-
   const formatTimeRemaining = (resetAt: Date): string => {
     const now = new Date();
     const diff = resetAt.getTime() - now.getTime();
@@ -271,10 +245,6 @@ export default function Result() {
         sessionStorage.removeItem('onboardingData');
         
         // Salvar automaticamente o plano gerado no banco de dados
-        // Calcular data de expiração: 8 semanas (mínima variação = plano fixo)
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 56); // 8 semanas = 56 dias
-        
         try {
           await createPlan({
             plan_name: responseData.plan.planName,
@@ -289,7 +259,6 @@ export default function Result() {
               warnings: responseData.plan.warnings,
               motivationalMessage: responseData.plan.motivationalMessage,
             })),
-            expires_at: expiresAt.toISOString(),
           });
           setIsSaved(true);
           toast.success('Plano gerado e salvo com sucesso!');
@@ -437,6 +406,7 @@ export default function Result() {
         cardioTiming: savedOnboardingData.cardioTiming || null,
         splitPreference: savedOnboardingData.splitPreference || null,
         experienceLevel: savedOnboardingData.experienceLevel || null,
+        variationPreference: savedOnboardingData.variationPreference || null,
         bodyAreas: savedOnboardingData.bodyAreas || [],
         hasHealthConditions: savedOnboardingData.hasHealthConditions || false,
         injuryAreas: savedOnboardingData.injuryAreas || [],
@@ -1013,25 +983,14 @@ export default function Result() {
             </Button>
           )}
           
-          {/* Refazer questionário - bloqueado se plano não expirou */}
-          {isPlanExpired() ? (
-            <button
-              onClick={() => navigate('/onboarding')}
-              className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Gerar novo plano</span>
-            </button>
-          ) : (
-            <div className="w-full text-center py-3">
-              <p className="text-sm text-muted-foreground">
-                Próxima atualização disponível em {formatPlanExpirationRemaining()}
-              </p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                Seu plano foi otimizado para este período
-              </p>
-            </div>
-          )}
+          {/* Refazer questionário - centered link style */}
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Refazer questionário</span>
+          </button>
         </motion.div>
 
       </div>

@@ -15,7 +15,7 @@ export interface UserOnboardingData {
   cardio_timing: CardioTiming | null;
   experience_level: OnboardingData["experienceLevel"];
   split_preference: OnboardingData["splitPreference"];
-  variation_preference: string | null; // Kept for backward compatibility but ignored
+  variation_preference: OnboardingData["variationPreference"];
   body_areas: string[];
   has_health_conditions: boolean;
   injury_areas: string[];
@@ -36,7 +36,8 @@ function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
     includeCardio: data.include_cardio,
     cardioTiming: data.cardio_timing,
     experienceLevel: data.experience_level,
-    splitPreference: data.split_preference as OnboardingData["splitPreference"],
+    splitPreference: data.split_preference,
+    variationPreference: data.variation_preference,
     bodyAreas: data.body_areas,
     hasHealthConditions: data.has_health_conditions,
     injuryAreas: (data.injury_areas || []) as InjuryArea[],
@@ -57,7 +58,7 @@ function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "u
     cardio_timing: data.cardioTiming,
     experience_level: data.experienceLevel,
     split_preference: data.splitPreference,
-    variation_preference: null, // Always null - system uses minimum variation
+    variation_preference: data.variationPreference,
     body_areas: data.bodyAreas,
     has_health_conditions: data.hasHealthConditions,
     injury_areas: data.injuryAreas,
@@ -128,6 +129,7 @@ export function useOnboardingData() {
       if (partialData.cardioTiming !== undefined) updateFields.cardio_timing = partialData.cardioTiming;
       if (partialData.splitPreference !== undefined) updateFields.split_preference = partialData.splitPreference;
       if (partialData.experienceLevel !== undefined) updateFields.experience_level = partialData.experienceLevel;
+      if (partialData.variationPreference !== undefined) updateFields.variation_preference = partialData.variationPreference;
       if (partialData.bodyAreas !== undefined) updateFields.body_areas = partialData.bodyAreas;
       if (partialData.hasHealthConditions !== undefined) updateFields.has_health_conditions = partialData.hasHealthConditions;
       if (partialData.injuryAreas !== undefined) updateFields.injury_areas = partialData.injuryAreas;

@@ -43,7 +43,10 @@ export interface OnboardingData {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null;
   
   // Step 9 - Split Preference (only for 3x/week intermediate/advanced)
-  splitPreference: 'fullbody' | 'hybrid' | null;
+  splitPreference: 'fullbody' | 'push_pull_legs' | 'hybrid' | 'no_preference' | null;
+  
+  // Step 10 - Variation Preference
+  variationPreference: 'high' | 'moderate' | 'low' | null;
   
   // Step 10 - Body Areas
   bodyAreas: string[];
@@ -73,6 +76,7 @@ export const initialOnboardingData: OnboardingData = {
   cardioTiming: null,
   experienceLevel: null,
   splitPreference: null,
+  variationPreference: null,
   bodyAreas: [],
   hasHealthConditions: false,
   injuryAreas: [],
