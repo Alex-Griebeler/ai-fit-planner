@@ -784,13 +784,16 @@ function reorderExercisesWithinWorkout(
   // Flatten mantendo agrupamento
   const reordered = sortedGroups.flatMap(([_, exs]) => exs);
   
-  // Remove propriedades temporárias
-  const cleanedResult = reordered.map(ex => {
+  // Remove propriedades temporárias E REATRIBUI order SEQUENCIALMENTE (1, 2, 3...)
+  const cleanedResult = reordered.map((ex, index) => {
     const { _originalIndex, _inferredGroup, _isCompound, ...clean } = ex;
-    return clean as ExerciseForReorder;
+    return {
+      ...clean,
+      order: index + 1,  // Reatribui order sequencialmente começando em 1
+    } as ExerciseForReorder;
   });
   
-  console.log(`[EXERCISE_REORDER] Output: ${cleanedResult.map(e => e.name).join(' | ')}`);
+  console.log(`[EXERCISE_REORDER] Output: ${cleanedResult.map(e => `${e.order}:${e.name}`).join(' | ')}`);
   
   return cleanedResult;
 }
