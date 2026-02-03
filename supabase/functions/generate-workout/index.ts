@@ -3257,7 +3257,8 @@ O campo "name" de cada treino DEVE seguir estas regras:
   - "Puxar B (Hipertrofia)" ou "Puxar B"
   - "Pernas A (Metabólico)" ou "Pernas A"
   - "Superior A" ou "Inferior B"
-  - "Full Body A" ou "Full Body B" (Full Body é aceito)
+  - "Full Body" (SEM letra quando é o único tipo de treino na semana - ex: 3x Full Body)
+  - "Full Body A" e "Full Body B" (COM letra apenas quando há variantes A/B alternando)
 - Exemplos INCORRETOS:
   - "Push A", "Pull B", "Legs A" ❌
   - "Upper A", "Lower B" ❌
