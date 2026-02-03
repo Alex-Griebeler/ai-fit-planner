@@ -788,13 +788,9 @@ function calculateDensityStrategy(params: {
   // Para 45min+: mais flexível
   const allowIsolation = isShortSession ? userWantsIsolation : true;
   
-  // Capacidade realista por sessão com descanso reduzido
-  const sessionCapacity: Record<string, { min: number; max: number }> = {
-    "30min": { min: 12, max: 14 },
-    "45min": { min: 18, max: 22 },
-    "60min": { min: 24, max: 28 },
-    "60plus": { min: 28, max: 34 }
-  };
+  // Capacidade realista por sessão - UNIFICADO com SESSION_SETS_PER_WORKOUT
+  // Usa os mesmos valores da tabela do documento técnico para consistência
+  const sessionCapacity = SESSION_SETS_PER_WORKOUT;
   
   const warmupStrategy = WARMUP_STRATEGY[sessionDuration] || WARMUP_STRATEGY["45min"];
   
@@ -3423,12 +3419,19 @@ serve(async (req) => {
       const reorderedWorkouts = reorderWorkoutsByDayStructure(finalWorkouts, splitRule.dayStructure);
       
       // 3b. REORDER EXERCISES within each workout (prioritize user's body areas + large groups)
+      // AND FIX exercise.order to match new position (1-indexed)
       const userPriorities = validatedData.bodyAreas || [];
       const workoutsWithReorderedExercises = reorderedWorkouts.map((workout: any) => {
         if (workout.exercises && Array.isArray(workout.exercises)) {
+          const reorderedExercises = reorderExercisesWithinWorkout(workout.exercises, userPriorities);
+          // Update order field to match new position (1-indexed)
+          const exercisesWithFixedOrder = reorderedExercises.map((ex: any, idx: number) => ({
+            ...ex,
+            order: idx + 1,
+          }));
           return {
             ...workout,
-            exercises: reorderExercisesWithinWorkout(workout.exercises, userPriorities),
+            exercises: exercisesWithFixedOrder,
           };
         }
         return workout;
