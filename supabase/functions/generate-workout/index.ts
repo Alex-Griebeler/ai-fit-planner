@@ -339,9 +339,9 @@ function getSplitRule(params: GetSplitRuleParams): SplitRule {
     const splitPreferenceMap: Record<string, SplitRule> = {
       'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
       'hybrid': {
-        split: "Full Body + Push/Pull Híbrido",
-        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
+        split: "Full Body + Superiores + Inferiores",
+        description: "Full Body fundamentos + dias especializados em Superiores e Inferiores para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Superiores", "Inferiores"]
       },
       // Backward compatibility: treat legacy values as fullbody
       'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].alternating,
@@ -4006,9 +4006,9 @@ ${userData.healthDescription ? `
       'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
       'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
       'hybrid': {
-        split: "Full Body + Push/Pull Híbrido",
-        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
+        split: "Full Body + Superiores + Inferiores",
+        description: "Full Body fundamentos + dias especializados em Superiores e Inferiores para 2 estímulos por grupo",
+        dayStructure: ["Full Body", "Superiores", "Inferiores"]
       },
       'no_preference': {
         split: "Full Body 3x (Variedade Máxima)",
@@ -4169,11 +4169,30 @@ ${healthSection}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
 ${userData.splitPreference === 'hybrid' ? `
-## ⚠️ REGRA CRÍTICA - HÍBRIDO (FB + A + B)
-- Dia 1: Full Body (Supino, Remada, Desenvolvimento, Agachamento, Stiff)
-- Dia 2: Push + Quads (repetir Supino/Desenvolvimento + Leg Press/Extensora + acessórios)
-- Dia 3: Pull + Posterior (repetir Remada/Puxada + Flexora + acessórios)
-- Os compostos REPETEM para garantir 2 estímulos/semana por grupo
+## ⚠️ REGRA CRÍTICA - HÍBRIDO (FB + SUPERIORES + INFERIORES)
+
+### ESTRUTURA OBRIGATÓRIA:
+**Dia 1 - Full Body**: Composto de cada região principal
+  - SUPERIORES: 1 Empurrar (Supino) + 1 Puxar (Remada) + 1 Ombro (Desenvolvimento)
+  - INFERIORES: 1 Quadríceps (Agachamento) + 1 Posterior (Stiff)
+  - CORE: 1 exercício ao final
+
+**Dia 2 - Superiores**: APENAS tronco e braços
+  - REPETIR os mesmos compostos de superior do Full Body (Supino, Remada, Desenvolvimento)
+  - ADICIONAR acessórios: Bíceps, Tríceps, Elevação Lateral, Crucifixo
+  - ❌ PROIBIDO: Qualquer exercício de perna (Agachamento, Leg Press, Stiff, Flexora)
+
+**Dia 3 - Inferiores**: APENAS pernas e core
+  - REPETIR os mesmos compostos de inferior do Full Body (Agachamento, Stiff)
+  - ADICIONAR acessórios: Leg Press, Cadeira Extensora, Flexora, Panturrilha, Glúteos
+  - ❌ PROIBIDO: Qualquer exercício de tronco/braços (Supino, Remada, Bíceps, Tríceps)
+
+### CHECKLIST DE VALIDAÇÃO (executar antes de retornar JSON):
+1. ☐ Dia 2 tem ZERO exercícios de pernas?
+2. ☐ Dia 3 tem ZERO exercícios de tronco/braços?
+3. ☐ Supino do Dia 2 = Supino do Dia 1?
+4. ☐ Agachamento do Dia 3 = Agachamento do Dia 1?
+5. ☐ Nomes dos treinos são "Full Body", "Superiores", "Inferiores"?
 ` : ''}
 ${dayPatternSection}
 
