@@ -1947,13 +1947,23 @@ function validateWorkoutPlan(
         const supSets = supWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
         const infSets = infWorkout.exercises?.reduce((sum: number, ex: any) => sum + (ex.sets || 0), 0) || 0;
         
-        // 9a. Validate volume distribution (FB should have fewer sets)
-        if (fbSets >= supSets && fbSets > 18) {
-          warnings.push(`[Híbrido] Full Body (${fbSets} séries) deveria ter MENOS séries que Superiores (${supSets})`);
+        // 9a. Validate volume EQUALIZATION across sessions (all should be similar, within session limits)
+        // FB, Superiores, and Inferiores should all have comparable volume per session
+        const avgSets = (fbSets + supSets + infSets) / 3;
+        const maxDeviation = 0.25; // 25% tolerance
+        
+        if (Math.abs(fbSets - avgSets) / avgSets > maxDeviation) {
+          warnings.push(`[Híbrido] Full Body (${fbSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
         }
-        if (fbSets >= infSets && fbSets > 18) {
-          warnings.push(`[Híbrido] Full Body (${fbSets} séries) deveria ter MENOS séries que Inferiores (${infSets})`);
+        if (Math.abs(supSets - avgSets) / avgSets > maxDeviation) {
+          warnings.push(`[Híbrido] Superiores (${supSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
         }
+        if (Math.abs(infSets - avgSets) / avgSets > maxDeviation) {
+          warnings.push(`[Híbrido] Inferiores (${infSets} séries) está desbalanceado. Média das sessões: ${Math.round(avgSets)} séries`);
+        }
+        
+        // Log session volume for debugging
+        console.log(`[Híbrido] Volume por sessão - FB: ${fbSets}, Sup: ${supSets}, Inf: ${infSets}, Média: ${avgSets.toFixed(1)}`);
         
         // 9b. Validate exercise repetition (compounds should repeat)
         const fbExerciseNames = new Set(fbWorkout.exercises?.map((ex: any) => ex.name?.toLowerCase().trim()) || []);
@@ -2029,6 +2039,52 @@ function validateWorkoutPlan(
           warnings.push(`[Híbrido] Inferiores deve ter exercício de Core`);
         }
       }
+    }
+  }
+  
+  // 10. VALIDATE ACTUAL WEEKLY VOLUME BY MUSCLE GROUP
+  // Calculate real volume from exercises and compare to minimums
+  const actualWeeklyVolume = calculateActualWeeklyVolume(plan);
+  const declaredVolume = plan.weeklyVolume || {};
+  
+  console.log(`Volume comparison - Calculated: ${JSON.stringify(actualWeeklyVolume)}`);
+  console.log(`Volume comparison - AI declared: ${JSON.stringify(declaredVolume)}`);
+  
+  // Define minimum weekly volumes based on goal
+  const minWeeklyByGoal: Record<string, Record<string, number>> = {
+    hypertrophy: { chest: 10, back: 10, quadriceps: 10, hamstrings: 8, glutes: 8, shoulders: 6, core: 10, scapular_belt: 6, biceps: 6, triceps: 6, calves: 6 },
+    weight_loss: { chest: 8, back: 8, quadriceps: 8, hamstrings: 6, glutes: 6, shoulders: 6, core: 8, scapular_belt: 4, biceps: 4, triceps: 4, calves: 4 },
+    health: { chest: 6, back: 6, quadriceps: 6, hamstrings: 4, glutes: 4, shoulders: 4, core: 6, scapular_belt: 4, biceps: 4, triceps: 4, calves: 4 },
+    performance: { chest: 8, back: 8, quadriceps: 8, hamstrings: 6, glutes: 6, shoulders: 6, core: 8, scapular_belt: 4, biceps: 6, triceps: 6, calves: 4 },
+  };
+  
+  const goalMins = minWeeklyByGoal[userData.goal || 'health'] || minWeeklyByGoal.health;
+  const densityStrat = calculateDensityStrategy({
+    sessionDuration: userData.sessionDuration || "45min",
+    goal: userData.goal,
+    experienceLevel: userData.experienceLevel || 'beginner',
+    focusAreas: userData.bodyAreas || []
+  });
+  
+  // Validate each muscle group's weekly volume
+  for (const [muscle, minVolume] of Object.entries(goalMins)) {
+    const actualVolume = actualWeeklyVolume[muscle] || 0;
+    const isPriority = isPriorityMuscle(muscle, userData.bodyAreas || []);
+    
+    // For small groups without isolation allowed, skip strict minimums (indirect work counts)
+    const isSmallGroup = ['biceps', 'triceps', 'calves'].includes(muscle);
+    if (isSmallGroup && !densityStrat.allowIsolation && !isPriority) {
+      continue; // Skip - indirect work is sufficient
+    }
+    
+    // Apply tolerance (15% for normal, 10% for priority)
+    const tolerance = isPriority ? 0.10 : 0.15;
+    const minWithTolerance = Math.round(minVolume * (1 - tolerance));
+    
+    if (actualVolume < minWithTolerance) {
+      warnings.push(
+        `Volume semanal insuficiente para ${muscle}: ${actualVolume} séries calculadas (mínimo: ${minVolume})${isPriority ? ' [PRIORIDADE]' : ''}`
+      );
     }
   }
   
@@ -2324,16 +2380,19 @@ EVITAR (mas não proibir) estímulos para o mesmo grupo em dias CONSECUTIVOS.
 - ⚠️ CONFLITO: Se dias consecutivos, há repetição
 - OBRIGATÓRIO: Treinar em dias ALTERNADOS (Seg/Qua/Sex ou Ter/Qui/Sáb)
 
-**OPÇÃO B - Full Body + A/B (INTERMEDIÁRIOS/AVANÇADOS):**
-| Dia | Tipo | Grupos |
-|-----|------|--------|
-| 1 | Full Body | Todos (volume reduzido) |
-| 2 | Upper (A) | Peitoral, Costas, Ombros, Bíceps, Tríceps |
-| 3 | Lower (B) | Quadríceps, Posteriores, Glúteos, Panturrilhas |
+**OPÇÃO B - Full Body + Superiores + Inferiores (INTERMEDIÁRIOS/AVANÇADOS):**
+| Dia | Tipo | Grupos | Volume |
+|-----|------|--------|--------|
+| 1 | Full Body | Todos os grandes grupos (compostos) | 15-20 séries |
+| 2 | Superiores | Peitoral, Costas, Ombros, Bíceps, Tríceps, Core | 15-20 séries |
+| 3 | Inferiores | Quadríceps, Posteriores, Glúteos, Panturrilhas, Core | 15-20 séries |
 
 - Estímulos: 2x/semana por grupo ✅
-- ⚠️ CONFLITO: FB → A (membros superiores consecutivos)
-- RECOMENDADO: Dias alternados (Seg/Qua/Sex)
+- ⭐ REGRA CRÍTICA: EQUALIZAR volume por sessão (todas com ~15-20 séries para 45min)
+- FB estabelece os compostos fundamentais que REPETEM em Sup/Inf
+- O volume semanal é a SOMA das 3 sessões, não concentrado em uma
+- Core deve aparecer em TODOS os 3 dias para atingir 10+ séries/semana
+
 
 ═══════════════════════════════════════════════════════════════════════════════
 ### 4x/SEMANA - Upper/Lower A/B
