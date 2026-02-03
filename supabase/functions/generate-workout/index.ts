@@ -223,84 +223,162 @@ function analyzeDayPattern(trainingDays: string[]): DayPatternAnalysis {
 }
 
 // Regras FIXAS de split baseadas no padrão de dias
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🏋️ MODELO LOW-COST GYM: ROTINAS FIXAS (SEM VARIAÇÃO A/B)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Para facilitar a instrução em academias low-cost:
+// - Dias com mesmo label = exercícios IDÊNTICOS
+// - Reduz carga cognitiva do professor e aluno
+// - Progressão focada em carga/reps, não em variedade
+// ═══════════════════════════════════════════════════════════════════════════════
 interface SplitRule {
   split: string;
   description: string;
   dayStructure: string[];
   specialInstruction?: string;
+  isFixedRoutine: boolean; // Flag para validação
 }
 
 const SPLIT_RULES_BY_PATTERN: Record<string, Record<string, SplitRule>> = {
-  // 3 dias/semana
+  // 1 dia/semana
+  "1": {
+    alternating: {
+      split: "Full Body",
+      description: "Treino completo único na semana",
+      dayStructure: ["Full Body"],
+      isFixedRoutine: true
+    },
+    consecutive: {
+      split: "Full Body",
+      description: "Treino completo único na semana",
+      dayStructure: ["Full Body"],
+      isFixedRoutine: true
+    },
+    mixed: {
+      split: "Full Body",
+      description: "Treino completo único na semana",
+      dayStructure: ["Full Body"],
+      isFixedRoutine: true
+    }
+  },
+  // 2 dias/semana - ROTINA FIXA (mesmo Full Body repetido)
+  "2": {
+    alternating: {
+      split: "Full Body 2x",
+      description: "Mesmo treino Full Body repetido 2x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Full Body", "Full Body"],
+      specialInstruction: "ROTINA FIXA: Os dois dias DEVEM ter EXATAMENTE os mesmos exercícios, séries e reps. Progressão via carga.",
+      isFixedRoutine: true
+    },
+    consecutive: {
+      split: "Full Body 2x",
+      description: "Mesmo treino Full Body repetido 2x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Full Body", "Full Body"],
+      specialInstruction: "ROTINA FIXA: Os dois dias DEVEM ter EXATAMENTE os mesmos exercícios, séries e reps. Progressão via carga.",
+      isFixedRoutine: true
+    },
+    mixed: {
+      split: "Full Body 2x",
+      description: "Mesmo treino Full Body repetido 2x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Full Body", "Full Body"],
+      specialInstruction: "ROTINA FIXA: Os dois dias DEVEM ter EXATAMENTE os mesmos exercícios, séries e reps. Progressão via carga.",
+      isFixedRoutine: true
+    }
+  },
+  // 3 dias/semana - ROTINAS FIXAS
   "3": {
     alternating: {
       split: "Full Body 3x",
-      description: "Treino completo cada dia, variando ênfase",
-      dayStructure: ["Full Body A", "Full Body B", "Full Body C"]
+      description: "Mesmo treino Full Body repetido 3x na semana - exercícios IDÊNTICOS em todos os dias",
+      dayStructure: ["Full Body", "Full Body", "Full Body"],
+      specialInstruction: "ROTINA FIXA: Os três dias DEVEM ter EXATAMENTE os mesmos exercícios, séries e reps. Progressão via carga.",
+      isFixedRoutine: true
     },
     consecutive: {
-      split: "A/B/C Split (Empurrar/Puxar/Inferiores)",
-      description: "Empurrar/Puxar/Inferiores para evitar sobreposição muscular em dias seguidos",
-      dayStructure: ["Empurrar (Peito/Ombro/Tríceps)", "Puxar (Costas/Bíceps)", "Inferiores (Pernas/Core)"]
+      split: "Full Body 3x",
+      description: "Mesmo treino Full Body repetido 3x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Full Body", "Full Body", "Full Body"],
+      specialInstruction: "ROTINA FIXA: Os três dias DEVEM ter EXATAMENTE os mesmos exercícios, séries e reps. Progressão via carga.",
+      isFixedRoutine: true
     },
     mixed: {
-      split: "Full Body + A/B",
-      description: "Full Body no dia isolado, A/B nos dias consecutivos",
-      dayStructure: ["Full Body", "Superiores", "Inferiores"]
+      split: "Full Body + Superiores + Inferiores",
+      description: "Híbrido: 1 Full Body + 1 Superiores + 1 Inferiores - cada tipo com exercícios fixos",
+      dayStructure: ["Full Body", "Superiores", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Cada tipo de treino tem exercícios próprios. Garanta que compostos base (Supino, Remada, Agachamento, Stiff) apareçam no Full Body E no dia especializado correspondente.",
+      isFixedRoutine: true
     }
   },
-  // 4 dias/semana
+  // 4 dias/semana - Superiores/Inferiores FIXO (A-B-A-B com A=A e B=B)
   "4": {
     alternating: {
       split: "Superiores/Inferiores 2x",
-      description: "Clássico Superiores/Inferiores com 2 frequências por grupamento",
-      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
+      description: "Superiores e Inferiores fixos, cada um repetido 2x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Superiores", "Inferiores", "Superiores", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Superiores 1 = Superiores 2 (exercícios idênticos). Inferiores 1 = Inferiores 2 (exercícios idênticos). Progressão via carga.",
+      isFixedRoutine: true
     },
     consecutive: {
-      split: "Superiores/Inferiores 2x (adaptado)",
-      description: "Alternar Superiores/Inferiores mesmo em dias seguidos - sem sobreposição",
-      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
+      split: "Superiores/Inferiores 2x",
+      description: "Superiores e Inferiores fixos, alternando para evitar sobreposição",
+      dayStructure: ["Superiores", "Inferiores", "Superiores", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Superiores 1 = Superiores 2 (exercícios idênticos). Inferiores 1 = Inferiores 2 (exercícios idênticos). Progressão via carga.",
+      isFixedRoutine: true
     },
     mixed: {
       split: "Superiores/Inferiores 2x",
-      description: "Superiores/Inferiores adaptado ao padrão misto",
-      dayStructure: ["Superiores A", "Inferiores A", "Superiores B", "Inferiores B"]
+      description: "Superiores e Inferiores fixos, adaptado ao padrão misto",
+      dayStructure: ["Superiores", "Inferiores", "Superiores", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Superiores 1 = Superiores 2 (exercícios idênticos). Inferiores 1 = Inferiores 2 (exercícios idênticos). Progressão via carga.",
+      isFixedRoutine: true
     }
   },
-  // 5 dias/semana
+  // 5 dias/semana - Híbrido com repetições fixas
   "5": {
     alternating: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
-      description: "Superiores-Inferiores-Empurrar-Puxar-Inferiores",
-      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
+      split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
+      description: "Híbrido: os dois treinos de Inferiores são IDÊNTICOS",
+      dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      isFixedRoutine: true
     },
     consecutive: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
-      description: "Organizado para minimizar sobreposição em dias seguidos",
-      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
+      split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
+      description: "Híbrido organizado para minimizar sobreposição",
+      dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      isFixedRoutine: true
     },
     mixed: {
-      split: "Híbrido (Sup-Inf-Empurrar-Puxar-Inf)",
-      description: "Superiores-Inferiores-Empurrar-Puxar-Inferiores adaptado",
-      dayStructure: ["Superiores", "Inferiores A", "Empurrar", "Puxar", "Inferiores B"]
+      split: "Superiores + Inferiores + Empurrar + Puxar + Inferiores",
+      description: "Híbrido adaptado",
+      dayStructure: ["Superiores", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Inferiores 1 = Inferiores 2 (exercícios idênticos). Demais treinos são únicos. Progressão via carga.",
+      isFixedRoutine: true
     }
   },
-  // 6 dias/semana
+  // 6 dias/semana - PPL FIXO (A-B-C-A-B-C onde cada letra repete idêntica)
   "6": {
     alternating: {
       split: "Empurrar/Puxar/Inferiores 2x",
-      description: "Empurrar/Puxar/Inferiores repetido 2x na semana",
-      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
+      description: "Push/Pull/Legs fixo, cada tipo repetido 2x na semana - exercícios IDÊNTICOS",
+      dayStructure: ["Empurrar", "Puxar", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Empurrar 1 = Empurrar 2. Puxar 1 = Puxar 2. Inferiores 1 = Inferiores 2. Cada par DEVE ter exercícios IDÊNTICOS. Progressão via carga.",
+      isFixedRoutine: true
     },
     consecutive: {
       split: "Empurrar/Puxar/Inferiores 2x",
-      description: "Empurrar/Puxar/Inferiores organizado para evitar mesmo grupo em dias seguidos",
-      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
+      description: "Push/Pull/Legs fixo organizado para evitar mesmo grupo em dias seguidos",
+      dayStructure: ["Empurrar", "Puxar", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Empurrar 1 = Empurrar 2. Puxar 1 = Puxar 2. Inferiores 1 = Inferiores 2. Cada par DEVE ter exercícios IDÊNTICOS. Progressão via carga.",
+      isFixedRoutine: true
     },
     mixed: {
       split: "Empurrar/Puxar/Inferiores 2x",
-      description: "Empurrar/Puxar/Inferiores 2x",
-      dayStructure: ["Empurrar A", "Puxar A", "Inferiores A", "Empurrar B", "Puxar B", "Inferiores B"]
+      description: "Push/Pull/Legs 2x",
+      dayStructure: ["Empurrar", "Puxar", "Inferiores", "Empurrar", "Puxar", "Inferiores"],
+      specialInstruction: "ROTINA FIXA: Empurrar 1 = Empurrar 2. Puxar 1 = Puxar 2. Inferiores 1 = Inferiores 2. Cada par DEVE ter exercícios IDÊNTICOS. Progressão via carga.",
+      isFixedRoutine: true
     }
   }
 };
@@ -330,33 +408,28 @@ function getSplitRule(params: GetSplitRuleParams): SplitRule {
   const dayPattern = analyzeDayPattern(trainingDays);
   const freqKey = trainingDays.length.toString();
   
-  // Check if user has a split preference (only for 3x/week intermediate/advanced)
-  const hasSplitPreference = splitPreference && 
-    trainingDays.length === 3 && 
-    level !== 'beginner';
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // MODELO LOW-COST GYM: IGNORAR splitPreference, SEMPRE USAR ROTINAS FIXAS
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Para academias low-cost, a simplicidade é prioridade:
+  // - 1-3x/semana: Full Body FIXO (mesmo treino repete)
+  // - 4x/semana: Superiores/Inferiores FIXO (cada tipo repete idêntico)
+  // - 5x/semana: Híbrido com Inferiores repetindo
+  // - 6x/semana: PPL FIXO (cada tipo repete idêntico)
+  // ═══════════════════════════════════════════════════════════════════════════════
   
-  if (hasSplitPreference) {
-    const splitPreferenceMap: Record<string, SplitRule> = {
-      'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
-      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
-      'hybrid': {
-        split: "Full Body + Push/Pull Híbrido",
-        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
-      },
-      'no_preference': {
-        split: "Full Body 3x (Variedade Máxima)",
-        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
-        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
-        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
-      }
-    };
-    return splitPreferenceMap[splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
+  // Caso especial: 3x/semana intermediário+ com padrão misto usa Híbrido FB+Sup+Inf
+  if (trainingDays.length === 3 && level !== 'beginner' && dayPattern.pattern === 'mixed') {
+    return SPLIT_RULES_BY_PATTERN["3"].mixed;
   }
   
-  // Automatic detection based on day pattern
-  return SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
+  // Para todos os outros casos: usar regra automática baseada em frequência e padrão
+  const rule = SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
     || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
+  
+  console.log(`[SPLIT] Freq: ${freqKey}, Pattern: ${dayPattern.pattern}, Split: ${rule.split}, IsFixed: ${rule.isFixedRoutine}`);
+  
+  return rule;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1937,6 +2010,70 @@ function validateWorkoutPlan(
     }
   }
   
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 9. VALIDATE FIXED ROUTINE (MODELO LOW-COST GYM)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Dias com mesmo label devem ter exercícios IDÊNTICOS
+  
+  const workoutsByLabel = new Map<string, any[]>();
+  
+  // Normalize workout labels to group identical days
+  const normalizeLabel = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/\s*(a|b|1|2|i|ii)\s*$/i, '') // Remove suffixes like A, B, 1, 2
+      .replace(/\s*\([^)]*\)\s*/g, '') // Remove parentheses content
+      .trim();
+  };
+  
+  // Group workouts by normalized label
+  for (const workout of plan.workouts || []) {
+    const label = normalizeLabel(workout.name || '');
+    if (!workoutsByLabel.has(label)) {
+      workoutsByLabel.set(label, []);
+    }
+    workoutsByLabel.get(label)!.push(workout);
+  }
+  
+  // Check consistency within each group
+  for (const [label, workouts] of workoutsByLabel.entries()) {
+    if (workouts.length <= 1) continue; // Only one workout with this label, no consistency check needed
+    
+    const referenceWorkout = workouts[0];
+    const referenceExercises = (referenceWorkout.exercises || []).map((ex: any) => ex.name?.toLowerCase().trim());
+    const referenceExerciseCount = referenceExercises.length;
+    
+    for (let i = 1; i < workouts.length; i++) {
+      const compareWorkout = workouts[i];
+      const compareExercises = (compareWorkout.exercises || []).map((ex: any) => ex.name?.toLowerCase().trim());
+      
+      // Check exercise count
+      if (compareExercises.length !== referenceExerciseCount) {
+        warnings.push(
+          `[ROTINA FIXA] "${compareWorkout.name}" tem ${compareExercises.length} exercícios, ` +
+          `mas "${referenceWorkout.name}" tem ${referenceExerciseCount}. Devem ser IDÊNTICOS.`
+        );
+      }
+      
+      // Check each exercise by position
+      for (let j = 0; j < Math.min(referenceExercises.length, compareExercises.length); j++) {
+        if (referenceExercises[j] !== compareExercises[j]) {
+          warnings.push(
+            `[ROTINA FIXA] Posição ${j + 1}: "${referenceWorkout.name}" usa "${referenceExercises[j]}", ` +
+            `mas "${compareWorkout.name}" usa "${compareExercises[j]}". Devem ser IDÊNTICOS.`
+          );
+          break; // Only report first difference per pair
+        }
+      }
+    }
+  }
+  
+  // Log fixed routine validation summary
+  console.log(`[FIXED ROUTINE] Groups found: ${[...workoutsByLabel.keys()].join(', ')}`);
+  for (const [label, workouts] of workoutsByLabel.entries()) {
+    console.log(`  - "${label}": ${workouts.length} workouts (should be identical)`);
+  }
+  
   return { 
     success: errors.length === 0, 
     warnings,
@@ -2740,58 +2877,85 @@ LIGEIRAMENTE SUPERIOR ao de EMPURRAR.
 - Redução máxima de 10%, não 25%
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 7.1: VARIAÇÃO DE EXERCÍCIOS
+                         SEÇÃO 7.1: 🔒 ROTINA FIXA (MODELO LOW-COST GYM)
 ═══════════════════════════════════════════════════════════════════════════════
 
-## DEFINIÇÕES:
-- **Exercícios BASE**: Multiarticulares principais (Supino, Agachamento, Remada, etc.)
-- **Exercícios ACESSÓRIOS**: Isoladores e variações secundárias
+## 🚨 REGRA CRÍTICA - ESTA SEÇÃO TEM PRIORIDADE MÁXIMA
 
-## NÍVEIS DE VARIAÇÃO:
+Este sistema foi projetado para ACADEMIAS LOW-COST onde:
+- Professores precisam ensinar POUCOS exercícios por aluno
+- Alunos devem memorizar uma rotina SIMPLES
+- Progressão é via CARGA e REPS, não via variação de exercícios
 
-### ALTA VARIAÇÃO (variationPreference = high):
-- Exercícios ACESSÓRIOS: Trocar a cada SEMANA
-- Exercícios BASE: Manter 2-3 semanas, depois variar angulação/equipamento
-- Dentro da mesma semana: Usar variações diferentes do mesmo padrão
-  - Ex: Supino Reto (Dia A) → Supino Inclinado (Dia B) → Crucifixo (Dia C)
-- Priorizar catálogo diverso de exercícios para evitar monotonia
-- progressionPlan DEVE indicar troca semanal de acessórios
+## DEFINIÇÃO DE ROTINA FIXA:
 
-### MODERADA (variationPreference = moderate):
-- Exercícios ACESSÓRIOS: Trocar a cada 2 SEMANAS
-- Exercícios BASE: Manter 3-4 semanas
-- Dentro da mesma semana: Pode repetir exercícios entre dias diferentes
-- progressionPlan DEVE indicar troca quinzenal de acessórios
+**TODOS OS DIAS COM O MESMO LABEL DEVEM TER EXERCÍCIOS IDÊNTICOS**
 
-### BAIXA VARIAÇÃO (variationPreference = low):
-- Exercícios BASE E ACESSÓRIOS: Manter 4 semanas mínimo
-- Dentro da mesma semana: Repetir os mesmos exercícios é aceitável
-- Foco em progressão de carga, não em variação de estímulo
-- progressionPlan DEVE focar em progressão de carga/volume
+### Exemplos:
 
-## REGRA ESPECIAL: VARIEDADE MÁXIMA (splitPreference = no_preference)
+**3x Full Body Fixo:**
+- Dia 1 (Full Body): Supino, Remada, Agachamento, Desenvolvimento, Rosca, Tríceps
+- Dia 2 (Full Body): Supino, Remada, Agachamento, Desenvolvimento, Rosca, Tríceps ← IDÊNTICO
+- Dia 3 (Full Body): Supino, Remada, Agachamento, Desenvolvimento, Rosca, Tríceps ← IDÊNTICO
 
-Quando o usuário seleciona "Sem Preferência" em 3 dias de treino:
-- USAR Full Body 3x com regra CRÍTICA:
-- **NENHUM EXERCÍCIO pode ser repetido durante a semana inteira**
-- Cada dia (A, B, C) DEVE usar exercícios DIFERENTES para o mesmo grupamento
-- Exemplo para Peitoral:
-  - Dia A: Supino Reto com Barra
-  - Dia B: Supino Inclinado com Halteres
-  - Dia C: Crucifixo na Máquina
-- Esta regra SOBREPÕE a preferência de variação normal
-- Objetivo: Maximizar variedade de estímulos em 3 treinos
+**4x Superiores/Inferiores Fixo:**
+- Dia 1 (Superiores): Supino, Remada, Desenvolvimento, Rosca, Tríceps
+- Dia 2 (Inferiores): Agachamento, Leg Press, Stiff, Panturrilha
+- Dia 3 (Superiores): Supino, Remada, Desenvolvimento, Rosca, Tríceps ← IDÊNTICO ao Dia 1
+- Dia 4 (Inferiores): Agachamento, Leg Press, Stiff, Panturrilha ← IDÊNTICO ao Dia 2
 
-## APLICAÇÃO NO JSON:
+**6x PPL Fixo:**
+- Dia 1 (Empurrar): Supino, Supino Inclinado, Desenvolvimento, Elevação Lateral, Tríceps
+- Dia 2 (Puxar): Puxada, Remada, Crucifixo Inverso, Rosca Direta
+- Dia 3 (Inferiores): Agachamento, Leg Press, Stiff, Cadeira Extensora, Panturrilha
+- Dia 4 (Empurrar): ← IDÊNTICO ao Dia 1
+- Dia 5 (Puxar): ← IDÊNTICO ao Dia 2
+- Dia 6 (Inferiores): ← IDÊNTICO ao Dia 3
 
-O campo "notes" de cada exercício pode incluir:
-- "Manter por X semanas" (para base)
-- "Trocar após Xª semana por [alternativa]" (para acessórios)
+## REGRAS DE IMPLEMENTAÇÃO:
 
-O campo progressionPlan DEVE refletir a estratégia de variação:
-- week1: "Semana base - aprender movimentos"
-- week2: "Manter exercícios, aumentar carga" ou "Trocar acessórios"
-- etc.
+1. **NOMES IDÊNTICOS**: Use EXATAMENTE o mesmo nome de exercício (não "Supino" e "Supino Reto")
+2. **SÉRIES IDÊNTICAS**: Mesmo número de séries
+3. **REPS IDÊNTICAS**: Mesma faixa de repetições
+4. **EQUIPAMENTO IDÊNTICO**: Mesmo equipamento
+5. **ORDEM IDÊNTICA**: Mesma ordem de exercícios
+
+## COMO GERAR:
+
+1. Identifique quantos TIPOS ÚNICOS de treino existem no dayStructure
+2. Gere APENAS esses tipos únicos (ex: 1 Full Body, ou 1 Superiores + 1 Inferiores)
+3. DUPLIQUE o treino para os dias que repetem
+
+## VALIDAÇÃO INTERNA (faça antes de retornar):
+
+Para cada par de dias com mesmo label:
+- ✅ Verificar: exercícios[0].name do Dia X === exercícios[0].name do Dia Y
+- ✅ Verificar: exercícios.length do Dia X === exercícios.length do Dia Y
+- ❌ Se diferente: CORRIGIR antes de retornar
+
+## progressionPlan PARA ROTINA FIXA:
+
+O campo progressionPlan DEVE refletir progressão via CARGA:
+
+\`\`\`json
+{
+  "week1": "Semana de adaptação - aprender os movimentos com carga leve",
+  "week2": "Aumentar carga em 5-10% nos compostos se todas as séries completaram",
+  "week3": "Aumentar carga nos isoladores, manter compostos",
+  "week4": "Aumentar reps em 1-2 por série mantendo a carga",
+  "week5": "Deload: reduzir volume em 40%, manter carga",
+  "week6": "Novo ciclo: aumentar carga base em 5%",
+  "week7": "Continuar progressão de carga",
+  "week8": "Avaliação e ajuste para próximo mesociclo"
+}
+\`\`\`
+
+## ⛔ PROIBIÇÕES:
+
+- ❌ NÃO criar variações A/B do mesmo tipo de treino
+- ❌ NÃO alternar exercícios entre dias do mesmo tipo
+- ❌ NÃO usar "Supino" no Dia 1 e "Supino Inclinado" no Dia 3 se ambos são "Full Body"
+- ❌ NÃO prescrever exercícios diferentes para o mesmo grupamento em dias iguais
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 8: MÉTODOS DE INTENSIFICAÇÃO
@@ -3924,37 +4088,14 @@ ${userData.healthDescription ? `
   const dayPattern = analyzeDayPattern(userData.trainingDays || []);
   const freqKey = (userData.trainingDays?.length || 3).toString();
   
-  // Check if user has a split preference (only for 3x/week intermediate/advanced)
-  let splitRule: SplitRule;
-  const hasSplitPreference = userData.splitPreference && 
-    (userData.trainingDays?.length || 0) === 3 && 
-    level !== 'beginner';
-  
-  if (hasSplitPreference) {
-    // Map user preference to split rules
-    const splitPreferenceMap: Record<string, SplitRule> = {
-      'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
-      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
-      'hybrid': {
-        split: "Full Body + Push/Pull Híbrido",
-        description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
-        dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
-      },
-      'no_preference': {
-        split: "Full Body 3x (Variedade Máxima)",
-        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
-        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
-        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
-      }
-    };
-    splitRule = splitPreferenceMap[userData.splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
-    console.log(`Using user's split preference: ${userData.splitPreference}`);
-  } else {
-    // Automatic detection based on day pattern
-    splitRule = SPLIT_RULES_BY_PATTERN[freqKey]?.[dayPattern.pattern] 
-      || SPLIT_RULES_BY_PATTERN["3"]?.alternating;
-    console.log(`Auto-detected split based on pattern: ${dayPattern.pattern}`);
-  }
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // MODELO LOW-COST GYM: SEMPRE USAR ROTINAS FIXAS
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const splitRule = getSplitRule({
+    trainingDays: userData.trainingDays || [],
+    splitPreference: null, // Ignorado no modelo low-cost
+    experienceLevel: userData.experienceLevel
+  });
 
   // Build day pattern section
   const dayPatternSection = splitRule ? `
