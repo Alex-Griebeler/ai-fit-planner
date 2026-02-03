@@ -406,7 +406,6 @@ export default function Result() {
         cardioTiming: savedOnboardingData.cardioTiming || null,
         splitPreference: savedOnboardingData.splitPreference || null,
         experienceLevel: savedOnboardingData.experienceLevel || null,
-        variationPreference: savedOnboardingData.variationPreference || null,
         bodyAreas: savedOnboardingData.bodyAreas || [],
         hasHealthConditions: savedOnboardingData.hasHealthConditions || false,
         injuryAreas: savedOnboardingData.injuryAreas || [],

@@ -16,13 +16,12 @@ import {
   StepExerciseTypes,
   StepExperience,
   StepSplitPreference,
-  StepVariation,
   StepBodyAreas,
   StepHealth,
   StepSleepStress,
 } from '@/components/onboarding/steps';
 
-const TOTAL_STEPS = 13;
+const TOTAL_STEPS = 12;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -159,12 +158,10 @@ export default function Onboarding() {
         }
         return <StepSplitPreference {...stepProps} />;
       case 10:
-        return <StepVariation {...stepProps} />;
-      case 11:
         return <StepBodyAreas {...stepProps} />;
-      case 12:
+      case 11:
         return <StepHealth {...stepProps} />;
-      case 13:
+      case 12:
         return <StepSleepStress {...stepProps} onFinish={handleFinish} isLoading={isLoading} />;
       default:
         return null;
