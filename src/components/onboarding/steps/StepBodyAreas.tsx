@@ -13,16 +13,25 @@ interface StepBodyAreasProps {
 }
 
 const BODY_AREA_OPTIONS = [
-  { value: 'chest', label: 'Peitoral', desc: 'Peito e músculos frontais', icon: Target },
-  { value: 'shoulders', label: 'Ombros', desc: 'Deltoides e trapézio', icon: CircleDot },
-  { value: 'arms', label: 'Braços', desc: 'Bíceps e tríceps', icon: Dumbbell },
-  { value: 'back', label: 'Costas', desc: 'Dorsais e romboides', icon: ArrowLeftRight },
-  { value: 'core', label: 'Core', desc: 'Abdominais e oblíquos', icon: Layers },
-  { value: 'glutes', label: 'Glúteos', desc: 'Glúteo máximo e médio', icon: Circle },
-  { value: 'legs', label: 'Pernas', desc: 'Quadríceps e posteriores', icon: Footprints },
+  { value: 'chest', label: 'Peitoral', desc: 'Peito e músculos frontais', icon: Target, isSmall: false },
+  { value: 'shoulders', label: 'Ombros', desc: 'Deltoides e trapézio', icon: CircleDot, isSmall: false },
+  { value: 'arms', label: 'Braços', desc: 'Bíceps e tríceps', icon: Dumbbell, isSmall: true },
+  { value: 'back', label: 'Costas', desc: 'Dorsais e romboides', icon: ArrowLeftRight, isSmall: false },
+  { value: 'core', label: 'Core', desc: 'Abdominais e oblíquos', icon: Layers, isSmall: false },
+  { value: 'glutes', label: 'Glúteos', desc: 'Glúteo máximo e médio', icon: Circle, isSmall: false },
+  { value: 'legs', label: 'Pernas', desc: 'Quadríceps e posteriores', icon: Footprints, isSmall: false },
 ];
 
+// Grupos pequenos não podem ser priorizados em sessões de 30min
+const SMALL_MUSCLE_GROUPS = ['arms', 'biceps', 'triceps'];
+
 export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: StepBodyAreasProps) {
+  const isShortSession = data.sessionDuration === '30min';
+  
+  // Filtra opções: em 30min, remove grupos pequenos
+  const availableOptions = isShortSession 
+    ? BODY_AREA_OPTIONS.filter(opt => !opt.isSmall)
+    : BODY_AREA_OPTIONS;
   const toggleArea = (area: string) => {
     const currentAreas = data.bodyAreas || [];
     const newAreas = currentAreas.includes(area)
@@ -39,8 +48,14 @@ export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: 
       subtitle="Selecione as áreas que você mais quer trabalhar"
       onBack={onBack}
     >
+      {isShortSession && (
+        <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg py-2 px-3 mb-4">
+          ⚠️ Treinos de 30min focam em grandes grupos. Braços recebem trabalho indireto via exercícios compostos.
+        </p>
+      )}
+      
       <div className="space-y-3 mb-4">
-        {BODY_AREA_OPTIONS.map((option) => (
+        {availableOptions.map((option) => (
           <OptionCard
             key={option.value}
             title={option.label}
