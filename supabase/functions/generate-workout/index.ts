@@ -3254,17 +3254,18 @@ Retorne APENAS um JSON válido com esta estrutura EXATA:
 O campo "name" de cada treino DEVE seguir estas regras:
 - SEMPRE em português brasileiro
 - Usar: "Empurrar" (NÃO "Push"), "Puxar" (NÃO "Pull"), "Pernas" (NÃO "Legs")
-- Usar: "Superior" (NÃO "Upper"), "Inferior" (NÃO "Lower")
+- Usar: "Superiores" e "Inferiores" (SEMPRE NO PLURAL, NÃO "Upper/Lower" ou "Superior/Inferior")
 - Exemplos CORRETOS:
   - "Empurrar A (Força)" ou "Empurrar A"
   - "Puxar B (Hipertrofia)" ou "Puxar B"
   - "Pernas A (Metabólico)" ou "Pernas A"
-  - "Superior A" ou "Inferior B"
+  - "Superiores A" ou "Inferiores B" (SEMPRE no plural)
   - "Full Body" (SEM letra quando é o único tipo de treino na semana - ex: 3x Full Body)
   - "Full Body A" e "Full Body B" (COM letra apenas quando há variantes A/B alternando)
 - Exemplos INCORRETOS:
   - "Push A", "Pull B", "Legs A" ❌
   - "Upper A", "Lower B" ❌
+  - "Superior A", "Inferior B" ❌ (singular não é aceito)
 
 ## OBRIGATÓRIO:
 1. Retorne APENAS o JSON, sem texto adicional
