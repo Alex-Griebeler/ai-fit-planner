@@ -37,7 +37,7 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
 
   return (
     <OnboardingLayout
-      step={11}
+      step={9}
       totalSteps={totalSteps}
       title="Você tem alguma lesão ou condição médica?"
       subtitle="Isso nos ajuda a adaptar os exercícios para sua segurança"

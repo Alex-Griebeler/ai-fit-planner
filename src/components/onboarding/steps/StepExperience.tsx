@@ -23,7 +23,7 @@ export function StepExperience({ data, updateData, onNext, onBack, totalSteps }:
 
   return (
     <OnboardingLayout
-      step={8}
+      step={7}
       totalSteps={totalSteps}
       title="Qual é o seu nível de experiência?"
       subtitle="Isso nos ajuda a ajustar a intensidade dos treinos"

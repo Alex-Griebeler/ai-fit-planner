@@ -46,7 +46,7 @@ export function StepBodyAreas({ data, updateData, onNext, onBack, totalSteps }: 
 
   return (
     <OnboardingLayout
-      step={10}
+      step={8}
       totalSteps={totalSteps}
       title="Em quais áreas do corpo você quer focar?"
       subtitle="Selecione as áreas que você mais quer trabalhar"
