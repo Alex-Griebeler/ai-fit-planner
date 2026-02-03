@@ -68,7 +68,7 @@ export const initialOnboardingData: OnboardingData = {
   height: null,
   weight: null,
   goal: null,
-  timeframe: null,
+  timeframe: '6months', // Fixo em 6 meses para modelo low-cost
   trainingDays: [],
   sessionDuration: null,
   exerciseTypes: [],
