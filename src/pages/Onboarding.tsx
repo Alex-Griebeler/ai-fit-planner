@@ -10,7 +10,7 @@ import {
   StepName,
   StepPersonalData,
   StepGoal,
-  StepTimeframe,
+  // StepTimeframe, // Removido: modelo low-cost usa 6 meses fixo
   StepTrainingDays,
   StepSessionDuration,
   StepExerciseTypes,
@@ -22,8 +22,8 @@ import {
   StepSleepStress,
 } from '@/components/onboarding/steps';
 
-// Modelo LOW-COST GYM: 11 steps (removidos Split e Variação)
-const TOTAL_STEPS = 11;
+// Modelo LOW-COST GYM: 10 steps (removidos Split, Variação e Timeframe)
+const TOTAL_STEPS = 10;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -133,23 +133,22 @@ export default function Onboarding() {
         return <StepPersonalData {...stepProps} />;
       case 3:
         return <StepGoal {...stepProps} />;
+      // MODELO LOW-COST: Step Timeframe removido (usa 6 meses fixo)
       case 4:
-        return <StepTimeframe {...stepProps} />;
-      case 5:
         return <StepTrainingDays {...stepProps} />;
-      case 6:
+      case 5:
         return <StepSessionDuration {...stepProps} />;
-      case 7:
+      case 6:
         return <StepExerciseTypes {...stepProps} />;
-      case 8:
+      case 7:
         return <StepExperience {...stepProps} />;
-      // MODELO LOW-COST: Steps 9-10 removidos (Split e Variação)
+      // MODELO LOW-COST: Steps Split e Variação removidos
       // Variação é sempre 'low' e split é automático
-      case 9:
+      case 8:
         return <StepBodyAreas {...stepProps} />;
-      case 10:
+      case 9:
         return <StepHealth {...stepProps} />;
-      case 11:
+      case 10:
         return <StepSleepStress {...stepProps} onFinish={handleFinish} isLoading={isLoading} />;
       default:
         return null;
