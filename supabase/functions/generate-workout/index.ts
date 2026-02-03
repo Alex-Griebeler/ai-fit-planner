@@ -136,12 +136,13 @@ const GOAL_VOLUME_RANGES: Record<string, VolumeRange> = {
 };
 
 // Tabela do documento técnico: Séries POR TREINO conforme duração
-// CORRIGIDO: 45min = 19-24, 60min = 25-30 conforme documento técnico
+// REALISTA: 45min = ~2.4min/série (45-5 aquec)/15 = 2.66min OK, /20 = 2min apertado
+// Cálculo: 45min - 3min aquec = 42min líquidos / 2.5min por série = ~16-17 séries
 const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
-  "30min":  { min: 12, max: 18 },
-  "45min":  { min: 19, max: 24 },
-  "60min":  { min: 25, max: 30 },
-  "60plus": { min: 28, max: 36 },
+  "30min":  { min: 10, max: 14 },  // 27min líquidos / 2min = ~13 séries
+  "45min":  { min: 15, max: 20 },  // 42min líquidos / 2.3min = ~18 séries
+  "60min":  { min: 20, max: 26 },  // 55min líquidos / 2.5min = ~22 séries
+  "60plus": { min: 24, max: 32 },  // 70min líquidos / 2.5min = ~28 séries
 };
 
 // Splits recomendados por frequência (consolidado)
@@ -2193,13 +2194,13 @@ O volume semanal (séries por grupamento) é determinado pela INTERSEÇÃO de:
 | Saúde         | 6   | 14  | Submáximo, foco em técnica |
 | Performance   | 8   | 18  | Foco em intensidade |
 
-### TABELA 3: Séries por TREINO (conforme duração)
+### TABELA 3: Séries por TREINO (conforme duração) - REALISTA
 | Duração  | Séries/Treino | Exercícios |
 |----------|---------------|------------|
-| 30 min   | 12-18         | 4-6 exercícios |
-| 45 min   | 19-24         | 5-7 exercícios |
-| 60 min   | 25-30         | 6-8 exercícios |
-| 60+ min  | 28-36         | 7-10 exercícios |
+| 30 min   | 10-14         | 4-5 exercícios |
+| 45 min   | 15-20         | 5-7 exercícios |
+| 60 min   | 20-26         | 6-8 exercícios |
+| 60+ min  | 24-32         | 7-10 exercícios |
 
 ### AJUSTES:
 - **Nível**: Iniciante ×0.85 | Intermediário ×1.0 | Avançado ×1.10
@@ -2521,12 +2522,12 @@ Quando tempo é limitado e usuário NÃO selecionou áreas de foco:
 - Panturrilha: coberto por agachamentos e leg press
 
 ## CAPACIDADE REALISTA POR SESSÃO:
-| Duração | Aquecimento   | Séries/Sessão | Com Descanso Reduzido |
-|---------|---------------|---------------|----------------------|
-| 30min   | 2min (espec.) | 10-12         | 12-14                |
-| 45min   | 3min (espec.) | 16-18         | 18-22                |
-| 60min   | 5min (geral)  | 22-24         | 24-28                |
-| 60+min  | 5min (geral)  | 28-32         | 30-36                |
+| Duração | Aquecimento   | Séries/Sessão | Tempo Líquido | Tempo/Série |
+|---------|---------------|---------------|---------------|-------------|
+| 30min   | 2min (espec.) | 10-14         | ~28min        | ~2min       |
+| 45min   | 3min (espec.) | 15-20         | ~42min        | ~2.3min     |
+| 60min   | 5min (geral)  | 20-26         | ~55min        | ~2.3min     |
+| 60+min  | 5min (geral)  | 24-32         | ~70min        | ~2.4min     |
 
 ## EXEMPLO TREINO 30min SEM ISOLADOS (Hipertrofia, 3x/semana):
 Aquecimento: 1 série leve de Supino (60-70% carga) [2min]
@@ -4326,79 +4327,70 @@ ${healthSection}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
 ${userData.splitPreference === 'hybrid' ? `
-## 🔴🔴🔴 REGRA MÁXIMA PRIORIDADE - HÍBRIDO (FB + SUPERIORES + INFERIORES) 🔴🔴🔴
+## 🔴🔴🔴 HÍBRIDO (FB + SUPERIORES + INFERIORES) - INSTRUÇÕES CRÍTICAS 🔴🔴🔴
 
-### ⭐ VOLUME POR TREINO (DIFERENCIADO):
-| Treino | Séries Alvo | Exercícios | Por quê |
-|--------|-------------|------------|---------|
-| Full Body | 15-18 | 5-6 | Base/fundamento |
-| Superiores | 19-24 | 6-8 | Especializado |
-| Inferiores | 19-24 | 6-8 | Especializado |
+### ⭐ VOLUME REALISTA POR TREINO (45 minutos):
+| Treino | Séries | Exercícios | Tempo estimado |
+|--------|--------|------------|----------------|
+| Full Body | 15-17 | 5-6 | ~40-45min |
+| Superiores | 17-20 | 6-7 | ~42-48min |
+| Inferiores | 17-20 | 6-7 | ~42-48min |
 
-Full Body TEM que ter MENOS séries que Sup/Inf!
+⚠️ ATENÇÃO: Superiores/Inferiores NÃO podem ter 24+ séries em 45min!
 
-### ⭐ DISTRIBUIÇÃO DE CORE OBRIGATÓRIA:
-- Full Body: 1 exercício core (2-3 séries)
-- Superiores: 1 exercício core (2-3 séries) ← NÃO ESQUECER!
-- Inferiores: 1 exercício core (2-3 séries)
-- Total semanal Core: 6-9 séries ✓
+### 📌 EXERCÍCIOS COMPOSTOS OBRIGATÓRIOS (REPETIR EXATAMENTE):
 
-### 🔄 PASSO 1 - ESCOLHER COMPOSTOS BASE (ANTES DE TUDO):
+PRIMEIRO escolha estes 5 exercícios ESPECÍFICOS do catálogo:
+1. Um exercício de SUPINO (ex: "Supino reto/Barra")
+2. Uma REMADA (ex: "Remada sentado peg. Fechada e romana/Puxador baixo")
+3. Um DESENVOLVIMENTO (ex: "Desenv. Sentado pegada aberta/Halter")
+4. Um AGACHAMENTO (ex: "Agachamento pés paralelos barra")
+5. Um STIFF (ex: "Stiff com barra")
 
-Escolha EXATAMENTE estes exercícios que serão REPETIDOS:
-- SUPINO → usar nos dias Full Body E Superiores
-- REMADA → usar nos dias Full Body E Superiores  
-- DESENVOLVIMENTO → usar nos dias Full Body E Superiores
-- AGACHAMENTO → usar nos dias Full Body E Inferiores
-- STIFF → usar nos dias Full Body E Inferiores
+ESSES NOMES devem aparecer IDÊNTICOS nos treinos indicados.
 
-### 📋 ESTRUTURA EXATA:
+### 📋 ESTRUTURA OBRIGATÓRIA:
 
-**Full Body (15-18 séries):**
-1. [Agachamento] - 3 séries
-2. [Supino] - 3 séries
-3. [Remada] - 3 séries
-4. [Stiff] - 3 séries
-5. [Desenvolvimento] - 3 séries
-6. Core - 2-3 séries
+**Full Body (~16 séries, 5-6 exercícios):**
+1. [AGACHAMENTO ESCOLHIDO] - 3 séries (ex: Agachamento pés paralelos barra)
+2. [SUPINO ESCOLHIDO] - 3 séries (ex: Supino reto/Barra)
+3. [REMADA ESCOLHIDA] - 3 séries (ex: Remada sentado/Puxador baixo)
+4. [STIFF ESCOLHIDO] - 3 séries (ex: Stiff com barra)
+5. [DESENVOLVIMENTO ESCOLHIDO] - 3 séries (ex: Desenv. Sentado/Halter)
+6. Core (Prancha ou Abd.) - 2 séries
+TOTAL: 17 séries
 
-**Superiores (19-24 séries):**
-1. **[MESMO Supino]** - 3 séries ← COPIAR DO FB
-2. **[MESMA Remada]** - 3 séries ← COPIAR DO FB
-3. **[MESMO Desenvolvimento]** - 3 séries ← COPIAR DO FB
-4. Puxada (acessório) - 3 séries
-5. Crucifixo/Elevação Lat (acessório) - 3 séries
-6. Rosca Bíceps (acessório) - 3 séries
-7. Tríceps (acessório) - 3 séries
-8. Core - 2 séries
+**Superiores (~18 séries, 6-7 exercícios):**
+1. [MESMO SUPINO DO FB] - 3 séries ← NOME IDÊNTICO
+2. [MESMA REMADA DO FB] - 3 séries ← NOME IDÊNTICO
+3. [MESMO DESENVOLVIMENTO DO FB] - 3 séries ← NOME IDÊNTICO
+4. Puxada frontal (acessório novo) - 3 séries
+5. Crucifixo inverso (acessório novo) - 2 séries
+6. Rosca Bíceps (acessório novo) - 2 séries
+7. Core (Abd. ou Prancha) - 2 séries
+TOTAL: 18 séries | 🚫 ZERO EXERCÍCIO DE PERNAS
 
-🚫 PROIBIDO: Agachamento, Leg Press, Stiff, Flexora, Panturrilha
+**Inferiores (~18 séries, 6-7 exercícios):**
+1. [MESMO AGACHAMENTO DO FB] - 3 séries ← NOME IDÊNTICO
+2. [MESMO STIFF DO FB] - 3 séries ← NOME IDÊNTICO
+3. Leg Press (acessório novo) - 3 séries
+4. Cadeira Flexora (acessório novo) - 3 séries
+5. Elevação Pélvica (acessório novo) - 3 séries
+6. Panturrilha (acessório novo) - 2 séries
+7. Core (Abd. ou Prancha) - 2 séries
+TOTAL: 19 séries | 🚫 ZERO EXERCÍCIO DE TRONCO/BRAÇOS
 
-**Inferiores (19-24 séries):**
-1. **[MESMO Agachamento]** - 3 séries ← COPIAR DO FB
-2. **[MESMO Stiff]** - 3 séries ← COPIAR DO FB
-3. Leg Press (acessório) - 3 séries
-4. Cadeira Extensora (acessório) - 3 séries
-5. Cadeira Flexora (acessório) - 3 séries
-6. Elevação Pélvica (acessório) - 3 séries
-7. Panturrilha (acessório) - 3 séries
-8. Core - 2 séries
-
-🚫 PROIBIDO: Supino, Remada, Puxada, Desenvolvimento, Bíceps, Tríceps
-
-### ✅ VALIDAÇÃO OBRIGATÓRIA (verificar CADA item):
-1. ☐ Full Body = 15-18 séries? (MENOR que Sup/Inf)
-2. ☐ Superiores = 19-24 séries?
-3. ☐ Inferiores = 19-24 séries?
-4. ☐ Supino de Superiores = EXATAMENTE o mesmo do Full Body?
-5. ☐ Remada de Superiores = EXATAMENTE a mesma do Full Body?
-6. ☐ Desenvolvimento de Superiores = EXATAMENTE o mesmo do Full Body?
-7. ☐ Agachamento de Inferiores = EXATAMENTE o mesmo do Full Body?
-8. ☐ Stiff de Inferiores = EXATAMENTE o mesmo do Full Body?
-9. ☐ Superiores tem ZERO exercício de pernas?
-10. ☐ Inferiores tem ZERO exercício de tronco/braços?
-11. ☐ Core aparece nos 3 dias?
-12. ☐ Nomes: "Full Body", "Superiores", "Inferiores"?
+### ✅ CHECKLIST ANTES DE RETORNAR JSON:
+□ Supino do Superiores = EXATAMENTE o mesmo nome do Full Body?
+□ Remada do Superiores = EXATAMENTE o mesmo nome do Full Body?
+□ Desenvolvimento do Superiores = EXATAMENTE o mesmo nome do Full Body?
+□ Agachamento do Inferiores = EXATAMENTE o mesmo nome do Full Body?
+□ Stiff do Inferiores = EXATAMENTE o mesmo nome do Full Body?
+□ Superiores: ZERO exercícios de pernas? (buscar por: Agach, Leg, Stiff, Flex, Pantur)
+□ Inferiores: ZERO exercícios de tronco/braços? (buscar por: Supino, Remada, Pux, Rosca, Tríceps)
+□ Core aparece nos 3 treinos?
+□ Nomes dos treinos: "Full Body", "Superiores", "Inferiores" (exatos)?
+□ Total de séries: FB ≤17, Sup ≤20, Inf ≤20?
 ` : ''}
 ${dayPatternSection}
 
