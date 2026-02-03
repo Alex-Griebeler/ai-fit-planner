@@ -2619,6 +2619,87 @@ Exemplo 4x/semana Hipertrofia:
 - O campo "periodizationDescription" DEVE explicar a estratégia
 
 ═══════════════════════════════════════════════════════════════════════════════
+                         SEÇÃO 3.3: HIERARQUIA DE COMPOSTOS vs ISOLADOS (CRÍTICO)
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🔴 REGRA FUNDAMENTAL: GRANDES GRUPOS PRIMEIRO, ISOLADOS SÓ SE SOBRAR ESPAÇO
+
+A prescrição segue uma HIERARQUIA RÍGIDA de prioridades:
+
+### PASSO 1: VOLUME MÍNIMO DOS GRANDES GRUPOS (OBRIGATÓRIO)
+Antes de adicionar QUALQUER exercício isolador, GARANTIR que os GRANDES grupos 
+atingiram seu volume MÍNIMO semanal com exercícios COMPOSTOS:
+
+| Grupo Grande    | Volume Mínimo (Hipertrofia) | Exercícios Compostos |
+|-----------------|-----------------------------|-----------------------|
+| Peitoral        | 10-12 séries/semana         | Supino (variações)    |
+| Costas          | 12-14 séries/semana         | Remada, Puxada        |
+| Quadríceps      | 10-12 séries/semana         | Agachamento, Leg Press|
+| Glúteos/Isquios | 8-10 séries/semana          | Stiff, Elevação Pélvica|
+| Ombros          | 8-10 séries/semana          | Desenvolvimento       |
+| Core            | 10-14 séries/semana         | Prancha, Abdominais   |
+
+### PASSO 2: VERIFICAR ESPAÇO DISPONÍVEL
+Após garantir volume dos grandes grupos, calcular séries restantes:
+- Séries disponíveis = Limite da sessão - Séries já alocadas para compostos
+- Se < 3 séries restantes → NÃO adicionar isolados
+
+### PASSO 3: ISOLADOS APENAS COM JUSTIFICATIVA
+Exercícios isolados para grupos pequenos (Bíceps, Tríceps, Panturrilha) 
+SÓ SÃO PERMITIDOS quando:
+
+✅ PERMITIDO adicionar isolados:
+1. O usuário PRIORIZOU o grupo no onboarding (bodyAreas contém "arms", "biceps", "triceps")
+2. O volume mínimo de TODOS os grandes grupos JÁ foi atingido
+3. Sobram ≥3 séries no orçamento da sessão
+
+❌ PROIBIDO adicionar isolados:
+1. Se algum grupo grande está ABAIXO do mínimo
+2. Se a sessão já está no limite de séries (30min = 10-14, 45min = 15-20)
+3. Se o usuário NÃO priorizou grupos pequenos
+
+### EXEMPLO: Sessão de 45min, Hipertrofia, SEM prioridade em braços
+
+**ORÇAMENTO:** 15-20 séries disponíveis
+
+**ALOCAÇÃO CORRETA:**
+| Grupo       | Exercício           | Séries | Acumulado |
+|-------------|---------------------|--------|-----------|
+| Peito       | Supino Reto         | 3      | 3         |
+| Peito       | Supino Inclinado    | 3      | 6         |
+| Costas      | Remada              | 3      | 9         |
+| Costas      | Puxada              | 3      | 12        |
+| Ombros      | Desenvolvimento     | 3      | 15        |
+| Core        | Prancha             | 3      | 18        |
+
+**Total: 18 séries (dentro do limite)**
+**Bíceps/Tríceps: 0 séries diretas** (trabalho indireto via compostos é SUFICIENTE)
+
+### EXEMPLO: Sessão de 45min, Hipertrofia, COM prioridade em braços
+
+**ORÇAMENTO:** 15-20 séries disponíveis
+
+**ALOCAÇÃO CORRETA:**
+| Grupo       | Exercício           | Séries | Acumulado |
+|-------------|---------------------|--------|-----------|
+| Peito       | Supino Reto         | 3      | 3         |
+| Costas      | Remada              | 3      | 6         |
+| Ombros      | Desenvolvimento     | 3      | 9         |
+| **Bíceps**  | Rosca Direta        | 3      | 12        |
+| **Tríceps** | Tríceps Pulley      | 3      | 15        |
+| Core        | Prancha             | 2      | 17        |
+
+**Total: 17 séries (prioridade em braços atendida)**
+
+### ⚠️ TRABALHO INDIRETO É SUFICIENTE PARA GRUPOS PEQUENOS
+Quando NÃO há prioridade declarada:
+- Bíceps recebe ~6-8 séries INDIRETAS por semana via Remadas e Puxadas
+- Tríceps recebe ~6-8 séries INDIRETAS por semana via Supino e Desenvolvimento
+- Panturrilha recebe estímulo via Agachamento e Leg Press
+
+Isso é SUFICIENTE para manutenção e crescimento lento em usuários que não priorizaram esses grupos.
+
+═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 4: ORDEM DOS EXERCÍCIOS (CRÍTICO)
 ═══════════════════════════════════════════════════════════════════════════════
 
