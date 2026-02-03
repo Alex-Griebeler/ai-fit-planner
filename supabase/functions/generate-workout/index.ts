@@ -40,7 +40,7 @@ const OnboardingSchema = z.object({
   cardioTiming: z.enum(["post_workout", "separate_day", "ai_decides"]).nullable().optional(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
   splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid", "no_preference"]).nullable().optional(),
-  variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
+  variationPreference: z.enum(["high", "moderate", "low"]).nullable().optional(),
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
   injuryAreas: z.array(z.enum([
