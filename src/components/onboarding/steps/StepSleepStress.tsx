@@ -32,7 +32,7 @@ export function StepSleepStress({ data, updateData, onFinish, onBack, totalSteps
 
   return (
     <OnboardingLayout
-      step={12}
+      step={10}
       totalSteps={totalSteps}
       title="Sono e Estresse"
       subtitle="Essas informações nos ajudam a ajustar a intensidade dos treinos"

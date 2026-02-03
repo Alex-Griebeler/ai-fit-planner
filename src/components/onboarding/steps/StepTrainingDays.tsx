@@ -16,7 +16,7 @@ export function StepTrainingDays({ data, updateData, onNext, onBack, totalSteps 
 
   return (
     <OnboardingLayout
-      step={5}
+      step={4}
       totalSteps={totalSteps}
       title="Quais dias da semana você pode treinar?"
       subtitle="Selecione os dias que funcionam melhor para sua rotina"

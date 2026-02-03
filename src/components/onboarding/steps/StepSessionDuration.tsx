@@ -24,7 +24,7 @@ export function StepSessionDuration({ data, updateData, onNext, onBack, totalSte
 
   return (
     <OnboardingLayout
-      step={6}
+      step={5}
       totalSteps={totalSteps}
       title="Quanto tempo você tem disponível para treinar?"
       subtitle="Vamos adequar os treinos ao seu tempo disponível"

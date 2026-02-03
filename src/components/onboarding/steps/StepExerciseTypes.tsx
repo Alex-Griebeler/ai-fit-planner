@@ -58,7 +58,7 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
 
   return (
     <OnboardingLayout
-      step={7}
+      step={6}
       totalSteps={totalSteps}
       title="Que tipos de exercícios você prefere?"
       subtitle="Selecione os tipos que você tem acesso ou prefere usar"
