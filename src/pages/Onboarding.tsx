@@ -36,11 +36,13 @@ export default function Onboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Verificar se o plano está ativo e não expirou
-  const isPlanLocked = useMemo(() => {
-    if (!activePlan?.expires_at) return false;
-    return new Date(activePlan.expires_at) > new Date();
-  }, [activePlan]);
+  // TESTING MODE: Bloqueio desativado temporariamente
+  // TODO: Reativar após testes
+  const isPlanLocked = false;
+  // const isPlanLocked = useMemo(() => {
+  //   if (!activePlan?.expires_at) return false;
+  //   return new Date(activePlan.expires_at) > new Date();
+  // }, [activePlan]);
 
   const formatExpirationRemaining = (): string => {
     if (!activePlan?.expires_at) return '';
