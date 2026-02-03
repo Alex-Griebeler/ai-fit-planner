@@ -3499,10 +3499,33 @@ serve(async (req) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
+      
+      // 3. Fetch previous plan ratings for feedback integration
+      const { data: previousPlanRatings } = await supabase
+        .from('workout_plans')
+        .select('user_rating, rating_notes, plan_name, rated_at')
+        .eq('user_id', userId)
+        .not('user_rating', 'is', null)
+        .order('rated_at', { ascending: false })
+        .limit(3);
+      
+      // 4. Fetch per-exercise feedback (prescription_feedback)
+      const { data: exerciseFeedback } = await supabase
+        .from('prescription_feedback')
+        .select('exercise_name, difficulty_rating, exercise_rpe, completed_sets, prescribed_sets, notes')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      // 3. Build Learning Context V2 if we have data
+      // 5. Build Learning Context V2 if we have data
       if (recentSessions && recentSessions.length > 0) {
-        learningContextV2 = buildLearningContextV2(recentSessions, loadHistory || [], plannedFrequency);
+        learningContextV2 = buildLearningContextV2(
+          recentSessions, 
+          loadHistory || [], 
+          plannedFrequency,
+          previousPlanRatings || [],
+          exerciseFeedback || []
+        );
         learningContext = learningContextV2.promptContext;
         
         console.log(`Learning Context V2 built:`, {
@@ -3849,6 +3872,22 @@ interface LoadData {
   created_at: string;
 }
 
+interface PlanRatingData {
+  user_rating: number;
+  rating_notes: string | null;
+  plan_name: string;
+  rated_at: string;
+}
+
+interface ExerciseFeedbackData {
+  exercise_name: string;
+  difficulty_rating: string | null;
+  exercise_rpe: number | null;
+  completed_sets: number;
+  prescribed_sets: number;
+  notes: string | null;
+}
+
 interface LearningContextV2Metrics {
   sessionsAnalyzed: number;
   avgRpe: number | null;
@@ -3882,6 +3921,8 @@ interface LearningContextV2 {
     loads: LoadData[];
     progressions: string[];
     stagnations: string[];
+    planRatings: PlanRatingData[];
+    exerciseFeedback: ExerciseFeedbackData[];
   };
 }
 
@@ -3993,7 +4034,9 @@ function calculateVolumeAdjustment(metrics: LearningContextV2Metrics): LearningC
 function buildLearningContextV2(
   sessions: SessionData[], 
   loadHistory: LoadData[],
-  plannedFrequency: number
+  plannedFrequency: number,
+  planRatings: PlanRatingData[] = [],
+  exerciseFeedback: ExerciseFeedbackData[] = []
 ): LearningContextV2 {
   // Calculate metrics
   const sessionsWithRpe = sessions.filter(s => s.perceived_effort !== null && s.perceived_effort > 0);
@@ -4062,8 +4105,33 @@ function buildLearningContextV2(
     }
   });
   
+  // Analyze exercise feedback for difficult/easy exercises
+  const difficultExercises: string[] = [];
+  const easyExercises: string[] = [];
+  
+  exerciseFeedback.forEach(fb => {
+    if (fb.difficulty_rating === 'too_hard' || (fb.exercise_rpe && fb.exercise_rpe >= 9)) {
+      if (!difficultExercises.includes(fb.exercise_name)) {
+        difficultExercises.push(fb.exercise_name);
+      }
+    } else if (fb.difficulty_rating === 'too_easy' || (fb.exercise_rpe && fb.exercise_rpe <= 4)) {
+      if (!easyExercises.includes(fb.exercise_name)) {
+        easyExercises.push(fb.exercise_name);
+      }
+    }
+  });
+  
   // Calculate adjustments
   const adjustments = calculateVolumeAdjustment(metrics);
+  
+  // Adjust based on plan ratings (low ratings = need significant changes)
+  if (planRatings.length > 0) {
+    const avgRating = planRatings.reduce((sum, r) => sum + r.user_rating, 0) / planRatings.length;
+    if (avgRating <= 2) {
+      // Very low satisfaction - recommend significant changes
+      adjustments.deloadRecommended = true;
+    }
+  }
   
   // Check guardrails
   const guardrails: LearningContextV2Guardrails = {
@@ -4079,15 +4147,31 @@ function buildLearningContextV2(
     guardrails.canApplyAdjustments = true;
   }
   
-  // Build prompt context
-  const promptContext = buildPromptContext(metrics, adjustments, guardrails, progressions, stagnations);
+  // Build prompt context (with plan ratings and exercise feedback)
+  const promptContext = buildPromptContext(
+    metrics, 
+    adjustments, 
+    guardrails, 
+    progressions, 
+    stagnations,
+    planRatings,
+    difficultExercises,
+    easyExercises
+  );
   
   return {
     metrics,
     adjustments,
     guardrails,
     promptContext,
-    rawData: { sessions, loads: loadHistory, progressions, stagnations },
+    rawData: { 
+      sessions, 
+      loads: loadHistory, 
+      progressions, 
+      stagnations,
+      planRatings,
+      exerciseFeedback 
+    },
   };
 }
 
@@ -4096,7 +4180,10 @@ function buildPromptContext(
   adjustments: LearningContextV2Adjustments,
   guardrails: LearningContextV2Guardrails,
   progressions: string[],
-  stagnations: string[]
+  stagnations: string[],
+  planRatings: PlanRatingData[] = [],
+  difficultExercises: string[] = [],
+  easyExercises: string[] = []
 ): string {
   let context = `
 ## 🧠 HISTÓRICO DO USUÁRIO (LEARNING CONTEXT V2)
@@ -4120,6 +4207,43 @@ function buildPromptContext(
   
   if (metrics.avgSessionDuration !== null) {
     context += `\n- Duração média: ${metrics.avgSessionDuration} min`;
+  }
+
+  // Plan ratings feedback section
+  if (planRatings.length > 0) {
+    const avgRating = planRatings.reduce((sum, r) => sum + r.user_rating, 0) / planRatings.length;
+    const lastRating = planRatings[0];
+    
+    context += `\n\n### ⭐ Avaliação de Planos Anteriores:`;
+    context += `\n- Média de satisfação: ${avgRating.toFixed(1)}/5`;
+    context += `\n- Último plano "${lastRating.plan_name}": ${lastRating.user_rating}/5`;
+    
+    if (lastRating.rating_notes) {
+      context += `\n- Feedback: "${lastRating.rating_notes}"`;
+    }
+    
+    if (avgRating <= 2) {
+      context += `\n- ⚠️ BAIXA SATISFAÇÃO: Fazer MUDANÇAS SIGNIFICATIVAS na estrutura do próximo plano`;
+    } else if (avgRating <= 3) {
+      context += `\n- ⚡ SATISFAÇÃO MODERADA: Ajustar exercícios problemáticos e manter estrutura geral`;
+    } else {
+      context += `\n- ✅ BOA SATISFAÇÃO: Manter abordagem similar com progressões naturais`;
+    }
+  }
+  
+  // Exercise-specific feedback
+  if (difficultExercises.length > 0) {
+    context += `\n\n### 🔴 Exercícios Muito Difíceis (reduzir ou substituir):`;
+    difficultExercises.slice(0, 5).forEach(ex => {
+      context += `\n- ${ex}`;
+    });
+  }
+  
+  if (easyExercises.length > 0) {
+    context += `\n\n### 🟢 Exercícios Muito Fáceis (aumentar intensidade):`;
+    easyExercises.slice(0, 5).forEach(ex => {
+      context += `\n- ${ex}`;
+    });
   }
 
   if (progressions.length > 0) {
@@ -4160,6 +4284,15 @@ function buildPromptContext(
   if (adjustments.deloadRecommended) {
     recommendations.push("🛑 DELOAD RECOMENDADO: Alta fadiga acumulada detectada");
   }
+  
+  // Recommendations based on exercise feedback
+  if (difficultExercises.length >= 3) {
+    recommendations.push(`🔴 SUBSTITUIR exercícios difíceis: ${difficultExercises.slice(0, 3).join(', ')}`);
+  }
+  
+  if (easyExercises.length >= 3) {
+    recommendations.push(`🟢 INTENSIFICAR exercícios fáceis: ${easyExercises.slice(0, 3).join(', ')}`);
+  }
 
   if (recommendations.length > 0) {
     context += `\n\n### 🎯 Recomendações Baseadas em Dados:`;
@@ -4168,9 +4301,9 @@ function buildPromptContext(
     });
   }
   
-  // V2: Show calculated adjustments (logging mode - informational only)
+  // V2: Show calculated adjustments
   context += `\n
-### 📊 Ajuste Calculado (V2 - Logging Only):
+### 📊 Ajuste Calculado (V2):
 - Multiplicador de volume: ${adjustments.volumeMultiplier}x
 - Direção de intensidade: ${adjustments.intensityShift}
 - Confiança: ${(adjustments.confidenceScore * 100).toFixed(0)}%
@@ -4181,6 +4314,9 @@ function buildPromptContext(
 - Se RPE está alto: PRIORIZE recuperação sobre volume
 - Se há estagnação: INCLUA variações dos exercícios estagnados
 - Se taxa de conclusão é baixa: REDUZA número de exercícios por sessão
+- Se satisfação baixa: MUDE estrutura do treino significativamente
+- Exercícios difíceis: SUBSTITUIR por alternativas mais acessíveis
+- Exercícios fáceis: AUMENTAR séries/carga ou usar métodos avançados
 `;
 
   return context;
