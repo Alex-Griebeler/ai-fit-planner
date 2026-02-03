@@ -338,18 +338,14 @@ function getSplitRule(params: GetSplitRuleParams): SplitRule {
   if (hasSplitPreference) {
     const splitPreferenceMap: Record<string, SplitRule> = {
       'fullbody': SPLIT_RULES_BY_PATTERN["3"].alternating,
-      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].consecutive,
       'hybrid': {
         split: "Full Body + Push/Pull Híbrido",
         description: "Full Body fundamentos + dias especializados para 2 estímulos por grupo",
         dayStructure: ["Full Body", "Push + Quads", "Pull + Posterior"]
       },
-      'no_preference': {
-        split: "Full Body 3x (Variedade Máxima)",
-        description: "Full Body com exercícios DIFERENTES em cada dia - PROIBIDO repetir exercícios na semana",
-        dayStructure: ["Full Body A", "Full Body B", "Full Body C"],
-        specialInstruction: "REGRA CRÍTICA: Nenhum exercício pode repetir entre os 3 dias. Use exercícios diferentes para cada grupamento em cada treino."
-      }
+      // Backward compatibility: treat legacy values as fullbody
+      'push_pull_legs': SPLIT_RULES_BY_PATTERN["3"].alternating,
+      'no_preference': SPLIT_RULES_BY_PATTERN["3"].alternating,
     };
     return splitPreferenceMap[splitPreference!] || SPLIT_RULES_BY_PATTERN["3"].alternating;
   }
@@ -2740,58 +2736,71 @@ LIGEIRAMENTE SUPERIOR ao de EMPURRAR.
 - Redução máxima de 10%, não 25%
 
 ═══════════════════════════════════════════════════════════════════════════════
-                         SEÇÃO 7.1: VARIAÇÃO DE EXERCÍCIOS
+                         SEÇÃO 7.1: MÍNIMA VARIAÇÃO DE EXERCÍCIOS
 ═══════════════════════════════════════════════════════════════════════════════
 
-## DEFINIÇÕES:
-- **Exercícios BASE**: Multiarticulares principais (Supino, Agachamento, Remada, etc.)
-- **Exercícios ACESSÓRIOS**: Isoladores e variações secundárias
+## CONTEXTO OPERACIONAL
+Este sistema é usado em academias low cost onde a simplicidade operacional 
+é crítica. O professor foca na ORIENTAÇÃO DA EXECUÇÃO, não em gerenciar 
+múltiplas rotinas diferentes.
 
-## NÍVEIS DE VARIAÇÃO:
+## REGRA OBRIGATÓRIA: EXERCÍCIOS FIXOS (MÍNIMA VARIAÇÃO)
 
-### ALTA VARIAÇÃO (variationPreference = high):
-- Exercícios ACESSÓRIOS: Trocar a cada SEMANA
-- Exercícios BASE: Manter 2-3 semanas, depois variar angulação/equipamento
-- Dentro da mesma semana: Usar variações diferentes do mesmo padrão
-  - Ex: Supino Reto (Dia A) → Supino Inclinado (Dia B) → Crucifixo (Dia C)
-- Priorizar catálogo diverso de exercícios para evitar monotonia
-- progressionPlan DEVE indicar troca semanal de acessórios
+### Full Body (qualquer frequência):
+- Gerar APENAS 1 rotina única
+- Esta rotina se REPETE idêntica em todos os dias da semana
+- Exemplo 3x: Dia A = Dia B = Dia C (mesmos exercícios, mesma ordem)
+- Gerar apenas UM objeto de treino no JSON, não três
 
-### MODERADA (variationPreference = moderate):
-- Exercícios ACESSÓRIOS: Trocar a cada 2 SEMANAS
-- Exercícios BASE: Manter 3-4 semanas
-- Dentro da mesma semana: Pode repetir exercícios entre dias diferentes
-- progressionPlan DEVE indicar troca quinzenal de acessórios
+### Divisão A/B (4x/semana):
+- Treino A: IDÊNTICO nos dois dias em que aparecer
+- Treino B: IDÊNTICO nos dois dias em que aparecer
+- Não criar "variações" de A ou B
 
-### BAIXA VARIAÇÃO (variationPreference = low):
-- Exercícios BASE E ACESSÓRIOS: Manter 4 semanas mínimo
-- Dentro da mesma semana: Repetir os mesmos exercícios é aceitável
-- Foco em progressão de carga, não em variação de estímulo
-- progressionPlan DEVE focar em progressão de carga/volume
+### PPL (6x/semana):
+- Push: IDÊNTICO nos dois dias
+- Pull: IDÊNTICO nos dois dias  
+- Legs: IDÊNTICO nos dois dias
 
-## REGRA ESPECIAL: VARIEDADE MÁXIMA (splitPreference = no_preference)
+## PROIBIDO:
+- Criar variações diferentes do mesmo treino na mesma semana
+- Trocar exercícios entre dias do mesmo "tipo"
+- Usar lógica de "alta variação" ou "variedade máxima"
+- Usar exercícios diferentes para "aumentar estímulo"
 
-Quando o usuário seleciona "Sem Preferência" em 3 dias de treino:
-- USAR Full Body 3x com regra CRÍTICA:
-- **NENHUM EXERCÍCIO pode ser repetido durante a semana inteira**
-- Cada dia (A, B, C) DEVE usar exercícios DIFERENTES para o mesmo grupamento
-- Exemplo para Peitoral:
-  - Dia A: Supino Reto com Barra
-  - Dia B: Supino Inclinado com Halteres
-  - Dia C: Crucifixo na Máquina
-- Esta regra SOBREPÕE a preferência de variação normal
-- Objetivo: Maximizar variedade de estímulos em 3 treinos
+## PROGRESSÃO PERMITIDA:
+- Aumentar carga (kg)
+- Aumentar repetições dentro do range prescrito
+- Ajustar esforço (RR → RPE)
+- NUNCA trocar exercícios para progredir
 
-## APLICAÇÃO NO JSON:
+## HÍBRIDO (FB + A + B) para 3x/semana (splitPreference = 'hybrid'):
 
-O campo "notes" de cada exercício pode incluir:
-- "Manter por X semanas" (para base)
-- "Trocar após Xª semana por [alternativa]" (para acessórios)
+Estrutura FIXA quando usuário seleciona Híbrido:
 
-O campo progressionPlan DEVE refletir a estratégia de variação:
-- week1: "Semana base - aprender movimentos"
-- week2: "Manter exercícios, aumentar carga" ou "Trocar acessórios"
-- etc.
+Dia 1 - Full Body Base:
+├── Compostos SUPERIORES: Supino, Remada, Desenvolvimento
+├── Compostos INFERIORES: Agachamento, Stiff
+└── Volume: ~12-15 séries totais
+
+Dia 2 - Treino A (Push + Quadríceps):
+├── REPETIR compostos: Supino (variação), Desenvolvimento
+├── ADICIONAR: Leg Press, Extensora
+├── ADICIONAR acessórios: Tríceps, Elevação Lateral
+└── Volume: compostos + 4-6 séries extras (se houver tempo)
+
+Dia 3 - Treino B (Pull + Posterior):
+├── REPETIR compostos: Remada, Puxada
+├── ADICIONAR: Flexora, Mesa Flexora ou Stiff
+├── ADICIONAR acessórios: Rosca, Panturrilha
+└── Volume: compostos + 4-6 séries extras (se houver tempo)
+
+NOTA: Os exercícios compostos REPETEM garantindo 2 estímulos semanais por grupo.
+
+## APLICAÇÃO NO progressionPlan:
+- SEMPRE indicar: "Manter exercícios fixos, progredir em carga/reps"
+- Semana 1-4: Mesmos exercícios, aumentar carga gradualmente
+- Após 4 semanas: Considerar troca de acessórios (não compostos)
 
 ═══════════════════════════════════════════════════════════════════════════════
                          SEÇÃO 8: MÉTODOS DE INTENSIFICAÇÃO
@@ -4084,7 +4093,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 - Aceita cardio: ${userData.includeCardio ? 'SIM' : 'NÃO'}
 ${userData.includeCardio && userData.cardioTiming ? `- Timing do cardio: ${getCardioTimingLabel(userData.cardioTiming)}` : ''}
 - Nível: ${getLevelLabel(userData.experienceLevel)}
-- Preferência de variação: ${getVariationLabel(userData.variationPreference)}
+- Lógica de variação: MÍNIMA (rotinas fixas, progressão por carga)
 
 ## ÁREAS PRIORITÁRIAS
 ${userData.bodyAreas?.length > 0 
@@ -4098,13 +4107,12 @@ ${healthSection}
 - Estresse: ${getStressLabel(userData.stressLevel)}
 - Capacidade de recuperação: ${getRecoveryLabel(userData.sleepHours, userData.stressLevel)}
 
-${userData.splitPreference === 'no_preference' ? `
-## ⚠️ REGRA CRÍTICA - VARIEDADE MÁXIMA
-- Split: Full Body 3x
-- **NENHUM exercício pode se repetir na semana**
-- Cada dia (A, B, C) DEVE ter exercícios DIFERENTES para cada grupamento
-- Exemplo: Supino Reto (A) → Supino Inclinado (B) → Crucifixo (C)
-- Esta regra é OBRIGATÓRIA e sobrepõe outras preferências de variação
+${userData.splitPreference === 'hybrid' ? `
+## ⚠️ REGRA CRÍTICA - HÍBRIDO (FB + A + B)
+- Dia 1: Full Body (Supino, Remada, Desenvolvimento, Agachamento, Stiff)
+- Dia 2: Push + Quads (repetir Supino/Desenvolvimento + Leg Press/Extensora + acessórios)
+- Dia 3: Pull + Posterior (repetir Remada/Puxada + Flexora + acessórios)
+- Os compostos REPETEM para garantir 2 estímulos/semana por grupo
 ` : ''}
 ${dayPatternSection}
 
@@ -4218,13 +4226,9 @@ function getLevelLabel(level: string | null): string {
   return labels[level || "beginner"] || "INICIANTE";
 }
 
-function getVariationLabel(variation: string | null): string {
-  const labels: Record<string, string> = {
-    high: "ALTA - troca semanal de acessórios",
-    moderate: "MODERADA - troca a cada 2 semanas",
-    low: "BAIXA - treino fixo 4 semanas",
-  };
-  return labels[variation || "moderate"] || "MODERADA";
+function getVariationLabel(_variation: string | null): string {
+  // Sistema agora usa SEMPRE mínima variação (modelo low cost)
+  return "MÍNIMA - rotinas fixas, progressão por carga";
 }
 
 function getCardioTimingLabel(timing: string | null | undefined): string {
