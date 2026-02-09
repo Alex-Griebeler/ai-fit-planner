@@ -84,7 +84,12 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
   }
 
   const planData = plan.plan_data as PlanData & { goal?: string };
-  const workouts = planData?.workouts ?? [];
+  const allWorkouts = planData?.workouts ?? [];
+  
+  // Deduplicate workouts by name (e.g., "Superiores" repeated twice = 1 unique)
+  const uniqueWorkouts = allWorkouts.filter((workout, index, self) =>
+    index === self.findIndex(w => w.name === workout.name)
+  );
 
   // Map goal to Portuguese label
   const goalLabels: Record<string, string> = {
@@ -138,14 +143,14 @@ export function ActivePlanCard({ plan, isLoading }: ActivePlanCardProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <Dumbbell className="w-4 h-4" />
-            <span>{workouts.length} treinos</span>
+            <span>{uniqueWorkouts.length} treinos</span>
           </div>
         </div>
 
-        {workouts.length > 0 && (
+        {uniqueWorkouts.length > 0 && (
           <div className="space-y-2">
             <div className="grid gap-2">
-              {workouts.slice(0, 3).map((workout, index) => {
+              {uniqueWorkouts.slice(0, 3).map((workout, index) => {
                 // Remove parenthetical suffixes like (força), (hipertrofia), (metabólico)
                 const cleanName = workout.name.replace(/\s*\([^)]*\)\s*$/, '').trim();
                 const cleanFocus = workout.focus?.replace(/\s*\([^)]*\)\s*$/, '').trim();
