@@ -32,7 +32,7 @@ const OnboardingSchema = z.object({
   height: z.number().int().min(100, "Altura mínima é 100 cm").max(250, "Altura máxima é 250 cm").nullable(),
   weight: z.number().int().min(30, "Peso mínimo é 30 kg").max(300, "Peso máximo é 300 kg").nullable(),
   goal: z.enum(["weight_loss", "hypertrophy", "health", "performance"]).nullable(),
-  timeframe: z.enum(["3months", "6months", "12months"]).nullable(),
+  timeframe: z.enum(["3months", "6months", "12months"]).nullable().optional(),
   trainingDays: z.array(z.string().max(20)).max(7),
   sessionDuration: z.enum(["30min", "45min", "60min", "60plus"]).nullable(),
   exerciseTypes: z.array(z.string().max(20)).max(5),

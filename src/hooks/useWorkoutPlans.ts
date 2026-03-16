@@ -81,12 +81,15 @@ export function useWorkoutPlans() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Desativar planos anteriores (manter histórico)
-      // O trigger agora conta apenas planos ATIVOS
-      await supabase
+      const { error: deactivateError } = await supabase
         .from("workout_plans")
         .update({ is_active: false })
         .eq("user_id", user.id)
         .eq("is_active", true);
+
+      if (deactivateError) {
+        throw new Error(`Erro ao desativar plano anterior: ${deactivateError.message}`);
+      }
 
       // Cria novo plano ativo
       const { data, error } = await supabase

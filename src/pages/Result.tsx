@@ -134,7 +134,7 @@ export default function Result() {
   const queryClient = useQueryClient();
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
-  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans, deactivatePlan } = useWorkoutPlans();
+  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans } = useWorkoutPlans();
   const { isPremium } = useSubscription();
   
   // Workout schedule - for reordering workouts based on suggestion
@@ -308,13 +308,12 @@ export default function Result() {
         })),
       });
 
-      // Aguarda invalidação do cache de forma correta
-      await queryClient.invalidateQueries({ queryKey: ['workout-plans'] });
-
+      // Hook already invalidates cache on success — no need to duplicate here
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
     } catch (err) {
       console.error('Error saving workout plan');
+      setIsSaved(false);
       toast.error('Erro ao salvar plano. Tente novamente.');
     }
   };
@@ -340,23 +339,24 @@ export default function Result() {
       }
       hasStartedGeneration.current = true;
       
-      const parsedData: OnboardingData = JSON.parse(savedSessionData);
+      let parsedData: OnboardingData;
+      try {
+        parsedData = JSON.parse(savedSessionData);
+        if (!parsedData || typeof parsedData !== 'object' || !Array.isArray(parsedData.trainingDays)) {
+          throw new Error('Invalid onboarding data structure');
+        }
+      } catch (parseErr) {
+        console.error('Corrupt sessionStorage data, clearing:', parseErr);
+        sessionStorage.removeItem('onboardingData');
+        navigate('/onboarding');
+        return;
+      }
       
       // Sanitize trainingDays from sessionStorage (may be corrupted)
       const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
       parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
       
-      // If it was corrupted, update sessionStorage
-      if (parsedData.trainingDays.length !== JSON.parse(savedSessionData).trainingDays?.length) {
-        sessionStorage.setItem('onboardingData', JSON.stringify(parsedData));
-      }
-      
-      // If there's an existing active plan, deactivate it before generating new one
-      if (activePlan) {
-        deactivatePlan(activePlan.id).catch(err => {
-          console.error('Error deactivating old plan:', err);
-        });
-      }
+      // Deactivation is handled inside createPlan hook — no need to call deactivatePlan here
       
       setData(parsedData);
       generatePlan(parsedData);
