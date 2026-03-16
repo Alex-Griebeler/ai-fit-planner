@@ -4,6 +4,30 @@ import { useAuth } from "./useAuth";
 import type { Json } from "@/integrations/supabase/types";
 import type { WorkoutPlanData } from "@/types/workout";
 
+/** Validates and parses the JSONB result returned by replace_active_plan RPC */
+function parseRpcPlanResult(data: Json): WorkoutPlan {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Resposta inválida ao criar plano');
+  }
+  const r = data as Record<string, Json | undefined>;
+  if (typeof r.id !== 'string' || typeof r.plan_name !== 'string') {
+    throw new Error('Resposta inválida ao criar plano: campos obrigatórios ausentes');
+  }
+  return {
+    id: r.id as string,
+    user_id: r.user_id as string,
+    plan_name: r.plan_name as string,
+    description: (r.description as string) ?? null,
+    weekly_frequency: (r.weekly_frequency as number) ?? 3,
+    session_duration: (r.session_duration as string) ?? '60min',
+    periodization: (r.periodization as string) ?? null,
+    plan_data: r.plan_data as Json,
+    is_active: (r.is_active as boolean) ?? true,
+    created_at: r.created_at as string,
+    expires_at: (r.expires_at as string) ?? null,
+  };
+}
+
 export interface WorkoutPlan {
   id: string;
   user_id: string;
