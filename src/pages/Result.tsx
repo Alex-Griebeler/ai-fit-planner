@@ -186,34 +186,34 @@ export default function Result() {
         throw new Error(responseData.error);
       }
 
-      if (responseData?.plan) {
-        setPlan(responseData.plan);
+      if (responseData?.plan && isGeneratedPlan(responseData.plan)) {
+        const generatedPlan = responseData.plan;
+        setPlan(generatedPlan);
         sessionStorage.removeItem('onboardingData');
         
         // Salvar automaticamente o plano gerado no banco de dados
         try {
           await createPlan({
-            plan_name: responseData.plan.planName,
-            description: responseData.plan.description,
-            weekly_frequency: responseData.plan.weeklyFrequency,
-            session_duration: responseData.plan.sessionDuration,
-            periodization: responseData.plan.periodization,
+            plan_name: generatedPlan.planName,
+            description: generatedPlan.description,
+            weekly_frequency: generatedPlan.weeklyFrequency,
+            session_duration: generatedPlan.sessionDuration,
+            periodization: generatedPlan.periodization,
             plan_data: JSON.parse(JSON.stringify({
-              workouts: responseData.plan.workouts,
-              weeklyVolume: responseData.plan.weeklyVolume,
-              progressionPlan: responseData.plan.progressionPlan,
-              warnings: responseData.plan.warnings,
-              motivationalMessage: responseData.plan.motivationalMessage,
+              workouts: generatedPlan.workouts,
+              weeklyVolume: generatedPlan.weeklyVolume,
+              progressionPlan: generatedPlan.progressionPlan,
+              warnings: generatedPlan.warnings,
+              motivationalMessage: generatedPlan.motivationalMessage,
             })),
           });
           setIsSaved(true);
           toast.success('Plano gerado e salvo com sucesso!');
         } catch (saveErr) {
           console.error('Error auto-saving plan:', saveErr);
-          // Não bloqueia - usuário ainda pode salvar manualmente
         }
       } else {
-        throw new Error('Plano não gerado');
+        throw new Error('Plano gerado com formato inválido');
       }
     } catch (err) {
       console.error('Error generating workout');
