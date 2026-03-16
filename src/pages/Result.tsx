@@ -308,13 +308,12 @@ export default function Result() {
         })),
       });
 
-      // Aguarda invalidação do cache de forma correta
-      await queryClient.invalidateQueries({ queryKey: ['workout-plans'] });
-
+      // Hook already invalidates cache on success — no need to duplicate here
       setIsSaved(true);
       toast.success('Plano salvo com sucesso!');
     } catch (err) {
       console.error('Error saving workout plan');
+      setIsSaved(false);
       toast.error('Erro ao salvar plano. Tente novamente.');
     }
   };
