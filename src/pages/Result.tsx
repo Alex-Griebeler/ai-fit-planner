@@ -313,13 +313,14 @@ export default function Result() {
     if (activePlan) {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
-        if (!isWorkoutPlanData(activePlan.plan_data)) {
+        const rawPlanData: unknown = activePlan.plan_data;
+        if (!isWorkoutPlanData(rawPlanData)) {
           console.error('Plano salvo com formato inválido:', activePlan.id);
           setError('O plano salvo possui formato inválido. Gere um novo plano.');
           return;
         }
 
-        const savedPlanData = activePlan.plan_data;
+        const savedPlanData = rawPlanData;
         setPlan({
           planName: activePlan.plan_name,
           description: activePlan.description || '',
