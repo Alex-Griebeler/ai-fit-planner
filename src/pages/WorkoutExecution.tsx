@@ -69,7 +69,7 @@ export default function WorkoutExecution() {
   useEffect(() => {
     if (loads && workout) {
       const loadMap: Record<string, string> = {};
-      workout.exercises.forEach(ex => {
+      workout.exercises.forEach((ex: WorkoutExercise) => {
         const key = `${workout.day}|${ex.name}`;
         if (loads[key]) {
           loadMap[ex.name] = loads[key];
