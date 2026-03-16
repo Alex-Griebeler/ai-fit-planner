@@ -413,7 +413,7 @@ export default function WorkoutExecution() {
       {/* Exercise list */}
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-lg mx-auto space-y-3">
-          {workout.exercises.map((exercise, index) => (
+          {workout.exercises.map((exercise: WorkoutExercise, index: number) => (
             <ExerciseCard
               key={`${exercise.name}-${index}`}
               exercise={exercise}
