@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: window.location.origin,
       },
     });
-    return { error: error ? new Error(error.message) : null };
+    return { error: error ? normalizeAuthError(error) : null };
   };
 
   const signInWithGoogle = async () => {
