@@ -12,6 +12,8 @@ import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { LoadingScreen, EmptyState } from '@/components/shared';
+import type { WorkoutDay, WorkoutPlanData, WorkoutExercise } from '@/types/workout';
+import { isWorkoutPlanData } from '@/types/workout';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,28 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface Exercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  method?: string;
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: Exercise[];
-}
 
 export default function WorkoutExecution() {
   const navigate = useNavigate();

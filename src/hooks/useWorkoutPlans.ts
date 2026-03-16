@@ -78,9 +78,11 @@ export function useWorkoutPlans() {
 
   // Criar novo plano (operação atômica via RPC — desativa anteriores + cria novo em uma transação)
   const createMutation = useMutation({
-    mutationFn: async (input: CreateWorkoutPlanInput) => {
+    mutationFn: async (input: CreateWorkoutPlanInput): Promise<WorkoutPlan> => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
+      // supabase.rpc types are auto-generated; since replace_active_plan may not be
+      // in the generated types yet, we use explicit typing on the response.
       const { data, error } = await supabase.rpc("replace_active_plan" as never, {
         p_plan_name: input.plan_name,
         p_description: input.description ?? null,
@@ -92,7 +94,14 @@ export function useWorkoutPlans() {
       } as never);
 
       if (error) throw new Error(`Erro ao criar plano: ${error.message}`);
-      return data as unknown as WorkoutPlan;
+
+      // Validate returned shape minimally
+      const result = data as Record<string, unknown> | null;
+      if (!result || typeof result.id !== 'string' || typeof result.plan_name !== 'string') {
+        throw new Error('Resposta inválida ao criar plano');
+      }
+
+      return result as unknown as WorkoutPlan;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
