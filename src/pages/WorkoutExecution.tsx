@@ -12,6 +12,8 @@ import { WorkoutProgress } from '@/components/workout/WorkoutProgress';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { LoadingScreen, EmptyState } from '@/components/shared';
+import type { WorkoutDay, WorkoutPlanData, WorkoutExercise } from '@/types/workout';
+import { isWorkoutPlanData } from '@/types/workout';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,28 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface Exercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  method?: string;
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: Exercise[];
-}
 
 export default function WorkoutExecution() {
   const navigate = useNavigate();
@@ -77,19 +57,19 @@ export default function WorkoutExecution() {
   const [workoutStartTime] = useState(new Date());
 
   // Get workout data
-  const workout = useMemo(() => {
+  const workout: WorkoutDay | null = useMemo(() => {
     if (!activePlan?.plan_data) return null;
-    const planData = activePlan.plan_data as { workouts?: Workout[] };
-    if (!planData.workouts) return null;
+    const planData = activePlan.plan_data as unknown;
+    if (!isWorkoutPlanData(planData)) return null;
     
-    return planData.workouts.find(w => w.day === dayParam) || planData.workouts[0];
+    return planData.workouts.find((w: WorkoutDay) => w.day === dayParam) || planData.workouts[0];
   }, [activePlan, dayParam]);
 
   // Initialize local loads from saved loads
   useEffect(() => {
     if (loads && workout) {
       const loadMap: Record<string, string> = {};
-      workout.exercises.forEach(ex => {
+      workout.exercises.forEach((ex: WorkoutExercise) => {
         const key = `${workout.day}|${ex.name}`;
         if (loads[key]) {
           loadMap[ex.name] = loads[key];
@@ -117,7 +97,7 @@ export default function WorkoutExecution() {
   useEffect(() => {
     if (shouldStartSession) {
       sessionInitializedRef.current = true;
-      const totalSets = workout!.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+      const totalSets = workout!.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
       startSession({
         workoutPlanId: activePlan!.id,
         workoutDay: workout!.day,
@@ -153,10 +133,10 @@ export default function WorkoutExecution() {
     if (!workout) return { totalExercises: 0, completedExercises: 0, totalSets: 0, completedSets: 0 };
     
     const totalExercises = workout.exercises.length;
-    const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-    const completedSetsCount = Object.values(completedSets).reduce((sum, sets) => sum + sets, 0);
+    const totalSets = workout.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
+    const completedSetsCount = Object.values(completedSets).reduce((sum: number, sets: number) => sum + sets, 0);
     const completedExercisesCount = workout.exercises.filter(
-      (_, index) => completedSets[index] >= workout.exercises[index].sets
+      (_: WorkoutExercise, index: number) => completedSets[index] >= workout.exercises[index].sets
     ).length;
 
     return {
@@ -189,8 +169,8 @@ export default function WorkoutExecution() {
 
     // Update session in database
     if (currentSession) {
-      const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
-      const exercisesData = workout?.exercises.map((ex, idx) => ({
+      const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
+      const exercisesData = workout?.exercises.map((ex: WorkoutExercise, idx: number) => ({
         name: ex.name,
         completedSets: newCompletedSets[idx] || 0,
         totalSets: ex.sets,
@@ -230,8 +210,8 @@ export default function WorkoutExecution() {
 
       // Update session in database
       if (currentSession) {
-        const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
-        const exercisesData = workout?.exercises.map((ex, idx) => ({
+        const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
+        const exercisesData = workout?.exercises.map((ex: WorkoutExercise, idx: number) => ({
           name: ex.name,
           completedSets: newCompletedSets[idx] || 0,
           totalSets: ex.sets,
@@ -256,8 +236,8 @@ export default function WorkoutExecution() {
 
     // Persist undo to backend
     if (currentSession && workout) {
-      const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
-      const exercisesData = workout.exercises.map((ex, idx) => ({
+      const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
+      const exercisesData = workout.exercises.map((ex: WorkoutExercise, idx: number) => ({
         name: ex.name,
         completedSets: newCompletedSets[idx] || 0,
         totalSets: ex.sets,
@@ -433,7 +413,7 @@ export default function WorkoutExecution() {
       {/* Exercise list */}
       <main className="flex-1 overflow-y-auto p-4">
         <div className="max-w-lg mx-auto space-y-3">
-          {workout.exercises.map((exercise, index) => (
+          {workout.exercises.map((exercise: WorkoutExercise, index: number) => (
             <ExerciseCard
               key={`${exercise.name}-${index}`}
               exercise={exercise}

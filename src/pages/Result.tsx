@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
+import type { WorkoutDay, WorkoutPlanData, WorkoutExercise, WorkoutCardio, ProgressionPlan, GeneratedWorkoutPlan } from '@/types/workout';
+import { isGeneratedPlan } from '@/types/workout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
@@ -39,29 +41,6 @@ import {
 } from "@/components/ui/popover";
 
 
-interface WorkoutExercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  isCompound?: boolean;
-  method?: string;
-  muscleGroup?: string;
-}
-
-interface WorkoutCardio {
-  type: string;
-  duration: string;
-  intensity?: string;
-  description?: string;
-  notes?: string;
-}
-
 // Descrições dos tipos de cardio para exibição
 const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
   'LISS': {
@@ -85,10 +64,8 @@ const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; i
 function parseCardioType(cardioType: string): { type: string; duration: string; info: typeof CARDIO_DESCRIPTIONS[string] | null } {
   const normalizedType = cardioType.toUpperCase().trim();
   
-  // Verifica se contém algum dos tipos conhecidos
   for (const [key, info] of Object.entries(CARDIO_DESCRIPTIONS)) {
     if (normalizedType.includes(key)) {
-      // Extrai a duração se estiver junto (ex: "LISS 20 min")
       const durationMatch = normalizedType.match(/(\d+)\s*(min|minutos?)?/i);
       const duration = durationMatch ? `${durationMatch[1]} min` : '';
       return { type: key, duration, info };
@@ -96,37 +73,6 @@ function parseCardioType(cardioType: string): { type: string; duration: string; 
   }
   
   return { type: cardioType, duration: '', info: null };
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: WorkoutExercise[];
-  cardio?: WorkoutCardio | null;
-}
-
-interface ProgressionPlan {
-  week1?: string;
-  week2?: string;
-  week3?: string;
-  week4?: string;
-  deloadWeek?: string;
-}
-
-interface WorkoutPlan {
-  planName: string;
-  description: string;
-  weeklyFrequency: number;
-  sessionDuration: string;
-  periodization: string;
-  workouts: Workout[];
-  weeklyVolume: Record<string, number>;
-  progressionPlan: string | ProgressionPlan;
-  warnings: string[];
-  motivationalMessage: string;
 }
 
 export default function Result() {
@@ -150,7 +96,7 @@ export default function Result() {
   const { loads, saveLoad, isLoading: isLoadingLoads } = useExerciseLoads(currentPlanId);
   
   const [data, setData] = useState<OnboardingData | null>(null);
-  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+  const [plan, setPlan] = useState<GeneratedWorkoutPlan | null>(null);
   // Start with loading false - we'll set it true only when generating a new plan
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -368,7 +314,7 @@ export default function Result() {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
         const savedPlanData = activePlan.plan_data as unknown as {
-          workouts: Workout[];
+          workouts: WorkoutDay[];
           weeklyVolume: Record<string, number>;
           progressionPlan: string | ProgressionPlan;
           warnings: string[];
@@ -591,7 +537,7 @@ export default function Result() {
   };
 
   // Usa inferência dos exercícios - retorna na ordem de prescrição
-  const getMuscleGroups = (workout: Workout): string[] => {
+  const getMuscleGroups = (workout: WorkoutDay): string[] => {
     return inferMuscleGroupsFromExercises(workout.exercises);
   };
 
@@ -638,7 +584,7 @@ export default function Result() {
           className="space-y-3 mb-8"
         >
           {/* Maintain original workout order, only highlight suggested */}
-          {plan.workouts.map((workout, workoutIndex) => {
+          {plan.workouts.map((workout: WorkoutDay, workoutIndex: number) => {
             if (!workout) return null;
             
             const isSuggested = workoutIndex === suggestedWorkoutIndex;
@@ -700,7 +646,7 @@ export default function Result() {
                   >
                     {/* Muscle Groups Pills - uses inferred groups for accuracy */}
                     <div className="px-5 pb-3 flex flex-wrap gap-2">
-                      {getMuscleGroups(workout).map((group, i) => (
+                      {getMuscleGroups(workout).map((group: string, i: number) => (
                         <span 
                           key={i} 
                           className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground"
@@ -712,7 +658,7 @@ export default function Result() {
                     
                     {/* Exercise List - Clean rows */}
                     <div className="px-5 pb-5 space-y-1">
-                      {workout.exercises.map((exercise, i) => {
+                      {workout.exercises.map((exercise: WorkoutExercise, i: number) => {
                         const loadKey = `${workout.day}|${exercise.name}`;
                         const savedLoad = loads[loadKey] || '';
                         
@@ -934,7 +880,7 @@ export default function Result() {
                   className="overflow-hidden"
                 >
                   <div className="space-y-2 pb-4">
-                    {plan.warnings.map((warning, i) => (
+                    {plan.warnings.map((warning: string, i: number) => (
                       <p key={i} className="text-xs text-muted-foreground pl-6">
                         {warning}
                       </p>
