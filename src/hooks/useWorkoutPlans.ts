@@ -75,41 +75,23 @@ export function useWorkoutPlans() {
     refetchOnMount: true,
   });
 
-  // Criar novo plano
+  // Criar novo plano (operação atômica via RPC — desativa anteriores + cria novo em uma transação)
   const createMutation = useMutation({
     mutationFn: async (input: CreateWorkoutPlanInput) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // Desativar planos anteriores (manter histórico)
-      const { error: deactivateError } = await supabase
-        .from("workout_plans")
-        .update({ is_active: false })
-        .eq("user_id", user.id)
-        .eq("is_active", true);
+      const { data, error } = await supabase.rpc("replace_active_plan" as never, {
+        p_plan_name: input.plan_name,
+        p_description: input.description ?? null,
+        p_weekly_frequency: input.weekly_frequency,
+        p_session_duration: input.session_duration,
+        p_periodization: input.periodization ?? null,
+        p_plan_data: input.plan_data,
+        p_expires_at: input.expires_at ?? null,
+      } as never);
 
-      if (deactivateError) {
-        throw new Error(`Erro ao desativar plano anterior: ${deactivateError.message}`);
-      }
-
-      // Cria novo plano ativo
-      const { data, error } = await supabase
-        .from("workout_plans")
-        .insert([{
-          user_id: user.id,
-          plan_name: input.plan_name,
-          description: input.description ?? null,
-          weekly_frequency: input.weekly_frequency,
-          session_duration: input.session_duration,
-          periodization: input.periodization ?? null,
-          plan_data: input.plan_data,
-          is_active: true,
-          expires_at: input.expires_at ?? null,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data as WorkoutPlan;
+      if (error) throw new Error(`Erro ao criar plano: ${error.message}`);
+      return data as unknown as WorkoutPlan;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
