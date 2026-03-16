@@ -21,17 +21,54 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const passwordValidation = usePasswordValidation(password);
 
   useEffect(() => {
-    // Check if user has a valid recovery session
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setValidSession(true);
+      try {
+        // Listen for the PASSWORD_RECOVERY event from the URL hash
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY' && session) {
+            setValidSession(true);
+            setChecking(false);
+          }
+        });
+
+        // Also check existing session (user may have already landed)
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('[ResetPassword] Session error:', error.message);
+          setSessionError('Erro ao verificar sessão. Tente novamente.');
+          setChecking(false);
+          return;
+        }
+
+        // Check URL hash for recovery token indicators
+        const hash = window.location.hash;
+        const hasRecoveryToken = hash.includes('type=recovery') || hash.includes('type=magiclink');
+
+        if (session && hasRecoveryToken) {
+          setValidSession(true);
+        } else if (session) {
+          // Session exists but no recovery token — could be a regular login session
+          // Still allow password change since user is authenticated
+          setValidSession(true);
+        } else if (!hasRecoveryToken) {
+          setSessionError('Link de recuperação inválido ou expirado.');
+        }
+        // If hasRecoveryToken but no session yet, the onAuthStateChange will handle it
+
+        setChecking(false);
+
+        return () => subscription.unsubscribe();
+      } catch (err) {
+        console.error('[ResetPassword] Unexpected error:', err);
+        setSessionError('Erro inesperado. Tente novamente.');
+        setChecking(false);
       }
-      setChecking(false);
     };
     
     checkSession();
