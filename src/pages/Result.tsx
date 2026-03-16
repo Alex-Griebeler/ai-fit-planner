@@ -41,29 +41,6 @@ import {
 } from "@/components/ui/popover";
 
 
-interface WorkoutExercise {
-  order: number;
-  name: string;
-  equipment: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  intensity?: string;
-  tempo?: string;
-  notes?: string;
-  isCompound?: boolean;
-  method?: string;
-  muscleGroup?: string;
-}
-
-interface WorkoutCardio {
-  type: string;
-  duration: string;
-  intensity?: string;
-  description?: string;
-  notes?: string;
-}
-
 // Descrições dos tipos de cardio para exibição
 const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
   'LISS': {
@@ -87,10 +64,8 @@ const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; i
 function parseCardioType(cardioType: string): { type: string; duration: string; info: typeof CARDIO_DESCRIPTIONS[string] | null } {
   const normalizedType = cardioType.toUpperCase().trim();
   
-  // Verifica se contém algum dos tipos conhecidos
   for (const [key, info] of Object.entries(CARDIO_DESCRIPTIONS)) {
     if (normalizedType.includes(key)) {
-      // Extrai a duração se estiver junto (ex: "LISS 20 min")
       const durationMatch = normalizedType.match(/(\d+)\s*(min|minutos?)?/i);
       const duration = durationMatch ? `${durationMatch[1]} min` : '';
       return { type: key, duration, info };
@@ -98,37 +73,6 @@ function parseCardioType(cardioType: string): { type: string; duration: string; 
   }
   
   return { type: cardioType, duration: '', info: null };
-}
-
-interface Workout {
-  day: string;
-  name: string;
-  focus: string;
-  muscleGroups: string[];
-  estimatedDuration: string;
-  exercises: WorkoutExercise[];
-  cardio?: WorkoutCardio | null;
-}
-
-interface ProgressionPlan {
-  week1?: string;
-  week2?: string;
-  week3?: string;
-  week4?: string;
-  deloadWeek?: string;
-}
-
-interface WorkoutPlan {
-  planName: string;
-  description: string;
-  weeklyFrequency: number;
-  sessionDuration: string;
-  periodization: string;
-  workouts: Workout[];
-  weeklyVolume: Record<string, number>;
-  progressionPlan: string | ProgressionPlan;
-  warnings: string[];
-  motivationalMessage: string;
 }
 
 export default function Result() {
