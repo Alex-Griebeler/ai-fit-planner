@@ -101,11 +101,15 @@ export function useWorkoutSessions() {
       }
 
       // Abandon any existing in-progress sessions
-      await supabase
+      const { error: abandonError } = await supabase
         .from('workout_sessions')
         .update({ status: 'abandoned' })
         .eq('user_id', user.id)
         .eq('status', 'in_progress');
+
+      if (abandonError) {
+        throw new Error(`Failed to abandon previous sessions: ${abandonError.message}`);
+      }
 
       const { data, error } = await supabase
         .from('workout_sessions')
