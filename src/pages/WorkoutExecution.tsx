@@ -57,12 +57,12 @@ export default function WorkoutExecution() {
   const [workoutStartTime] = useState(new Date());
 
   // Get workout data
-  const workout = useMemo(() => {
+  const workout: WorkoutDay | null = useMemo(() => {
     if (!activePlan?.plan_data) return null;
-    const planData = activePlan.plan_data as { workouts?: Workout[] };
-    if (!planData.workouts) return null;
+    const planData = activePlan.plan_data as unknown;
+    if (!isWorkoutPlanData(planData)) return null;
     
-    return planData.workouts.find(w => w.day === dayParam) || planData.workouts[0];
+    return planData.workouts.find((w: WorkoutDay) => w.day === dayParam) || planData.workouts[0];
   }, [activePlan, dayParam]);
 
   // Initialize local loads from saved loads
