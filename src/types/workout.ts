@@ -81,7 +81,7 @@ export function isWorkoutPlanData(value: unknown): value is WorkoutPlanData {
  */
 export function isGeneratedPlan(value: unknown): value is GeneratedWorkoutPlan {
   if (!isWorkoutPlanData(value)) return false;
-  const obj = value as Record<string, unknown>;
+  const obj = value as unknown as Record<string, unknown>;
   return (
     typeof obj.planName === 'string' &&
     typeof obj.weeklyFrequency === 'number'
