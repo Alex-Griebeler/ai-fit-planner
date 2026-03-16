@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: window.location.origin,
       },
     });
-    return { error: error ? new Error(error.message) : null };
+    return { error: error ? normalizeAuthError(error) : null };
   };
 
   const resetPassword = async (email: string) => {
