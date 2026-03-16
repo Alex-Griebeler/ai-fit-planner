@@ -49,14 +49,15 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-// Fallback app origin for redirect URLs (never use SUPABASE_URL)
 function getAppOrigin(requestOrigin: string | null): string {
   if (requestOrigin && isOriginAllowed(requestOrigin)) return requestOrigin;
   const fallback = Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || Deno.env.get("WEB_URL");
   return fallback || "https://preview--smartfit-starter.lovable.app";
 }
 
-const PREMIUM_PRICE_ID = "price_1SpBXMLtHQX7R8uhaSvARvLA";
+// Price ID: prefer env, fallback to hardcoded default
+const DEFAULT_PREMIUM_PRICE_ID = "price_1SpBXMLtHQX7R8uhaSvARvLA";
+const PREMIUM_PRICE_ID = (Deno.env.get("STRIPE_PRICE_ID") ?? "").trim() || DEFAULT_PREMIUM_PRICE_ID;
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -72,7 +73,7 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started");
+    logStep("Function started", { priceId: PREMIUM_PRICE_ID });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -117,12 +118,41 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Resolve all customers for this email (limit 10 to catch duplicates)
+    const customers = await stripe.customers.list({ email: user.email, limit: 10 });
     let customerId: string | undefined;
-    
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+
+    // Check for existing active/trialing subscription across ALL customers
+    for (const cust of customers.data) {
+      const [activeSubs, trialingSubs] = await Promise.all([
+        stripe.subscriptions.list({ customer: cust.id, status: "active", limit: 1 }),
+        stripe.subscriptions.list({ customer: cust.id, status: "trialing", limit: 1 }),
+      ]);
+
+      const existingSubs = [...activeSubs.data, ...trialingSubs.data];
+      if (existingSubs.length > 0) {
+        logStep("User already has active/trialing subscription", {
+          customerId: cust.id,
+          subscriptionId: existingSubs[0].id,
+          status: existingSubs[0].status,
+        });
+        return new Response(JSON.stringify({
+          error: "Você já possui uma assinatura ativa. Acesse o portal de assinatura para gerenciá-la.",
+          code: "SUBSCRIPTION_EXISTS",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 409,
+        });
+      }
+
+      // Use first customer found as fallback for checkout
+      if (!customerId) {
+        customerId = cust.id;
+      }
+    }
+
+    if (customerId) {
+      logStep("Using existing customer for checkout", { customerId });
     } else {
       logStep("No existing customer, will create during checkout");
     }
@@ -130,7 +160,7 @@ serve(async (req) => {
     const appOrigin = getAppOrigin(origin);
 
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+      customer: customerId ?? undefined,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
