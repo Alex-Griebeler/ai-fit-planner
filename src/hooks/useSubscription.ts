@@ -143,6 +143,23 @@ export function useSubscription(): UseSubscriptionReturn {
     checkSubscription();
   }, [checkSubscription]);
 
+  // Listen for checkout success via URL params and refresh
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success' || params.get('session_id')) {
+      // Immediate check + delayed retry to allow Stripe propagation
+      checkSubscription();
+      const timer = setTimeout(() => checkSubscription(), 3000);
+      // Clean URL params
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.pathname);
+      return () => clearTimeout(timer);
+    }
+  }, [user, checkSubscription]);
+
   // Polling every 60 seconds
   useEffect(() => {
     if (!user) return;
