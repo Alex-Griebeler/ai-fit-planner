@@ -34,7 +34,13 @@ function isOriginAllowed(origin: string): boolean {
 }
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : "*";
+  let allowedOrigin: string;
+  if (origin && isOriginAllowed(origin)) {
+    allowedOrigin = origin;
+  } else {
+    const fallback = Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || Deno.env.get("WEB_URL");
+    allowedOrigin = fallback || "https://preview--smartfit-starter.lovable.app";
+  }
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
