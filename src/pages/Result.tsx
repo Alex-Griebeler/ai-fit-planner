@@ -646,7 +646,7 @@ export default function Result() {
                   >
                     {/* Muscle Groups Pills - uses inferred groups for accuracy */}
                     <div className="px-5 pb-3 flex flex-wrap gap-2">
-                      {getMuscleGroups(workout).map((group, i) => (
+                      {getMuscleGroups(workout).map((group: string, i: number) => (
                         <span 
                           key={i} 
                           className="text-xs px-3 py-1 rounded-full bg-muted text-muted-foreground"
