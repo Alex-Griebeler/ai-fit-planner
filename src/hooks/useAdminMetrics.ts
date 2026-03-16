@@ -124,11 +124,21 @@ export function useAdminMetrics(period: Period = '30d') {
         throw fnError;
       }
 
-      if (data.error) {
-        throw new Error(data.error);
+      // Validate payload shape before using
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        !data.summary || typeof data.summary.totalUsers !== 'number' ||
+        !data.engagement || typeof data.engagement.totalSessions !== 'number' ||
+        !data.funnel || typeof data.funnel.signups !== 'number' ||
+        !data.timeSeries ||
+        !data.learningContext
+      ) {
+        console.error('[AdminMetrics] Invalid payload shape:', JSON.stringify(data).slice(0, 200));
+        throw new Error('Payload de métricas inválido');
       }
 
-      setMetrics(data);
+      setMetrics(data as AdminMetrics);
     } catch (err) {
       console.error('Error fetching admin metrics:', err);
       setError(err instanceof Error ? err.message : 'Erro ao carregar métricas');
