@@ -169,8 +169,8 @@ export default function WorkoutExecution() {
 
     // Update session in database
     if (currentSession) {
-      const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
-      const exercisesData = workout?.exercises.map((ex, idx) => ({
+      const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
+      const exercisesData = workout?.exercises.map((ex: WorkoutExercise, idx: number) => ({
         name: ex.name,
         completedSets: newCompletedSets[idx] || 0,
         totalSets: ex.sets,
