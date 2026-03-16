@@ -658,7 +658,7 @@ export default function Result() {
                     
                     {/* Exercise List - Clean rows */}
                     <div className="px-5 pb-5 space-y-1">
-                      {workout.exercises.map((exercise, i) => {
+                      {workout.exercises.map((exercise: WorkoutExercise, i: number) => {
                         const loadKey = `${workout.day}|${exercise.name}`;
                         const savedLoad = loads[loadKey] || '';
                         
