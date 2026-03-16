@@ -52,9 +52,17 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
             <Input
               type="number"
               placeholder="25"
+              min={MIN_AGE}
+              max={MAX_AGE}
               value={data.age || ''}
-              onChange={(e) => updateData('age', parseInt(e.target.value) || null)}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                updateData('age', isNaN(val) ? null : val);
+              }}
             />
+            {data.age !== null && data.age < MIN_AGE && (
+              <p className="text-xs text-destructive mt-1">Idade mínima: {MIN_AGE} anos</p>
+            )}
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Altura (cm)</label>
