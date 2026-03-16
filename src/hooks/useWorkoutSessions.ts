@@ -101,11 +101,15 @@ export function useWorkoutSessions() {
       }
 
       // Abandon any existing in-progress sessions
-      await supabase
+      const { error: abandonError } = await supabase
         .from('workout_sessions')
         .update({ status: 'abandoned' })
         .eq('user_id', user.id)
         .eq('status', 'in_progress');
+
+      if (abandonError) {
+        throw new Error(`Failed to abandon previous sessions: ${abandonError.message}`);
+      }
 
       const { data, error } = await supabase
         .from('workout_sessions')
@@ -125,7 +129,26 @@ export function useWorkoutSessions() {
       if (error) throw error;
       return data.id;
     },
-    onSuccess: () => {
+    onSuccess: (sessionId, params) => {
+      // Immediately set the current session in cache for fast UI response
+      const newSession: WorkoutSession = {
+        id: sessionId,
+        user_id: user!.id,
+        workout_plan_id: params.workoutPlanId,
+        workout_day: params.workoutDay,
+        workout_name: params.workoutName,
+        total_sets: params.totalSets,
+        completed_sets: 0,
+        exercises_data: params.exercisesData ?? [],
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        duration_minutes: null,
+        perceived_effort: null,
+        session_notes: null,
+        status: 'in_progress',
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData(['workout-sessions', user?.id, 'current'], newSession);
       queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
     },
   });
