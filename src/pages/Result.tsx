@@ -313,14 +313,13 @@ export default function Result() {
     if (activePlan) {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
-        const savedPlanData = activePlan.plan_data as unknown as {
-          workouts: WorkoutDay[];
-          weeklyVolume: Record<string, number>;
-          progressionPlan: string | ProgressionPlan;
-          warnings: string[];
-          motivationalMessage: string;
-        };
+        if (!isWorkoutPlanData(activePlan.plan_data)) {
+          console.error('Plano salvo com formato inválido:', activePlan.id);
+          setError('O plano salvo possui formato inválido. Gere um novo plano.');
+          return;
+        }
 
+        const savedPlanData = activePlan.plan_data;
         setPlan({
           planName: activePlan.plan_name,
           description: activePlan.description || '',

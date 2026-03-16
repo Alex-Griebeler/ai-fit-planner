@@ -81,27 +81,19 @@ export function useWorkoutPlans() {
     mutationFn: async (input: CreateWorkoutPlanInput): Promise<WorkoutPlan> => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // supabase.rpc types are auto-generated; since replace_active_plan may not be
-      // in the generated types yet, we use explicit typing on the response.
-      const { data, error } = await supabase.rpc("replace_active_plan" as never, {
+      const { data, error } = await supabase.rpc("replace_active_plan", {
         p_plan_name: input.plan_name,
         p_description: input.description ?? null,
         p_weekly_frequency: input.weekly_frequency,
         p_session_duration: input.session_duration,
         p_periodization: input.periodization ?? null,
-        p_plan_data: input.plan_data,
+        p_plan_data: input.plan_data as unknown as Json,
         p_expires_at: input.expires_at ?? null,
-      } as never);
+      });
 
       if (error) throw new Error(`Erro ao criar plano: ${error.message}`);
 
-      // Validate returned shape minimally
-      const result = data as Record<string, unknown> | null;
-      if (!result || typeof result.id !== 'string' || typeof result.plan_name !== 'string') {
-        throw new Error('Resposta inválida ao criar plano');
-      }
-
-      return result as unknown as WorkoutPlan;
+      return parseRpcPlanResult(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
