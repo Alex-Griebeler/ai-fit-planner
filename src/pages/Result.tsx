@@ -584,7 +584,7 @@ export default function Result() {
           className="space-y-3 mb-8"
         >
           {/* Maintain original workout order, only highlight suggested */}
-          {plan.workouts.map((workout, workoutIndex) => {
+          {plan.workouts.map((workout: WorkoutDay, workoutIndex: number) => {
             if (!workout) return null;
             
             const isSuggested = workoutIndex === suggestedWorkoutIndex;
