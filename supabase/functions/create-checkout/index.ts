@@ -34,7 +34,7 @@ function isOriginAllowed(origin: string): boolean {
 }
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : "";
+  const allowedOrigin = origin && isOriginAllowed(origin) ? origin : "*";
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
