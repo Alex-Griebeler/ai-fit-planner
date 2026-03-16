@@ -126,22 +126,30 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
+    // Check both active and trialing subscriptions
+    const [activeSubs, trialingSubs] = await Promise.all([
+      stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 }),
+      stripe.subscriptions.list({ customer: customerId, status: "trialing", limit: 1 }),
+    ]);
 
-    const hasActiveSub = subscriptions.data.length > 0;
+    const allSubs = [...activeSubs.data, ...trialingSubs.data];
+    const hasActiveSub = allSubs.length > 0;
     let productId: string | null = null;
     let subscriptionEnd: string | null = null;
 
     if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const subscription = allSubs[0];
+      // Handle both Unix timestamp (number) and ISO string from Stripe API
+      const periodEnd = subscription.current_period_end;
+      if (typeof periodEnd === "number") {
+        subscriptionEnd = new Date(periodEnd * 1000).toISOString();
+      } else if (typeof periodEnd === "string") {
+        subscriptionEnd = new Date(periodEnd).toISOString();
+      }
       productId = subscription.items.data[0]?.price?.product as string || null;
       logStep("Active subscription found", { 
         subscriptionId: subscription.id, 
+        status: subscription.status,
         endDate: subscriptionEnd,
         productId 
       });
