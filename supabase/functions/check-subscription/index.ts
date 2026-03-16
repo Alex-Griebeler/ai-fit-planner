@@ -17,7 +17,6 @@ function buildAllowedOrigins(): string[] {
       if (trimmed) origins.push(trimmed);
     }
   }
-  // Always allow localhost for development
   origins.push("http://localhost:5173", "http://localhost:8080");
   return [...new Set(origins)];
 }
@@ -48,6 +47,17 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Credentials": "true",
     "Vary": "Origin",
   };
+}
+
+/** Parse Stripe period end safely (number=unix, string=ISO) */
+function parsePeriodEnd(value: unknown): string | null {
+  if (typeof value === "number") {
+    return new Date(value * 1000).toISOString();
+  }
+  if (typeof value === "string") {
+    return new Date(value).toISOString();
+  }
+  return null;
 }
 
 const logStep = (step: string, details?: unknown) => {
@@ -109,7 +119,8 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Resolve up to 10 customers for this email
+    const customers = await stripe.customers.list({ email: user.email, limit: 10 });
     
     if (customers.data.length === 0) {
       logStep("No customer found, returning unsubscribed state");
@@ -123,44 +134,44 @@ serve(async (req) => {
       });
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    // Search across ALL customers, prioritize the one with active/trialing sub
+    for (const cust of customers.data) {
+      const [activeSubs, trialingSubs] = await Promise.all([
+        stripe.subscriptions.list({ customer: cust.id, status: "active", limit: 1 }),
+        stripe.subscriptions.list({ customer: cust.id, status: "trialing", limit: 1 }),
+      ]);
 
-    // Check both active and trialing subscriptions
-    const [activeSubs, trialingSubs] = await Promise.all([
-      stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 }),
-      stripe.subscriptions.list({ customer: customerId, status: "trialing", limit: 1 }),
-    ]);
+      const allSubs = [...activeSubs.data, ...trialingSubs.data];
+      if (allSubs.length > 0) {
+        const subscription = allSubs[0];
+        const subscriptionEnd = parsePeriodEnd(subscription.current_period_end);
+        const productId = subscription.items.data[0]?.price?.product as string || null;
 
-    const allSubs = [...activeSubs.data, ...trialingSubs.data];
-    const hasActiveSub = allSubs.length > 0;
-    let productId: string | null = null;
-    let subscriptionEnd: string | null = null;
+        logStep("Active subscription found", { 
+          customerId: cust.id,
+          subscriptionId: subscription.id, 
+          status: subscription.status,
+          endDate: subscriptionEnd,
+          productId 
+        });
 
-    if (hasActiveSub) {
-      const subscription = allSubs[0];
-      // Handle both Unix timestamp (number) and ISO string from Stripe API
-      const periodEnd = subscription.current_period_end;
-      if (typeof periodEnd === "number") {
-        subscriptionEnd = new Date(periodEnd * 1000).toISOString();
-      } else if (typeof periodEnd === "string") {
-        subscriptionEnd = new Date(periodEnd).toISOString();
+        return new Response(JSON.stringify({
+          subscribed: true,
+          product_id: productId,
+          subscription_end: subscriptionEnd
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
       }
-      productId = subscription.items.data[0]?.price?.product as string || null;
-      logStep("Active subscription found", { 
-        subscriptionId: subscription.id, 
-        status: subscription.status,
-        endDate: subscriptionEnd,
-        productId 
-      });
-    } else {
-      logStep("No active subscription found");
     }
 
+    // No active/trialing subscription found on any customer
+    logStep("No active subscription found across all customers");
     return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
-      product_id: productId,
-      subscription_end: subscriptionEnd
+      subscribed: false,
+      product_id: null,
+      subscription_end: null
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

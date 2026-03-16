@@ -114,23 +114,41 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Resolve up to 10 customers, prioritize one with active/trialing sub
+    const customers = await stripe.customers.list({ email: user.email, limit: 10 });
     
     if (customers.data.length === 0) {
       logStep("No Stripe customer found");
-      return new Response(JSON.stringify({ error: "No subscription found for this user" }), {
+      return new Response(JSON.stringify({ error: "Nenhuma assinatura encontrada para este usuário" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    // Find the customer with an active/trialing subscription
+    let bestCustomerId: string | null = null;
+    for (const cust of customers.data) {
+      const [activeSubs, trialingSubs] = await Promise.all([
+        stripe.subscriptions.list({ customer: cust.id, status: "active", limit: 1 }),
+        stripe.subscriptions.list({ customer: cust.id, status: "trialing", limit: 1 }),
+      ]);
+      if (activeSubs.data.length > 0 || trialingSubs.data.length > 0) {
+        bestCustomerId = cust.id;
+        logStep("Found customer with active subscription", { customerId: cust.id });
+        break;
+      }
+    }
+
+    // Fallback to first customer if none has active sub
+    if (!bestCustomerId) {
+      bestCustomerId = customers.data[0].id;
+      logStep("No customer with active sub, using first customer", { customerId: bestCustomerId });
+    }
 
     const appOrigin = getAppOrigin(origin);
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
+      customer: bestCustomerId,
       return_url: `${appOrigin}/settings`,
     });
 
