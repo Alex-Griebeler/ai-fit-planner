@@ -740,6 +740,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      replace_active_plan: {
+        Args: {
+          p_description?: string
+          p_expires_at?: string
+          p_periodization?: string
+          p_plan_data?: Json
+          p_plan_name: string
+          p_session_duration?: string
+          p_weekly_frequency?: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
