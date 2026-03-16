@@ -96,7 +96,7 @@ export default function Result() {
   const { loads, saveLoad, isLoading: isLoadingLoads } = useExerciseLoads(currentPlanId);
   
   const [data, setData] = useState<OnboardingData | null>(null);
-  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+  const [plan, setPlan] = useState<GeneratedWorkoutPlan | null>(null);
   // Start with loading false - we'll set it true only when generating a new plan
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
