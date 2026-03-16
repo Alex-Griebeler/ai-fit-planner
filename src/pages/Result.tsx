@@ -880,7 +880,7 @@ export default function Result() {
                   className="overflow-hidden"
                 >
                   <div className="space-y-2 pb-4">
-                    {plan.warnings.map((warning, i) => (
+                    {plan.warnings.map((warning: string, i: number) => (
                       <p key={i} className="text-xs text-muted-foreground pl-6">
                         {warning}
                       </p>
