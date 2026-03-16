@@ -537,7 +537,7 @@ export default function Result() {
   };
 
   // Usa inferência dos exercícios - retorna na ordem de prescrição
-  const getMuscleGroups = (workout: Workout): string[] => {
+  const getMuscleGroups = (workout: WorkoutDay): string[] => {
     return inferMuscleGroupsFromExercises(workout.exercises);
   };
 
