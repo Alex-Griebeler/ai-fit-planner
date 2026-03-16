@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    return { error: error ? new Error(error.message) : null };
+    return { error: error ? normalizeAuthError(error) : null };
   };
 
   const signOut = async () => {

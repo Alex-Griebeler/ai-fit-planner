@@ -128,8 +128,7 @@ export default function ResetPassword() {
           </div>
           <h1 className="text-xl font-bold mb-4">Link inválido ou expirado</h1>
           <p className="text-muted-foreground mb-6">
-            Este link de recuperação de senha não é mais válido. 
-            Por favor, solicite um novo link.
+            {sessionError || 'Este link de recuperação de senha não é mais válido. Por favor, solicite um novo link.'}
           </p>
           <Button onClick={() => navigate('/login')} variant="gradient" className="w-full">
             Voltar ao login
