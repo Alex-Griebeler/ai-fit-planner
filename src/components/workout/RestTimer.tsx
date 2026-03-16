@@ -41,7 +41,7 @@ export function RestTimer({ initialSeconds, onComplete, autoStart = false }: Res
   }, [seconds, isRunning, haptic]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
 
     if (isRunning && seconds > 0) {
       interval = setInterval(() => {
