@@ -35,6 +35,12 @@ export default function Onboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // Limpa dados temporários antigos ao iniciar novo fluxo de onboarding
+  // Evita contaminação de dados obsoletos de jornadas anteriores
+  useEffect(() => {
+    sessionStorage.removeItem('onboardingData');
+  }, []);
+
   // MODELO LOW-COST: splitPreference e variationPreference são fixos
   // Não precisamos mais calcular shouldShowSplitStep
 
