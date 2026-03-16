@@ -129,7 +129,26 @@ export function useWorkoutSessions() {
       if (error) throw error;
       return data.id;
     },
-    onSuccess: () => {
+    onSuccess: (sessionId, params) => {
+      // Immediately set the current session in cache for fast UI response
+      const newSession: WorkoutSession = {
+        id: sessionId,
+        user_id: user!.id,
+        workout_plan_id: params.workoutPlanId,
+        workout_day: params.workoutDay,
+        workout_name: params.workoutName,
+        total_sets: params.totalSets,
+        completed_sets: 0,
+        exercises_data: params.exercisesData ?? [],
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        duration_minutes: null,
+        perceived_effort: null,
+        session_notes: null,
+        status: 'in_progress',
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData(['workout-sessions', user?.id, 'current'], newSession);
       queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
     },
   });

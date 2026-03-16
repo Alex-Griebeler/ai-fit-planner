@@ -230,11 +230,28 @@ export default function WorkoutExecution() {
 
   // Handle set undo
   const handleSetUndo = useCallback((exerciseIndex: number, setNumber: number) => {
-    setCompletedSets(prev => ({
-      ...prev,
-      [exerciseIndex]: Math.max(0, (prev[exerciseIndex] || 0) - 1),
-    }));
-  }, []);
+    const newCompletedSets = {
+      ...completedSets,
+      [exerciseIndex]: Math.max(0, (completedSets[exerciseIndex] || 0) - 1),
+    };
+    setCompletedSets(newCompletedSets);
+
+    // Persist undo to backend
+    if (currentSession && workout) {
+      const totalCompleted = Object.values(newCompletedSets).reduce((sum, sets) => sum + sets, 0);
+      const exercisesData = workout.exercises.map((ex, idx) => ({
+        name: ex.name,
+        completedSets: newCompletedSets[idx] || 0,
+        totalSets: ex.sets,
+        load: localLoads[ex.name] || null,
+      }));
+
+      updateSession(currentSession.id, {
+        completedSets: totalCompleted,
+        exercisesData,
+      }).catch(console.error);
+    }
+  }, [workout, completedSets, currentSession, localLoads, updateSession]);
 
   // Handle manual timer start
   const handleStartTimer = useCallback((exerciseIndex: number) => {
