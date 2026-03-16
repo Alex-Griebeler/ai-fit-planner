@@ -26,17 +26,16 @@ export default function ResetPassword() {
   const passwordValidation = usePasswordValidation(password);
 
   useEffect(() => {
+    // Listen for the PASSWORD_RECOVERY event from the URL hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setValidSession(true);
+        setChecking(false);
+      }
+    });
+
     const checkSession = async () => {
       try {
-        // Listen for the PASSWORD_RECOVERY event from the URL hash
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          if (event === 'PASSWORD_RECOVERY' && session) {
-            setValidSession(true);
-            setChecking(false);
-          }
-        });
-
-        // Also check existing session (user may have already landed)
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -52,26 +51,23 @@ export default function ResetPassword() {
 
         if (session && hasRecoveryToken) {
           setValidSession(true);
-        } else if (session) {
-          // Session exists but no recovery token — could be a regular login session
-          // Still allow password change since user is authenticated
-          setValidSession(true);
         } else if (!hasRecoveryToken) {
+          // No recovery token — reject even if a regular session exists
           setSessionError('Link de recuperação inválido ou expirado.');
         }
-        // If hasRecoveryToken but no session yet, the onAuthStateChange will handle it
+        // If hasRecoveryToken but no session yet, onAuthStateChange will handle it
 
         setChecking(false);
-
-        return () => subscription.unsubscribe();
       } catch (err) {
         console.error('[ResetPassword] Unexpected error:', err);
         setSessionError('Erro inesperado. Tente novamente.');
         setChecking(false);
       }
     };
-    
+
     checkSession();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
