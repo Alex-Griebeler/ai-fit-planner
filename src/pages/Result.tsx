@@ -314,7 +314,7 @@ export default function Result() {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
         const savedPlanData = activePlan.plan_data as unknown as {
-          workouts: Workout[];
+          workouts: WorkoutDay[];
           weeklyVolume: Record<string, number>;
           progressionPlan: string | ProgressionPlan;
           warnings: string[];
