@@ -268,12 +268,21 @@ export default function WorkoutExecution() {
     }
   }, [workout, parseRestTime]);
 
-  // Handle load change
+  // Handle load change — debounced save to avoid excessive writes during typing
   const handleLoadChange = useCallback((exerciseName: string, value: string) => {
     setLocalLoads(prev => ({ ...prev, [exerciseName]: value }));
-    // Auto-save on change
+
+    // Clear previous timer for this exercise
+    if (loadSaveTimersRef.current[exerciseName]) {
+      clearTimeout(loadSaveTimersRef.current[exerciseName]);
+    }
+
+    // Debounce save: persist after 800ms of no typing
     if (value && workout) {
-      saveLoad(workout.day, exerciseName, value);
+      loadSaveTimersRef.current[exerciseName] = setTimeout(() => {
+        saveLoad(workout.day, exerciseName, value);
+        delete loadSaveTimersRef.current[exerciseName];
+      }, 800);
     }
   }, [workout, saveLoad]);
 
