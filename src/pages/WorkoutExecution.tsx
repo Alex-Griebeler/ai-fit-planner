@@ -133,10 +133,10 @@ export default function WorkoutExecution() {
     if (!workout) return { totalExercises: 0, completedExercises: 0, totalSets: 0, completedSets: 0 };
     
     const totalExercises = workout.exercises.length;
-    const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
-    const completedSetsCount = Object.values(completedSets).reduce((sum, sets) => sum + sets, 0);
+    const totalSets = workout.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
+    const completedSetsCount = Object.values(completedSets).reduce((sum: number, sets: number) => sum + sets, 0);
     const completedExercisesCount = workout.exercises.filter(
-      (_, index) => completedSets[index] >= workout.exercises[index].sets
+      (_: WorkoutExercise, index: number) => completedSets[index] >= workout.exercises[index].sets
     ).length;
 
     return {
