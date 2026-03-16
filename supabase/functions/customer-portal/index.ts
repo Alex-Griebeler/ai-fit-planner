@@ -46,7 +46,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 function getAppOrigin(requestOrigin: string | null): string {
   if (requestOrigin && isOriginAllowed(requestOrigin)) return requestOrigin;
   const fallback = Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || Deno.env.get("WEB_URL");
-  return fallback || "https://smartfit-starter.lovable.app";
+  return fallback || "https://preview--smartfit-starter.lovable.app";
 }
 
 const logStep = (step: string, details?: unknown) => {
