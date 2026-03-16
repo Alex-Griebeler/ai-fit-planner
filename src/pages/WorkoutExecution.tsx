@@ -51,8 +51,9 @@ export default function WorkoutExecution() {
   const [searchParams] = useSearchParams();
   const dayParam = searchParams.get('day');
   
-  // Entry mode: intentional start (from Dashboard/Result card) vs. resuming existing session
-  const isIntentionalStart = location.state?.startWorkout === true;
+  // Entry signals: startWorkout state is a strong signal, but we also consider
+  // the presence of a valid dayParam + activePlan as sufficient context for a legitimate entry.
+  const hasStartSignal = location.state?.startWorkout === true;
   const sessionInitializedRef = useRef(false);
   const loadSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
