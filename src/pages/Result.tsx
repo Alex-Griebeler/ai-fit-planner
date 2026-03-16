@@ -134,7 +134,7 @@ export default function Result() {
   const queryClient = useQueryClient();
   const { profile, isLoading: isLoadingProfile } = useProfile();
   const { onboardingData: savedOnboardingData, isLoading: isLoadingOnboarding } = useOnboardingData();
-  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans, deactivatePlan } = useWorkoutPlans();
+  const { createPlan, activePlan, isCreating, isLoading: isLoadingPlans, plans } = useWorkoutPlans();
   const { isPremium } = useSubscription();
   
   // Workout schedule - for reordering workouts based on suggestion
