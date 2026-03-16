@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
 import type { WorkoutDay, WorkoutPlanData, WorkoutExercise, WorkoutCardio, ProgressionPlan, GeneratedWorkoutPlan } from '@/types/workout';
-import { isGeneratedPlan } from '@/types/workout';
+import { isGeneratedPlan, isWorkoutPlanData } from '@/types/workout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
@@ -186,34 +186,34 @@ export default function Result() {
         throw new Error(responseData.error);
       }
 
-      if (responseData?.plan) {
-        setPlan(responseData.plan);
+      if (responseData?.plan && isGeneratedPlan(responseData.plan)) {
+        const generatedPlan = responseData.plan;
+        setPlan(generatedPlan);
         sessionStorage.removeItem('onboardingData');
         
         // Salvar automaticamente o plano gerado no banco de dados
         try {
           await createPlan({
-            plan_name: responseData.plan.planName,
-            description: responseData.plan.description,
-            weekly_frequency: responseData.plan.weeklyFrequency,
-            session_duration: responseData.plan.sessionDuration,
-            periodization: responseData.plan.periodization,
+            plan_name: generatedPlan.planName,
+            description: generatedPlan.description,
+            weekly_frequency: generatedPlan.weeklyFrequency,
+            session_duration: generatedPlan.sessionDuration,
+            periodization: generatedPlan.periodization,
             plan_data: JSON.parse(JSON.stringify({
-              workouts: responseData.plan.workouts,
-              weeklyVolume: responseData.plan.weeklyVolume,
-              progressionPlan: responseData.plan.progressionPlan,
-              warnings: responseData.plan.warnings,
-              motivationalMessage: responseData.plan.motivationalMessage,
+              workouts: generatedPlan.workouts,
+              weeklyVolume: generatedPlan.weeklyVolume,
+              progressionPlan: generatedPlan.progressionPlan,
+              warnings: generatedPlan.warnings,
+              motivationalMessage: generatedPlan.motivationalMessage,
             })),
           });
           setIsSaved(true);
           toast.success('Plano gerado e salvo com sucesso!');
         } catch (saveErr) {
           console.error('Error auto-saving plan:', saveErr);
-          // Não bloqueia - usuário ainda pode salvar manualmente
         }
       } else {
-        throw new Error('Plano não gerado');
+        throw new Error('Plano gerado com formato inválido');
       }
     } catch (err) {
       console.error('Error generating workout');
@@ -313,14 +313,14 @@ export default function Result() {
     if (activePlan) {
       // Only set plan state if not already set (avoid re-renders)
       if (!plan) {
-        const savedPlanData = activePlan.plan_data as unknown as {
-          workouts: WorkoutDay[];
-          weeklyVolume: Record<string, number>;
-          progressionPlan: string | ProgressionPlan;
-          warnings: string[];
-          motivationalMessage: string;
-        };
+        const rawPlanData: unknown = activePlan.plan_data;
+        if (!isWorkoutPlanData(rawPlanData)) {
+          console.error('Plano salvo com formato inválido:', activePlan.id);
+          setError('O plano salvo possui formato inválido. Gere um novo plano.');
+          return;
+        }
 
+        const savedPlanData = rawPlanData;
         setPlan({
           planName: activePlan.plan_name,
           description: activePlan.description || '',

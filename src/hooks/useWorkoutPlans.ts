@@ -4,6 +4,30 @@ import { useAuth } from "./useAuth";
 import type { Json } from "@/integrations/supabase/types";
 import type { WorkoutPlanData } from "@/types/workout";
 
+/** Validates and parses the JSONB result returned by replace_active_plan RPC */
+function parseRpcPlanResult(data: Json): WorkoutPlan {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Resposta inválida ao criar plano');
+  }
+  const r = data as Record<string, Json | undefined>;
+  if (typeof r.id !== 'string' || typeof r.plan_name !== 'string') {
+    throw new Error('Resposta inválida ao criar plano: campos obrigatórios ausentes');
+  }
+  return {
+    id: r.id as string,
+    user_id: r.user_id as string,
+    plan_name: r.plan_name as string,
+    description: (r.description as string) ?? null,
+    weekly_frequency: (r.weekly_frequency as number) ?? 3,
+    session_duration: (r.session_duration as string) ?? '60min',
+    periodization: (r.periodization as string) ?? null,
+    plan_data: r.plan_data as Json,
+    is_active: (r.is_active as boolean) ?? true,
+    created_at: r.created_at as string,
+    expires_at: (r.expires_at as string) ?? null,
+  };
+}
+
 export interface WorkoutPlan {
   id: string;
   user_id: string;
@@ -81,27 +105,19 @@ export function useWorkoutPlans() {
     mutationFn: async (input: CreateWorkoutPlanInput): Promise<WorkoutPlan> => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // supabase.rpc types are auto-generated; since replace_active_plan may not be
-      // in the generated types yet, we use explicit typing on the response.
-      const { data, error } = await supabase.rpc("replace_active_plan" as never, {
+      const { data, error } = await supabase.rpc("replace_active_plan", {
         p_plan_name: input.plan_name,
         p_description: input.description ?? null,
         p_weekly_frequency: input.weekly_frequency,
         p_session_duration: input.session_duration,
         p_periodization: input.periodization ?? null,
-        p_plan_data: input.plan_data,
+        p_plan_data: input.plan_data as unknown as Json,
         p_expires_at: input.expires_at ?? null,
-      } as never);
+      });
 
       if (error) throw new Error(`Erro ao criar plano: ${error.message}`);
 
-      // Validate returned shape minimally
-      const result = data as Record<string, unknown> | null;
-      if (!result || typeof result.id !== 'string' || typeof result.plan_name !== 'string') {
-        throw new Error('Resposta inválida ao criar plano');
-      }
-
-      return result as unknown as WorkoutPlan;
+      return parseRpcPlanResult(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workout-plans", user?.id] });
