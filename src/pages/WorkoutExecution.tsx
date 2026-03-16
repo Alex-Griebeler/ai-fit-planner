@@ -97,7 +97,7 @@ export default function WorkoutExecution() {
   useEffect(() => {
     if (shouldStartSession) {
       sessionInitializedRef.current = true;
-      const totalSets = workout!.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+      const totalSets = workout!.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
       startSession({
         workoutPlanId: activePlan!.id,
         workoutDay: workout!.day,
