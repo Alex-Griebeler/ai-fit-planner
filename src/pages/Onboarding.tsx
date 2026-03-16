@@ -93,6 +93,9 @@ export default function Onboarding() {
       sessionStorage.setItem('onboardingData', JSON.stringify(sanitizedData));
       
       toast.success('Dados salvos com sucesso!');
+      
+      // Nota: onboardingData será limpo pela Result.tsx após consumo bem-sucedido.
+      // Se o usuário voltar ao onboarding, os dados serão recarregados do banco.
       navigate('/result');
     } catch (error) {
       // Log error without sensitive details

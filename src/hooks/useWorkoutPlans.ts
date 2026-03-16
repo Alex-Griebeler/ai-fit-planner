@@ -116,10 +116,24 @@ export function useWorkoutPlans() {
     },
   });
 
-  // Deletar plano
+  // Deletar plano (bloqueia exclusão de plano ativo para evitar perda acidental)
   const deleteMutation = useMutation({
     mutationFn: async (planId: string) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+
+      // Verifica se o plano é ativo antes de deletar
+      const { data: plan, error: fetchError } = await supabase
+        .from("workout_plans")
+        .select("is_active")
+        .eq("id", planId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (fetchError) throw new Error(`Erro ao verificar plano: ${fetchError.message}`);
+
+      if (plan?.is_active) {
+        throw new Error("Não é possível excluir o plano ativo. Desative-o primeiro ou crie um novo plano.");
+      }
 
       const { error } = await supabase
         .from("workout_plans")

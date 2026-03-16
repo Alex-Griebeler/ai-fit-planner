@@ -53,8 +53,9 @@ export default function Dashboard() {
     try {
       await deletePlan(planId);
       toast.success('Plano excluído com sucesso', { duration: 2000 });
-    } catch {
-      toast.error('Erro ao excluir plano', { duration: 4000 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao excluir plano';
+      toast.error(message, { duration: 4000 });
     }
   };
 
