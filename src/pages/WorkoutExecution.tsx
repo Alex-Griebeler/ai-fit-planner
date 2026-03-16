@@ -99,17 +99,29 @@ export default function WorkoutExecution() {
     }
   }, [loads, workout]);
 
-  // Start session when workout loads — only on intentional navigation with startWorkout state.
-  // If user navigates directly to /workout without state (e.g. bookmark), no session is created
-  // to avoid accidental duplicates. Existing currentSession (resume) is handled automatically.
+  // Determine if we should start a new session:
+  // 1. If there's already a currentSession → resume it (no new session needed)
+  // 2. If startWorkout state is present → explicit intent from navigation
+  // 3. If no state but dayParam is present + no currentSession → legitimate entry
+  //    (covers refresh, deep link, re-entry scenarios)
+  // The 30s lock guard in useWorkoutSessions prevents actual duplicates at DB level.
+  const shouldStartSession = useMemo(() => {
+    if (!workout || !activePlan || currentSession || sessionInitializedRef.current) return false;
+    // Strong signal: explicit navigation intent
+    if (hasStartSignal) return true;
+    // Fallback: dayParam present means user targeted a specific workout day
+    if (dayParam) return true;
+    return false;
+  }, [workout, activePlan, currentSession, hasStartSignal, dayParam]);
+
   useEffect(() => {
-    if (workout && activePlan && !currentSession && isIntentionalStart && !sessionInitializedRef.current) {
+    if (shouldStartSession) {
       sessionInitializedRef.current = true;
-      const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
+      const totalSets = workout!.exercises.reduce((sum, ex) => sum + ex.sets, 0);
       startSession({
-        workoutPlanId: activePlan.id,
-        workoutDay: workout.day,
-        workoutName: workout.name,
+        workoutPlanId: activePlan!.id,
+        workoutDay: workout!.day,
+        workoutName: workout!.name,
         totalSets,
       }).catch((error) => {
         if (!error.message?.includes('recently completed')) {
@@ -117,7 +129,7 @@ export default function WorkoutExecution() {
         }
       });
     }
-  }, [workout, activePlan, currentSession, isIntentionalStart, startSession]);
+  }, [shouldStartSession, workout, activePlan, startSession]);
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
