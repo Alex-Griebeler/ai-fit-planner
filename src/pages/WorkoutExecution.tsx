@@ -51,9 +51,10 @@ export default function WorkoutExecution() {
   const [searchParams] = useSearchParams();
   const dayParam = searchParams.get('day');
   
-  // Check if this is an intentional start from WorkoutPreview
+  // Entry mode: intentional start (from Dashboard/Result card) vs. resuming existing session
   const isIntentionalStart = location.state?.startWorkout === true;
   const sessionInitializedRef = useRef(false);
+  const loadSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const { activePlan, isLoading } = useWorkoutPlans();
   const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
@@ -97,13 +98,10 @@ export default function WorkoutExecution() {
     }
   }, [loads, workout]);
 
-  // Start session when workout loads - only if intentionally started from preview
+  // Start session when workout loads — only on intentional navigation with startWorkout state.
+  // If user navigates directly to /workout without state (e.g. bookmark), no session is created
+  // to avoid accidental duplicates. Existing currentSession (resume) is handled automatically.
   useEffect(() => {
-    // Only create a new session if:
-    // 1. We have workout data and active plan
-    // 2. There's no current session
-    // 3. This is an intentional navigation from WorkoutPreview (has startWorkout state)
-    // 4. We haven't already initialized a session in this component mount
     if (workout && activePlan && !currentSession && isIntentionalStart && !sessionInitializedRef.current) {
       sessionInitializedRef.current = true;
       const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -113,13 +111,20 @@ export default function WorkoutExecution() {
         workoutName: workout.name,
         totalSets,
       }).catch((error) => {
-        // Silently handle "recently completed" errors
         if (!error.message?.includes('recently completed')) {
-          console.error('Error starting session:', error);
+          console.error('[WorkoutExecution] Error starting session:', error);
         }
       });
     }
   }, [workout, activePlan, currentSession, isIntentionalStart, startSession]);
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    const timers = loadSaveTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
 
   // Parse rest time from string like "60s" or "2min"
   const parseRestTime = useCallback((rest: string): number => {
@@ -263,12 +268,21 @@ export default function WorkoutExecution() {
     }
   }, [workout, parseRestTime]);
 
-  // Handle load change
+  // Handle load change — debounced save to avoid excessive writes during typing
   const handleLoadChange = useCallback((exerciseName: string, value: string) => {
     setLocalLoads(prev => ({ ...prev, [exerciseName]: value }));
-    // Auto-save on change
+
+    // Clear previous timer for this exercise
+    if (loadSaveTimersRef.current[exerciseName]) {
+      clearTimeout(loadSaveTimersRef.current[exerciseName]);
+    }
+
+    // Debounce save: persist after 800ms of no typing
     if (value && workout) {
-      saveLoad(workout.day, exerciseName, value);
+      loadSaveTimersRef.current[exerciseName] = setTimeout(() => {
+        saveLoad(workout.day, exerciseName, value);
+        delete loadSaveTimersRef.current[exerciseName];
+      }, 800);
     }
   }, [workout, saveLoad]);
 
