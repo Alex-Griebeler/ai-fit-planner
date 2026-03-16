@@ -51,9 +51,10 @@ export default function WorkoutExecution() {
   const [searchParams] = useSearchParams();
   const dayParam = searchParams.get('day');
   
-  // Check if this is an intentional start from WorkoutPreview
+  // Entry mode: intentional start (from Dashboard/Result card) vs. resuming existing session
   const isIntentionalStart = location.state?.startWorkout === true;
   const sessionInitializedRef = useRef(false);
+  const loadSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const { activePlan, isLoading } = useWorkoutPlans();
   const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
