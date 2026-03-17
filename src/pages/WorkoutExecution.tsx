@@ -104,9 +104,13 @@ export default function WorkoutExecution() {
         workoutName: workout!.name,
         totalSets,
       }).catch((error) => {
-        if (!error.message?.includes('recently completed')) {
+        if (error.message?.includes('recently completed')) {
+          toast.info('Sessão finalizada recentemente. Aguarde alguns segundos antes de iniciar outra.');
+        } else {
           console.error('[WorkoutExecution] Error starting session:', error);
+          toast.error('Erro ao iniciar sessão de treino. Voltando ao dashboard.');
         }
+        navigate('/dashboard', { replace: true });
       });
     }
   }, [shouldStartSession, workout, activePlan, startSession]);
