@@ -48,10 +48,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { startDate, endDate }: MetricsRequest = await req.json();
-    
+    let body: MetricsRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { startDate, endDate } = body;
+    if (!startDate || !endDate) {
+      return new Response(JSON.stringify({ error: "Missing startDate or endDate" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const start = new Date(startDate);
     const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return new Response(JSON.stringify({ error: "Invalid date format. Use ISO 8601." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch all data in parallel
     const [
