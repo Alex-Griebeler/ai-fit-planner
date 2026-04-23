@@ -55,9 +55,14 @@ function getAppOrigin(requestOrigin: string | null): string {
   return fallback || "https://preview--smartfit-starter.lovable.app";
 }
 
-// Price ID: prefer env, fallback to hardcoded default
+// Price ID resolution:
+// - In LIVE mode (sk_live/rk_live): STRIPE_PRICE_ID is REQUIRED. Fail fast otherwise.
+// - In TEST/sandbox mode: fall back to a hardcoded default for convenience.
 const DEFAULT_PREMIUM_PRICE_ID = "price_1SpBXMLtHQX7R8uhaSvARvLA";
-const PREMIUM_PRICE_ID = (Deno.env.get("STRIPE_PRICE_ID") ?? "").trim() || DEFAULT_PREMIUM_PRICE_ID;
+const RAW_STRIPE_PRICE_ID = (Deno.env.get("STRIPE_PRICE_ID") ?? "").trim();
+const RAW_STRIPE_KEY = (Deno.env.get("STRIPE_SECRET_KEY") ?? "").trim();
+const IS_LIVE_MODE = RAW_STRIPE_KEY.startsWith("sk_live") || RAW_STRIPE_KEY.startsWith("rk_live");
+const PREMIUM_PRICE_ID = RAW_STRIPE_PRICE_ID || (IS_LIVE_MODE ? "" : DEFAULT_PREMIUM_PRICE_ID);
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -73,11 +78,20 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started", { priceId: PREMIUM_PRICE_ID });
+    logStep("Function started", { priceId: PREMIUM_PRICE_ID, liveMode: IS_LIVE_MODE });
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     logStep("Stripe key verified");
+
+    // Fail fast in live mode without explicit price configuration
+    if (IS_LIVE_MODE && !RAW_STRIPE_PRICE_ID) {
+      logStep("LIVE mode requires STRIPE_PRICE_ID env var");
+      return new Response(JSON.stringify({ error: "Internal server error" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
