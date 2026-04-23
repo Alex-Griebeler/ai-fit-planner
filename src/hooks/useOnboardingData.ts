@@ -3,6 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { OnboardingData, InjuryArea, CardioTiming } from "@/types/onboarding";
 
+/**
+ * Legacy normalization: the onboarding previously offered a "60plus" session
+ * duration option, but the current low-cost gym model caps duration at 60 min.
+ * Any persisted "60plus" value is coerced to "60min" both on read and write so
+ * the UI never renders an option that no longer exists.
+ */
+function normalizeSessionDuration(
+  value: OnboardingData["sessionDuration"] | string | null | undefined,
+): OnboardingData["sessionDuration"] {
+  if (value === "60plus") return "60min";
+  return (value ?? null) as OnboardingData["sessionDuration"];
+}
+
 export interface UserOnboardingData {
   id: string;
   user_id: string;
@@ -31,7 +44,7 @@ function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
     goal: data.goal,
     timeframe: data.timeframe,
     trainingDays: data.training_days,
-    sessionDuration: data.session_duration,
+    sessionDuration: normalizeSessionDuration(data.session_duration),
     exerciseTypes: data.exercise_types,
     includeCardio: data.include_cardio,
     cardioTiming: data.cardio_timing,
@@ -52,7 +65,7 @@ function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "u
     goal: data.goal,
     timeframe: data.timeframe,
     training_days: data.trainingDays,
-    session_duration: data.sessionDuration,
+    session_duration: normalizeSessionDuration(data.sessionDuration),
     exercise_types: data.exerciseTypes,
     include_cardio: data.includeCardio,
     cardio_timing: data.cardioTiming,
@@ -123,7 +136,7 @@ export function useOnboardingData() {
       if (partialData.goal !== undefined) updateFields.goal = partialData.goal;
       if (partialData.timeframe !== undefined) updateFields.timeframe = partialData.timeframe;
       if (partialData.trainingDays !== undefined) updateFields.training_days = partialData.trainingDays;
-      if (partialData.sessionDuration !== undefined) updateFields.session_duration = partialData.sessionDuration;
+      if (partialData.sessionDuration !== undefined) updateFields.session_duration = normalizeSessionDuration(partialData.sessionDuration);
       if (partialData.exerciseTypes !== undefined) updateFields.exercise_types = partialData.exerciseTypes;
       if (partialData.includeCardio !== undefined) updateFields.include_cardio = partialData.includeCardio;
       if (partialData.cardioTiming !== undefined) updateFields.cardio_timing = partialData.cardioTiming;

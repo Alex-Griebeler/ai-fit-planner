@@ -84,6 +84,8 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [user]);
 
+  const openCustomerPortalRef = useRef<() => Promise<void>>();
+
   const createCheckout = useCallback(async () => {
     if (!user) {
       toast.error('Você precisa estar logado para assinar');
@@ -93,15 +95,41 @@ export function useSubscription(): UseSubscriptionReturn {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout');
 
+      // Detect "already subscribed" (HTTP 409 / SUBSCRIPTION_EXISTS) from either
+      // the FunctionsHttpError envelope or the JSON body.
+      const errMessage =
+        (fnError as { message?: string } | null)?.message ??
+        (data && typeof data === 'object' ? (data as { error?: string }).error : undefined) ??
+        '';
+      const errCode =
+        data && typeof data === 'object' ? (data as { code?: string }).code : undefined;
+
+      const isAlreadySubscribed =
+        errCode === 'SUBSCRIPTION_EXISTS' ||
+        /409/.test(errMessage) ||
+        /already.*(active|subscri)/i.test(errMessage) ||
+        /assinatura ativa/i.test(errMessage) ||
+        /subscription_exists/i.test(errMessage);
+
+      if (isAlreadySubscribed) {
+        toast.info('Você já possui uma assinatura ativa. Abrindo o portal de gerenciamento...');
+        // Refresh state and open the customer portal automatically.
+        await checkSubscription();
+        if (openCustomerPortalRef.current) {
+          await openCustomerPortalRef.current();
+        }
+        return;
+      }
+
       if (fnError) {
         throw new Error(fnError.message);
       }
 
-      if (data.error) {
+      if (data?.error) {
         throw new Error(data.error);
       }
 
-      if (data.url) {
+      if (data?.url) {
         window.open(data.url, '_blank');
       }
     } catch (err) {
@@ -109,7 +137,7 @@ export function useSubscription(): UseSubscriptionReturn {
       toast.error('Erro ao criar sessão de pagamento');
       console.error('Checkout error:', error);
     }
-  }, [user]);
+  }, [user, checkSubscription]);
 
   const openCustomerPortal = useCallback(async () => {
     if (!user) {

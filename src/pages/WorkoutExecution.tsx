@@ -103,12 +103,13 @@ export default function WorkoutExecution() {
         workoutDay: workout!.day,
         workoutName: workout!.name,
         totalSets,
-      }).catch((error) => {
-        if (error.message?.includes('recently completed')) {
+      }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error ?? '');
+        if (/recently completed/i.test(message)) {
           toast.info('Sessão finalizada recentemente. Aguarde alguns segundos antes de iniciar outra.');
         } else {
           console.error('[WorkoutExecution] Error starting session:', error);
-          toast.error('Erro ao iniciar sessão de treino. Voltando ao dashboard.');
+          toast.error('Não foi possível iniciar o treino agora. Voltando ao dashboard.');
         }
         navigate('/dashboard', { replace: true });
       });

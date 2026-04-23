@@ -125,7 +125,10 @@ serve(async (req) => {
       });
     }
 
-    // Find the customer with an active/trialing subscription
+    // Find the customer with an active/trialing subscription.
+    // We ONLY open the billing portal for customers that currently hold a
+    // valid subscription. This prevents free users from landing in a portal
+    // where they cannot do anything meaningful.
     let bestCustomerId: string | null = null;
     for (const cust of customers.data) {
       const [activeSubs, trialingSubs] = await Promise.all([
@@ -139,10 +142,15 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to first customer if none has active sub
     if (!bestCustomerId) {
-      bestCustomerId = customers.data[0].id;
-      logStep("No customer with active sub, using first customer", { customerId: bestCustomerId });
+      logStep("No active/trialing subscription found for any customer");
+      return new Response(JSON.stringify({
+        error: "Nenhuma assinatura ativa encontrada. Acesse a página de planos para assinar.",
+        code: "NO_ACTIVE_SUBSCRIPTION",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     const appOrigin = getAppOrigin(origin);

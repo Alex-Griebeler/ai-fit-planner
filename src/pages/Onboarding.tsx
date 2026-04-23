@@ -61,6 +61,13 @@ export default function Onboarding() {
       weight: profile?.weight || null,
     };
 
+    // Legacy normalization: "60plus" was an old session duration option that no
+    // longer exists in the low-cost gym model. Coerce to "60min" so the UI does
+    // not try to render a non-existent option.
+    if ((mergedData.sessionDuration as unknown as string) === '60plus') {
+      mergedData.sessionDuration = '60min';
+    }
+
     setData(mergedData);
     setHasInitialized(true);
   }, [profile, savedOnboardingData, isLoadingProfile, isLoadingOnboarding, hasInitialized]);
