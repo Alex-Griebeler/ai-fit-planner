@@ -166,6 +166,12 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [user]);
 
+  // Keep a ref to openCustomerPortal so createCheckout can call it without
+  // creating a circular useCallback dependency.
+  useEffect(() => {
+    openCustomerPortalRef.current = openCustomerPortal;
+  }, [openCustomerPortal]);
+
   // Initial check on mount
   useEffect(() => {
     checkSubscription();
