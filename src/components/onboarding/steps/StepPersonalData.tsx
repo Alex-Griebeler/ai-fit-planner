@@ -59,7 +59,7 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Data de nascimento</label>
             <Input
