@@ -19,10 +19,6 @@ export default defineConfig(({ mode }) => ({
             return "pdf-vendor";
           }
 
-          if (id.includes("recharts") || id.includes("d3-")) {
-            return "charts-vendor";
-          }
-
           if (id.includes("@supabase")) {
             return "supabase-vendor";
           }
