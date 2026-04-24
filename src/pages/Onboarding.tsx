@@ -152,8 +152,9 @@ export default function Onboarding() {
       navigate('/result');
     } catch (error) {
       console.error('[onboarding] save failed:', error);
-      const message = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro ao salvar dados: ${message}`, { duration: 6000 });
+      toast.error('Não foi possível salvar seus dados. Tente novamente ou fale com o suporte.', {
+        duration: 6000,
+      });
     } finally {
       setIsSubmitting(false);
     }

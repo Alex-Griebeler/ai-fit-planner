@@ -39,11 +39,11 @@ function computeStatus(row: ParQResponseRow | null): ParQStatus {
   };
 }
 
-// Fail-open default used when the PAR-Q table is unavailable (e.g. the
-// migration has not been applied yet). Blocking the entire app in that
-// case would be worse than letting the user through.
-const FAIL_OPEN_STATUS: ParQStatus = {
-  requiresAnswers: false,
+// Fail-safe default used when the PAR-Q table is unavailable or the lookup
+// fails. We prefer requiring screening over silently letting users through,
+// since the questionnaire is a safety/liability gate before training.
+const FAIL_SAFE_STATUS: ParQStatus = {
+  requiresAnswers: true,
   blocked: false,
   lastSubmittedAt: null,
 };
@@ -54,7 +54,7 @@ export function useParQStatus() {
   const query = useQuery({
     queryKey: ['par-q-status', user?.id],
     queryFn: async (): Promise<ParQStatus> => {
-      if (!user?.id) return FAIL_OPEN_STATUS;
+      if (!user?.id) return FAIL_SAFE_STATUS;
 
       const { data, error } = await supabase
         .from('par_q_responses')
@@ -65,8 +65,8 @@ export function useParQStatus() {
         .maybeSingle();
 
       if (error) {
-        console.warn('[PAR-Q] status lookup failed, allowing through:', error.message);
-        return FAIL_OPEN_STATUS;
+        console.warn('[PAR-Q] status lookup failed, requiring screening:', error.message);
+        return FAIL_SAFE_STATUS;
       }
       return computeStatus((data as ParQResponseRow | null) ?? null);
     },
@@ -76,7 +76,7 @@ export function useParQStatus() {
   });
 
   return {
-    status: query.data ?? FAIL_OPEN_STATUS,
+    status: query.data ?? FAIL_SAFE_STATUS,
     isLoading: query.isLoading,
     error: query.error,
   };
