@@ -52,15 +52,15 @@ export function useProfile() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Use upsert to create profile if it doesn't exist
-      const payload: Record<string, unknown> = {
+      const payload = {
         user_id: user.id,
         name: updates.name || "Usuário",
         gender: updates.gender,
         age: updates.age,
         height: updates.height,
         weight: updates.weight,
+        ...(updates.birth_date !== undefined ? { birth_date: updates.birth_date } : {}),
       };
-      if (updates.birth_date !== undefined) payload.birth_date = updates.birth_date;
 
       const { data, error } = await supabase
         .from("profiles")
