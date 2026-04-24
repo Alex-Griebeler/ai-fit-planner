@@ -74,7 +74,6 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 const VALID_TRAINING_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
 const GOAL_VALUES = ["weight_loss", "hypertrophy", "health", "performance"] as const;
 
 function normalizeGoals(
@@ -127,9 +126,17 @@ const OnboardingSchema = z.object({
   bodyAreas: z.array(z.string().max(30)).max(10),
   hasHealthConditions: z.boolean(),
   injuryAreas: z.array(z.enum([
-    "shoulder", "lower_back", "cervical", 
+    "shoulder", "lower_back", "cervical",
     "knee", "hip", "ankle_foot"
   ])).max(6).default([]),
+  injuryDetails: z.record(
+    z.enum(["shoulder", "lower_back", "cervical", "knee", "hip", "ankle_foot"]),
+    z.object({
+      side: z.enum(["left", "right", "both"]).optional(),
+      severity: z.enum(["mild", "moderate", "severe"]).optional(),
+      duration: z.enum(["acute", "chronic"]).optional(),
+    }).strict(),
+  ).optional().default({}),
   healthDescription: z.string().max(500, "Descrição de saúde deve ter no máximo 500 caracteres").optional().default(""),
   sleepHours: z.string().max(10).nullable(),
   stressLevel: z.enum(["low", "moderate", "high"]).nullable(),
@@ -169,14 +176,6 @@ const OnboardingSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: "Selecione ao menos uma região afetada",
         path: ["injuryAreas"],
-      });
-    }
-
-    if ((data.healthDescription ?? "").trim().length < MIN_HEALTH_DESCRIPTION_LENGTH) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Descreva a condição/lesão com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres`,
-        path: ["healthDescription"],
       });
     }
   }
@@ -2397,6 +2396,32 @@ function getInjuryLabel(area: string): string {
   return labels[area] || area;
 }
 
+function getInjurySideLabel(side: string): string {
+  const labels: Record<string, string> = {
+    left: "Esquerdo",
+    right: "Direito",
+    both: "Ambos",
+  };
+  return labels[side] || side;
+}
+
+function getInjurySeverityLabel(severity: string): string {
+  const labels: Record<string, string> = {
+    mild: "Leve",
+    moderate: "Moderada",
+    severe: "Intensa",
+  };
+  return labels[severity] || severity;
+}
+
+function getInjuryDurationLabel(duration: string): string {
+  const labels: Record<string, string> = {
+    acute: "Aguda (< 4 semanas)",
+    chronic: "Crônica (> 4 semanas)",
+  };
+  return labels[duration] || duration;
+}
+
 function getInjuryAdaptationRules(area: string): string {
   const rules: Record<string, string> = {
     shoulder: "EVITAR overhead pesado, supino aberto >90°, mergulho. PRIORIZAR rotadores externos, estabilizadores escapulares.",
@@ -4383,10 +4408,18 @@ function buildUserPrompt(
 ## CONDIÇÕES DE SAÚDE E DOR
 - Possui condições/lesões: SIM
 - REGIÕES AFETADAS: ${userData.injuryAreas.map(getInjuryLabel).join(', ')}
-${userData.injuryAreas.map(area => `
-### ${getInjuryLabel(area).toUpperCase()}:
+${userData.injuryAreas.map(area => {
+  const detail = userData.injuryDetails?.[area];
+  const detailParts: string[] = [];
+  if (detail?.side) detailParts.push(`Lado: ${getInjurySideLabel(detail.side)}`);
+  if (detail?.severity) detailParts.push(`Intensidade: ${getInjurySeverityLabel(detail.severity)}`);
+  if (detail?.duration) detailParts.push(`Duração: ${getInjuryDurationLabel(detail.duration)}`);
+  const detailSuffix = detailParts.length ? ` (${detailParts.join(' · ')})` : '';
+  return `
+### ${getInjuryLabel(area).toUpperCase()}${detailSuffix}:
 - ${getInjuryAdaptationRules(area)}
-- OBRIGATÓRIO: Incluir alternativas em cada exercício`).join('\n')}
+- OBRIGATÓRIO: Incluir alternativas em cada exercício`;
+}).join('\n')}
 ${userData.healthDescription ? `
 - Descrição adicional: ${sanitizeForPrompt(userData.healthDescription)}` : ''}`;
     } else if (userData.healthDescription) {

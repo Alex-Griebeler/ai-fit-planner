@@ -1,5 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { OnboardingData, INJURY_AREA_OPTIONS, InjuryArea } from '@/types/onboarding';
+import {
+  OnboardingData,
+  INJURY_AREA_OPTIONS,
+  INJURY_SIDE_OPTIONS,
+  INJURY_SEVERITY_OPTIONS,
+  INJURY_DURATION_OPTIONS,
+  SIDE_RELEVANT_INJURIES,
+  InjuryArea,
+  InjuryDetail,
+  InjuryDetails,
+} from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { OptionCard } from '../OptionCard';
 import { Button } from '@/components/ui/button';
@@ -15,13 +25,18 @@ interface StepHealthProps {
   totalSteps: number;
 }
 
-const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+function getAreaLabel(areaKey: InjuryArea): string {
+  return INJURY_AREA_OPTIONS.find((a) => a.key === areaKey)?.label ?? areaKey;
+}
 
 export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: StepHealthProps) {
+  const injuryDetails: InjuryDetails = data.injuryDetails ?? {};
+
   const handleConditionChange = (hasCondition: boolean) => {
     updateData('hasHealthConditions', hasCondition);
     if (!hasCondition) {
       updateData('injuryAreas', []);
+      updateData('injuryDetails', {});
       updateData('healthDescription', '');
     }
   };
@@ -29,19 +44,32 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
   const handleInjuryAreaToggle = (areaKey: InjuryArea) => {
     const currentAreas = data.injuryAreas || [];
     const isSelected = currentAreas.includes(areaKey);
-    
+
     if (isSelected) {
-      updateData('injuryAreas', currentAreas.filter(a => a !== areaKey));
+      updateData('injuryAreas', currentAreas.filter((a) => a !== areaKey));
+      const nextDetails = { ...injuryDetails };
+      delete nextDetails[areaKey];
+      updateData('injuryDetails', nextDetails);
     } else {
       updateData('injuryAreas', [...currentAreas, areaKey]);
     }
   };
 
+  const updateDetail = <K extends keyof InjuryDetail>(
+    areaKey: InjuryArea,
+    field: K,
+    value: InjuryDetail[K],
+  ) => {
+    const current = injuryDetails[areaKey] ?? {};
+    updateData('injuryDetails', {
+      ...injuryDetails,
+      [areaKey]: { ...current, [field]: value },
+    });
+  };
+
   const selectedAreasCount = (data.injuryAreas || []).length;
-  const trimmedDescription = data.healthDescription.trim();
   const missingInjuryArea = data.hasHealthConditions && selectedAreasCount === 0;
-  const missingHealthDescription = data.hasHealthConditions && trimmedDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH;
-  const canProceed = !missingInjuryArea && !missingHealthDescription;
+  const canProceed = !missingInjuryArea;
 
   return (
     <OnboardingLayout
@@ -116,12 +144,55 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                 )}
               </div>
 
+              {(data.injuryAreas || []).length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Preenchendo os detalhes abaixo a prescrição fica mais precisa. Campos são opcionais.
+                  </p>
+                  {(data.injuryAreas || []).map((areaKey) => {
+                    const detail = injuryDetails[areaKey] ?? {};
+                    const sideApplies = SIDE_RELEVANT_INJURIES.includes(areaKey);
+                    return (
+                      <div
+                        key={areaKey}
+                        className="rounded-lg border border-border bg-card/40 p-3 space-y-3"
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          {getAreaLabel(areaKey)}
+                        </p>
+                        {sideApplies && (
+                          <ChipRow
+                            label="Lado"
+                            options={INJURY_SIDE_OPTIONS}
+                            value={detail.side}
+                            onChange={(v) => updateDetail(areaKey, 'side', v)}
+                          />
+                        )}
+                        <ChipRow
+                          label="Intensidade"
+                          options={INJURY_SEVERITY_OPTIONS}
+                          value={detail.severity}
+                          onChange={(v) => updateDetail(areaKey, 'severity', v)}
+                        />
+                        <ChipRow
+                          label="Há quanto tempo"
+                          options={INJURY_DURATION_OPTIONS}
+                          value={detail.duration}
+                          onChange={(v) => updateDetail(areaKey, 'duration', v)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
-                  Descrição da condição/lesão <span className="text-destructive">*</span>
+                  Descrição da condição/lesão
+                  <span className="text-xs font-normal text-muted-foreground ml-2">(opcional)</span>
                 </p>
                 <Textarea
-                  placeholder="Descreva sintomas, limitações e cuidados (mínimo de 15 caracteres)..."
+                  placeholder="Ex.: dor no ombro direito há 3 meses, piora ao elevar o braço acima da cabeça."
                   value={data.healthDescription}
                   onChange={(e) => updateData('healthDescription', e.target.value)}
                   className="min-h-[80px]"
@@ -132,14 +203,9 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                     Quanto mais claro, mais segura fica a prescrição.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {trimmedDescription.length}/500
+                    {data.healthDescription.trim().length}/500
                   </p>
                 </div>
-                {missingHealthDescription && (
-                  <p className="text-xs text-destructive mt-2">
-                    Descreva sua condição com pelo menos {MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.
-                  </p>
-                )}
               </div>
             </div>
           </motion.div>
@@ -158,5 +224,39 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
         </Button>
       </div>
     </OnboardingLayout>
+  );
+}
+
+interface ChipRowProps<V extends string> {
+  label: string;
+  options: { value: V; label: string }[];
+  value: V | undefined;
+  onChange: (value: V) => void;
+}
+
+function ChipRow<V extends string>({ label, options, value, onChange }: ChipRowProps<V>) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground mb-1.5">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
+                selected
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border text-muted-foreground hover:border-primary/50'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

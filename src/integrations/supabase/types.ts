@@ -493,6 +493,7 @@ export type Database = {
           id: string
           include_cardio: boolean | null
           injury_areas: string[] | null
+          injury_details: Json
           session_duration: string | null
           sleep_hours: string | null
           split_preference: string | null
@@ -515,6 +516,7 @@ export type Database = {
           id?: string
           include_cardio?: boolean | null
           injury_areas?: string[] | null
+          injury_details?: Json
           session_duration?: string | null
           sleep_hours?: string | null
           split_preference?: string | null
@@ -537,6 +539,7 @@ export type Database = {
           id?: string
           include_cardio?: boolean | null
           injury_areas?: string[] | null
+          injury_details?: Json
           session_duration?: string | null
           sleep_hours?: string | null
           split_preference?: string | null

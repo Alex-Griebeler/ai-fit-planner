@@ -4,7 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { OnboardingData, INJURY_AREA_OPTIONS, InjuryArea } from '@/types/onboarding';
+import {
+  OnboardingData,
+  INJURY_AREA_OPTIONS,
+  INJURY_SIDE_OPTIONS,
+  INJURY_SEVERITY_OPTIONS,
+  INJURY_DURATION_OPTIONS,
+  SIDE_RELEVANT_INJURIES,
+  InjuryArea,
+  InjuryDetail,
+  InjuryDetails,
+} from '@/types/onboarding';
 import { toast } from 'sonner';
 import { Save, Loader2 } from 'lucide-react';
 
@@ -14,12 +24,15 @@ interface HealthSectionProps {
   isSaving: boolean;
 }
 
-const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+function getAreaLabel(areaKey: InjuryArea): string {
+  return INJURY_AREA_OPTIONS.find((a) => a.key === areaKey)?.label ?? areaKey;
+}
 
 export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
   const [formData, setFormData] = useState({
     hasHealthConditions: false,
     injuryAreas: [] as InjuryArea[],
+    injuryDetails: {} as InjuryDetails,
     healthDescription: '',
   });
 
@@ -28,30 +41,48 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
       setFormData({
         hasHealthConditions: data.hasHealthConditions || false,
         injuryAreas: data.injuryAreas || [],
+        injuryDetails: data.injuryDetails || {},
         healthDescription: data.healthDescription || '',
       });
     }
   }, [data]);
 
   const toggleInjuryArea = (area: InjuryArea) => {
-    setFormData(prev => ({
+    setFormData((prev) => {
+      const isSelected = prev.injuryAreas.includes(area);
+      if (isSelected) {
+        const nextDetails = { ...prev.injuryDetails };
+        delete nextDetails[area];
+        return {
+          ...prev,
+          injuryAreas: prev.injuryAreas.filter((a) => a !== area),
+          injuryDetails: nextDetails,
+        };
+      }
+      return {
+        ...prev,
+        injuryAreas: [...prev.injuryAreas, area],
+      };
+    });
+  };
+
+  const updateDetail = <K extends keyof InjuryDetail>(
+    areaKey: InjuryArea,
+    field: K,
+    value: InjuryDetail[K],
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      injuryAreas: prev.injuryAreas.includes(area)
-        ? prev.injuryAreas.filter(a => a !== area)
-        : [...prev.injuryAreas, area],
+      injuryDetails: {
+        ...prev.injuryDetails,
+        [areaKey]: { ...(prev.injuryDetails[areaKey] ?? {}), [field]: value },
+      },
     }));
   };
 
   const handleSave = async () => {
-    const trimmedDescription = formData.healthDescription.trim();
-
     if (formData.hasHealthConditions && formData.injuryAreas.length === 0) {
       toast.error('Selecione ao menos uma área afetada.');
-      return;
-    }
-
-    if (formData.hasHealthConditions && trimmedDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH) {
-      toast.error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
       return;
     }
 
@@ -59,7 +90,8 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
       await onSave({
         hasHealthConditions: formData.hasHealthConditions,
         injuryAreas: formData.injuryAreas,
-        healthDescription: trimmedDescription,
+        injuryDetails: formData.injuryDetails,
+        healthDescription: formData.healthDescription.trim(),
       });
       toast.success('Dados de saúde atualizados!');
     } catch (error) {
@@ -73,7 +105,6 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
         <CardTitle className="text-lg">Dados de Saúde</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Tem condições de saúde */}
         <div className="flex items-center space-x-3">
           <Checkbox
             id="hasHealthConditions"
@@ -83,6 +114,7 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
                 ...prev,
                 hasHealthConditions: !!checked,
                 injuryAreas: checked ? prev.injuryAreas : [],
+                injuryDetails: checked ? prev.injuryDetails : {},
                 healthDescription: checked ? prev.healthDescription : '',
               }))
             }
@@ -92,12 +124,11 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
           </Label>
         </div>
 
-        {/* Áreas de Lesão */}
         {formData.hasHealthConditions && (
           <div className="space-y-3">
             <Label>Áreas Afetadas</Label>
             <div className="grid grid-cols-2 gap-3">
-              {INJURY_AREA_OPTIONS.map(area => (
+              {INJURY_AREA_OPTIONS.map((area) => (
                 <div
                   key={area.key}
                   onClick={() => toggleInjuryArea(area.key)}
@@ -114,22 +145,61 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
           </div>
         )}
 
-        {/* Descrição de Saúde */}
+        {formData.hasHealthConditions && formData.injuryAreas.length > 0 && (
+          <div className="space-y-3">
+            <Label>Detalhes por região (opcional)</Label>
+            {formData.injuryAreas.map((areaKey) => {
+              const detail = formData.injuryDetails[areaKey] ?? {};
+              const sideApplies = SIDE_RELEVANT_INJURIES.includes(areaKey);
+              return (
+                <div
+                  key={areaKey}
+                  className="rounded-lg border border-border bg-card/40 p-3 space-y-3"
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    {getAreaLabel(areaKey)}
+                  </p>
+                  {sideApplies && (
+                    <ChipRow
+                      label="Lado"
+                      options={INJURY_SIDE_OPTIONS}
+                      value={detail.side}
+                      onChange={(v) => updateDetail(areaKey, 'side', v)}
+                    />
+                  )}
+                  <ChipRow
+                    label="Intensidade"
+                    options={INJURY_SEVERITY_OPTIONS}
+                    value={detail.severity}
+                    onChange={(v) => updateDetail(areaKey, 'severity', v)}
+                  />
+                  <ChipRow
+                    label="Há quanto tempo"
+                    options={INJURY_DURATION_OPTIONS}
+                    value={detail.duration}
+                    onChange={(v) => updateDetail(areaKey, 'duration', v)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {formData.hasHealthConditions && (
           <div className="space-y-2">
-            <Label htmlFor="healthDescription">Observações Adicionais</Label>
+            <Label htmlFor="healthDescription">
+              Observações Adicionais
+              <span className="text-xs font-normal text-muted-foreground ml-2">(opcional)</span>
+            </Label>
             <Textarea
               id="healthDescription"
               value={formData.healthDescription}
               onChange={(e) => setFormData({ ...formData, healthDescription: e.target.value })}
-              placeholder="Descreva suas condições de saúde, lesões ou limitações..."
+              placeholder="Ex.: dor no ombro direito há 3 meses, piora ao elevar o braço acima da cabeça."
               rows={4}
               maxLength={500}
             />
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                Mínimo de {MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.
-              </p>
+            <div className="flex items-center justify-end">
               <p className="text-xs text-muted-foreground">
                 {formData.healthDescription.trim().length}/500
               </p>
@@ -137,8 +207,8 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
           </div>
         )}
 
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           disabled={isSaving}
           className="w-full"
           variant="gradient"
@@ -152,5 +222,39 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+interface ChipRowProps<V extends string> {
+  label: string;
+  options: { value: V; label: string }[];
+  value: V | undefined;
+  onChange: (value: V) => void;
+}
+
+function ChipRow<V extends string>({ label, options, value, onChange }: ChipRowProps<V>) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground mb-1.5">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
+                selected
+                  ? 'border-primary bg-primary/10 text-foreground'
+                  : 'border-border text-muted-foreground hover:border-primary/50'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

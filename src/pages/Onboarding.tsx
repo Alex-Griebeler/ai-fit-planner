@@ -27,7 +27,6 @@ import {
 
 // Modelo LOW-COST GYM: 10 steps (removidos Split, Variação e Timeframe)
 const TOTAL_STEPS = 10;
-const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
 const MIN_GOALS_REQUIRED = 1;
 
 export default function Onboarding() {
@@ -109,12 +108,6 @@ export default function Onboarding() {
       const trimmedHealthDescription = data.healthDescription.trim();
       if (data.hasHealthConditions && (!data.injuryAreas || data.injuryAreas.length === 0)) {
         toast.error('Informe as regiões afetadas para gerar um plano seguro.');
-        setStep(9);
-        return;
-      }
-
-      if (data.hasHealthConditions && trimmedHealthDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH) {
-        toast.error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
         setStep(9);
         return;
       }

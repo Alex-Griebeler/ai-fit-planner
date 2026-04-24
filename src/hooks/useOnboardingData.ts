@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
-import { OnboardingData, InjuryArea, CardioTiming } from "@/types/onboarding";
+import { OnboardingData, InjuryArea, InjuryDetails, CardioTiming } from "@/types/onboarding";
 import { normalizeTrainingDays } from "@/lib/trainingDays";
 import { goalsFromLegacy, normalizeGoals, primaryGoalFromGoals } from "@/lib/goals";
 
@@ -22,6 +22,7 @@ export interface UserOnboardingData {
   body_areas: string[];
   has_health_conditions: boolean;
   injury_areas: string[];
+  injury_details?: InjuryDetails | null;
   health_description: string;
   sleep_hours: string | null;
   stress_level: OnboardingData["stressLevel"];
@@ -47,6 +48,7 @@ function dbToAppFormat(data: UserOnboardingData): Partial<OnboardingData> {
     bodyAreas: data.body_areas,
     hasHealthConditions: data.has_health_conditions,
     injuryAreas: (data.injury_areas || []) as InjuryArea[],
+    injuryDetails: (data.injury_details ?? {}) as InjuryDetails,
     healthDescription: data.health_description,
     sleepHours: data.sleep_hours,
     stressLevel: data.stress_level,
@@ -71,6 +73,7 @@ function appToDbFormat(data: OnboardingData): Omit<UserOnboardingData, "id" | "u
     body_areas: data.bodyAreas,
     has_health_conditions: data.hasHealthConditions,
     injury_areas: data.injuryAreas,
+    injury_details: data.injuryDetails ?? {},
     health_description: data.healthDescription,
     sleep_hours: data.sleepHours,
     stress_level: data.stressLevel,
@@ -167,6 +170,7 @@ export function useOnboardingData() {
       if (partialData.bodyAreas !== undefined) updateFields.body_areas = partialData.bodyAreas;
       if (partialData.hasHealthConditions !== undefined) updateFields.has_health_conditions = partialData.hasHealthConditions;
       if (partialData.injuryAreas !== undefined) updateFields.injury_areas = partialData.injuryAreas;
+      if (partialData.injuryDetails !== undefined) updateFields.injury_details = partialData.injuryDetails;
       if (partialData.healthDescription !== undefined) updateFields.health_description = partialData.healthDescription;
       if (partialData.sleepHours !== undefined) updateFields.sleep_hours = partialData.sleepHours;
       if (partialData.stressLevel !== undefined) updateFields.stress_level = partialData.stressLevel;

@@ -62,7 +62,6 @@ const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; i
   }
 };
 
-const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
 const MIN_GOALS_REQUIRED = 1;
 
 // Função para parsear o tipo de cardio e extrair informações
@@ -192,13 +191,6 @@ export default function Result() {
 
       if (sanitizedUserData.hasHealthConditions && sanitizedUserData.injuryAreas.length === 0) {
         throw new Error('Informe ao menos uma região afetada para gerar um plano seguro.');
-      }
-
-      if (
-        sanitizedUserData.hasHealthConditions
-        && normalizedHealthDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH
-      ) {
-        throw new Error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
       }
 
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
@@ -419,6 +411,7 @@ export default function Result() {
         bodyAreas: savedOnboardingData.bodyAreas || [],
         hasHealthConditions: savedOnboardingData.hasHealthConditions || false,
         injuryAreas: savedOnboardingData.injuryAreas || [],
+        injuryDetails: savedOnboardingData.injuryDetails || {},
         healthDescription: savedOnboardingData.healthDescription || '',
         sleepHours: savedOnboardingData.sleepHours || null,
         stressLevel: savedOnboardingData.stressLevel || null,
