@@ -46,17 +46,17 @@ import {
 // Descrições dos tipos de cardio para exibição
 const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; icon: string }> = {
   'LISS': {
-    name: 'Cardio Leve (LISS)',
+    name: 'Leve (contínuo)',
     description: 'Baixa intensidade, longa duração. Caminhada, bike leve. FC 50-65% máxima.',
     icon: '🚶'
   },
   'MICT': {
-    name: 'Cardio Moderado (MICT)',
+    name: 'Moderado (contínuo)',
     description: 'Intensidade moderada. Corrida leve, elíptico. FC 65-75% máxima.',
     icon: '🏃'
   },
   'HIIT': {
-    name: 'Cardio Intenso (HIIT)',
+    name: 'Intenso (intervalado)',
     description: 'Alta intensidade intervalada. Sprints, burpees. Séries curtas com descanso.',
     icon: '⚡'
   }
