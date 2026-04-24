@@ -8,6 +8,7 @@ export interface Profile {
   name: string;
   gender: "female" | "male" | "other" | null;
   age: number | null;
+  birth_date: string | null;
   height: number | null;
   weight: number | null;
   avatar_url: string | null;
@@ -19,6 +20,7 @@ export interface ProfileUpdate {
   name?: string;
   gender?: "female" | "male" | "other" | null;
   age?: number | null;
+  birth_date?: string | null;
   height?: number | null;
   weight?: number | null;
 }
@@ -50,18 +52,19 @@ export function useProfile() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Use upsert to create profile if it doesn't exist
+      const payload: Record<string, unknown> = {
+        user_id: user.id,
+        name: updates.name || "Usuário",
+        gender: updates.gender,
+        age: updates.age,
+        height: updates.height,
+        weight: updates.weight,
+      };
+      if (updates.birth_date !== undefined) payload.birth_date = updates.birth_date;
+
       const { data, error } = await supabase
         .from("profiles")
-        .upsert({
-          user_id: user.id,
-          name: updates.name || "Usuário",
-          gender: updates.gender,
-          age: updates.age,
-          height: updates.height,
-          weight: updates.weight,
-        }, {
-          onConflict: "user_id",
-        })
+        .upsert(payload, { onConflict: "user_id" })
         .select()
         .single();
 
