@@ -250,12 +250,12 @@ export type Database = {
           version: number
         }
         Insert: {
-          answers: Json
-          any_yes: boolean
+          answers?: Json
+          any_yes?: boolean
           id?: string
           submitted_at?: string
           user_id: string
-          version?: number
+          version: number
         }
         Update: {
           answers?: Json
