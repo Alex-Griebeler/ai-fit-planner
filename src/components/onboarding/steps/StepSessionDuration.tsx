@@ -16,7 +16,6 @@ const DURATION_OPTIONS = [
   { value: '30min', label: '30 minutos' },
   { value: '45min', label: '45 minutos' },
   { value: '60min', label: '60 minutos' },
-  { value: '60plus', label: '+60 minutos' },
 ] as const;
 
 export function StepSessionDuration({ data, updateData, onNext, onBack, totalSteps }: StepSessionDurationProps) {

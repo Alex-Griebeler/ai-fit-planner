@@ -1,7 +1,19 @@
+import { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import { OnboardingData } from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import {
+  calculateAge,
+  MIN_AGE_YEARS,
+  MAX_AGE_YEARS,
+  MIN_BIRTH_DATE,
+} from '@/lib/age';
 
 interface StepPersonalDataProps {
   data: OnboardingData;
@@ -11,11 +23,29 @@ interface StepPersonalDataProps {
   totalSteps: number;
 }
 
+const minBirthDate = new Date(MIN_BIRTH_DATE);
+
 export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps }: StepPersonalDataProps) {
-  const MIN_AGE = 13;
-  const MAX_AGE = 120;
-  const ageIsValid = data.age !== null && data.age >= MIN_AGE && data.age <= MAX_AGE;
-  const canProceed = data.gender !== null && ageIsValid && data.height !== null && data.weight !== null;
+  // birthDate is the source of truth. `age` is kept derived for backward
+  // compatibility with downstream consumers (Profile, Result, generate-workout).
+  const derivedAge = calculateAge(data.birthDate);
+
+  useEffect(() => {
+    if (derivedAge !== null && derivedAge !== data.age) {
+      updateData('age', derivedAge);
+    }
+  }, [derivedAge, data.age, updateData]);
+
+  const [open, setOpen] = useState(false);
+
+  const effectiveAge = derivedAge ?? data.age ?? null;
+  const ageIsValid = effectiveAge !== null && effectiveAge >= MIN_AGE_YEARS && effectiveAge <= MAX_AGE_YEARS;
+  const canProceed =
+    data.gender !== null && data.birthDate !== null && ageIsValid && data.height !== null && data.weight !== null;
+
+  const today = new Date();
+  const selectedDate = data.birthDate ? parseISO(data.birthDate) : undefined;
+  const defaultMonth = selectedDate ?? new Date(today.getFullYear() - 25, today.getMonth(), 1);
 
   return (
     <OnboardingLayout
@@ -46,24 +76,52 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Idade</label>
-            <Input
-              type="number"
-              placeholder="25"
-              min={MIN_AGE}
-              max={MAX_AGE}
-              value={data.age || ''}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                updateData('age', isNaN(val) ? null : val);
-              }}
-            />
-            {data.age !== null && data.age < MIN_AGE && (
-              <p className="text-xs text-destructive mt-1">Idade mínima: {MIN_AGE} anos</p>
-            )}
-          </div>
+        <div>
+          <label className="text-sm text-muted-foreground mb-2 block">Data de nascimento</label>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'w-full justify-start text-left font-normal h-11',
+                  !data.birthDate && 'text-muted-foreground',
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Selecione sua data de nascimento'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (!date) return;
+                  const iso = format(date, 'yyyy-MM-dd');
+                  updateData('birthDate', iso);
+                  updateData('age', calculateAge(iso));
+                  setOpen(false);
+                }}
+                disabled={(date) => date > today || date < minBirthDate}
+                defaultMonth={defaultMonth}
+                fromYear={1900}
+                toYear={today.getFullYear()}
+                initialFocus
+                className={cn('p-3 pointer-events-auto')}
+              />
+            </PopoverContent>
+          </Popover>
+          {effectiveAge !== null && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Idade calculada: <span className="text-foreground font-medium">{effectiveAge} anos</span>
+            </p>
+          )}
+          {effectiveAge !== null && effectiveAge < MIN_AGE_YEARS && (
+            <p className="text-xs text-destructive mt-1">Idade mínima: {MIN_AGE_YEARS} anos</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Altura (cm)</label>
             <Input
