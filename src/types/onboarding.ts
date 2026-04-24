@@ -2,12 +2,12 @@ import type { GoalValue } from '@/lib/goals';
 
 // Injury area options for structured health data collection
 export const INJURY_AREA_OPTIONS = [
-  { key: 'shoulder', label: 'Ombro', description: 'Dor, instabilidade ou limitação' },
-  { key: 'lower_back', label: 'Lombar', description: 'Dor, hérnia ou desconforto' },
-  { key: 'cervical', label: 'Cervical', description: 'Dor ou tensão' },
-  { key: 'knee', label: 'Joelho', description: 'Dor, instabilidade ou crepitação' },
-  { key: 'hip', label: 'Quadril', description: 'Dor ou limitação de movimento' },
-  { key: 'ankle_foot', label: 'Tornozelo/Pé', description: 'Dor, entorse ou lesão' },
+  { key: 'shoulder', label: 'Ombro' },
+  { key: 'lower_back', label: 'Lombar' },
+  { key: 'cervical', label: 'Cervical' },
+  { key: 'knee', label: 'Joelho' },
+  { key: 'hip', label: 'Quadril' },
+  { key: 'ankle_foot', label: 'Tornozelo/Pé' },
 ] as const;
 
 export type InjuryArea = typeof INJURY_AREA_OPTIONS[number]['key'];

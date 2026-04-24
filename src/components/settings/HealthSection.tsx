@@ -108,7 +108,6 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
                   }`}
                 >
                   <div className="font-medium text-foreground">{area.label}</div>
-                  <div className="text-xs text-muted-foreground">{area.description}</div>
                 </div>
               ))}
             </div>
