@@ -35,12 +35,47 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !authData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const payload: PushPayload = await req.json();
+    if (!payload?.userId || !payload?.title || !payload?.body) {
+      return new Response(JSON.stringify({ error: "Invalid payload" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: authData.user.id,
+      _role: "admin",
+    });
+    const canSend = isAdmin === true || payload.userId === authData.user.id;
+    if (!canSend) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get user's push subscriptions
     const { data: subscriptions, error: subError } = await supabaseAdmin
       .from("push_subscriptions")
-      .select("endpoint, p256dh, auth")
+      .select("endpoint")
       .eq("user_id", payload.userId);
 
     if (subError) throw subError;
@@ -66,21 +101,12 @@ Deno.serve(async (req) => {
     // Send to all subscriptions using Web Push API
     const results = await Promise.allSettled(
       subscriptions.map(async (sub) => {
-        // Using the Web Push library approach with fetch
-        const endpoint = sub.endpoint;
-        
-        // For now, we'll use a simplified approach
-        // In production, you'd want to use web-push library
-        const response = await sendWebPush({
-          endpoint,
-          p256dh: sub.p256dh,
-          auth: sub.auth,
+        const success = await sendWebPush({
+          endpoint: sub.endpoint,
           payload: notificationPayload,
-          vapidPublicKey,
-          vapidPrivateKey,
         });
 
-        return { endpoint, success: response };
+        return { endpoint: sub.endpoint, success };
       })
     );
 
@@ -93,8 +119,11 @@ Deno.serve(async (req) => {
       data: payload.data || {},
     });
 
-    const successful = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.filter((r) => r.status === "rejected").length;
+    const successful = results.filter(
+      (r): r is PromiseFulfilledResult<{ endpoint: string; success: boolean }> =>
+        r.status === "fulfilled" && r.value.success,
+    ).length;
+    const failed = results.length - successful;
 
     return new Response(
       JSON.stringify({
@@ -122,32 +151,9 @@ Deno.serve(async (req) => {
 // Simplified Web Push sender
 async function sendWebPush(options: {
   endpoint: string;
-  p256dh: string;
-  auth: string;
   payload: string;
-  vapidPublicKey: string;
-  vapidPrivateKey: string;
 }): Promise<boolean> {
   try {
-    // Import the crypto utilities
-    const encoder = new TextEncoder();
-    
-    // Create JWT for VAPID authentication
-    const now = Math.floor(Date.now() / 1000);
-    const endpointUrl = new URL(options.endpoint);
-    
-    const jwtHeader = { alg: "ES256", typ: "JWT" };
-    const jwtPayload = {
-      aud: endpointUrl.origin,
-      exp: now + 12 * 60 * 60, // 12 hours
-      sub: "mailto:notifications@evolve.app",
-    };
-
-    // For a complete implementation, you'd need to:
-    // 1. Sign the JWT with the VAPID private key
-    // 2. Encrypt the payload with the subscription keys
-    // 3. Send the request to the push endpoint
-    
     // This is a simplified version that works with some push services
     const response = await fetch(options.endpoint, {
       method: "POST",

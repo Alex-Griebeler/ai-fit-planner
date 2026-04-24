@@ -1,19 +1,14 @@
-import { useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import { OnboardingData } from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import {
-  calculateAge,
-  MIN_AGE_YEARS,
-  MAX_AGE_YEARS,
-  MIN_BIRTH_DATE,
-} from '@/lib/age';
+  calculateAgeFromBirthDate,
+  getBirthDateBounds,
+  isAgeInAllowedRange,
+  MAX_ALLOWED_AGE,
+  MIN_ALLOWED_AGE,
+} from '@/lib/profileAge';
 
 interface StepPersonalDataProps {
   data: OnboardingData;
@@ -23,29 +18,17 @@ interface StepPersonalDataProps {
   totalSteps: number;
 }
 
-const minBirthDate = new Date(MIN_BIRTH_DATE);
-
 export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps }: StepPersonalDataProps) {
-  // birthDate is the source of truth. `age` is kept derived for backward
-  // compatibility with downstream consumers (Profile, Result, generate-workout).
-  const derivedAge = calculateAge(data.birthDate);
-
-  useEffect(() => {
-    if (derivedAge !== null && derivedAge !== data.age) {
-      updateData('age', derivedAge);
-    }
-  }, [derivedAge, data.age, updateData]);
-
-  const [open, setOpen] = useState(false);
-
-  const effectiveAge = derivedAge ?? data.age ?? null;
-  const ageIsValid = effectiveAge !== null && effectiveAge >= MIN_AGE_YEARS && effectiveAge <= MAX_AGE_YEARS;
-  const canProceed =
-    data.gender !== null && data.birthDate !== null && ageIsValid && data.height !== null && data.weight !== null;
-
-  const today = new Date();
-  const selectedDate = data.birthDate ? parseISO(data.birthDate) : undefined;
-  const defaultMonth = selectedDate ?? new Date(today.getFullYear() - 25, today.getMonth(), 1);
+  const MIN_HEIGHT = 100;
+  const MAX_HEIGHT = 250;
+  const MIN_WEIGHT = 30;
+  const MAX_WEIGHT = 300;
+  const birthDateBounds = getBirthDateBounds();
+  const computedAge = calculateAgeFromBirthDate(data.birthDate);
+  const ageIsValid = isAgeInAllowedRange(computedAge);
+  const heightIsValid = data.height !== null && data.height >= MIN_HEIGHT && data.height <= MAX_HEIGHT;
+  const weightIsValid = data.weight !== null && data.weight >= MIN_WEIGHT && data.weight <= MAX_WEIGHT;
+  const canProceed = data.gender !== null && data.birthDate !== null && ageIsValid && heightIsValid && weightIsValid;
 
   return (
     <OnboardingLayout
@@ -76,69 +59,61 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
           </div>
         </div>
 
-        <div>
-          <label className="text-sm text-muted-foreground mb-2 block">Data de nascimento</label>
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal h-11',
-                  !data.birthDate && 'text-muted-foreground',
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Selecione sua data de nascimento'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (!date) return;
-                  const iso = format(date, 'yyyy-MM-dd');
-                  updateData('birthDate', iso);
-                  updateData('age', calculateAge(iso));
-                  setOpen(false);
-                }}
-                disabled={(date) => date > today || date < minBirthDate}
-                defaultMonth={defaultMonth}
-                fromYear={1900}
-                toYear={today.getFullYear()}
-                initialFocus
-                className={cn('p-3 pointer-events-auto')}
-              />
-            </PopoverContent>
-          </Popover>
-          {effectiveAge !== null && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Idade calculada: <span className="text-foreground font-medium">{effectiveAge} anos</span>
-            </p>
-          )}
-          {effectiveAge !== null && effectiveAge < MIN_AGE_YEARS && (
-            <p className="text-xs text-destructive mt-1">Idade mínima: {MIN_AGE_YEARS} anos</p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Data de nascimento</label>
+            <Input
+              type="date"
+              min={birthDateBounds.min}
+              max={birthDateBounds.max}
+              value={data.birthDate || ''}
+              onChange={(e) => {
+                const birthDate = e.target.value || null;
+                const age = calculateAgeFromBirthDate(birthDate);
+                updateData('birthDate', birthDate);
+                updateData('age', age);
+              }}
+            />
+            {data.birthDate && !ageIsValid && (
+              <p className="text-xs text-destructive mt-1">
+                Data inválida. A idade deve estar entre {MIN_ALLOWED_AGE} e {MAX_ALLOWED_AGE} anos
+              </p>
+            )}
+            {computedAge !== null && ageIsValid && (
+              <p className="text-xs text-muted-foreground mt-1">Idade calculada: {computedAge} anos</p>
+            )}
+          </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Altura (cm)</label>
             <Input
               type="number"
               placeholder="170"
+              min={MIN_HEIGHT}
+              max={MAX_HEIGHT}
               value={data.height || ''}
               onChange={(e) => updateData('height', parseInt(e.target.value) || null)}
             />
+            {data.height !== null && (data.height < MIN_HEIGHT || data.height > MAX_HEIGHT) && (
+              <p className="text-xs text-destructive mt-1">Altura deve estar entre {MIN_HEIGHT} e {MAX_HEIGHT} cm</p>
+            )}
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">Peso (kg)</label>
             <Input
               type="number"
+              step="0.1"
+              min={MIN_WEIGHT}
+              max={MAX_WEIGHT}
               placeholder="70"
               value={data.weight || ''}
-              onChange={(e) => updateData('weight', parseInt(e.target.value) || null)}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                updateData('weight', Number.isNaN(val) ? null : val);
+              }}
             />
+            {data.weight !== null && (data.weight < MIN_WEIGHT || data.weight > MAX_WEIGHT) && (
+              <p className="text-xs text-destructive mt-1">Peso deve estar entre {MIN_WEIGHT} e {MAX_WEIGHT} kg</p>
+            )}
           </div>
         </div>
 

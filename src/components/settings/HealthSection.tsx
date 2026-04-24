@@ -14,6 +14,8 @@ interface HealthSectionProps {
   isSaving: boolean;
 }
 
+const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+
 export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
   const [formData, setFormData] = useState({
     hasHealthConditions: false,
@@ -41,11 +43,23 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
   };
 
   const handleSave = async () => {
+    const trimmedDescription = formData.healthDescription.trim();
+
+    if (formData.hasHealthConditions && formData.injuryAreas.length === 0) {
+      toast.error('Selecione ao menos uma área afetada.');
+      return;
+    }
+
+    if (formData.hasHealthConditions && trimmedDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH) {
+      toast.error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
+      return;
+    }
+
     try {
       await onSave({
         hasHealthConditions: formData.hasHealthConditions,
         injuryAreas: formData.injuryAreas,
-        healthDescription: formData.healthDescription,
+        healthDescription: trimmedDescription,
       });
       toast.success('Dados de saúde atualizados!');
     } catch (error) {
@@ -64,7 +78,14 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
           <Checkbox
             id="hasHealthConditions"
             checked={formData.hasHealthConditions}
-            onCheckedChange={(checked) => setFormData({ ...formData, hasHealthConditions: !!checked })}
+            onCheckedChange={(checked) =>
+              setFormData((prev) => ({
+                ...prev,
+                hasHealthConditions: !!checked,
+                injuryAreas: checked ? prev.injuryAreas : [],
+                healthDescription: checked ? prev.healthDescription : '',
+              }))
+            }
           />
           <Label htmlFor="hasHealthConditions" className="cursor-pointer">
             Possuo lesões ou condições de saúde relevantes
@@ -104,7 +125,16 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
               onChange={(e) => setFormData({ ...formData, healthDescription: e.target.value })}
               placeholder="Descreva suas condições de saúde, lesões ou limitações..."
               rows={4}
+              maxLength={500}
             />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Mínimo de {MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formData.healthDescription.trim().length}/500
+              </p>
+            </div>
           </div>
         )}
 

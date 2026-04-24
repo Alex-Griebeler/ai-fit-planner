@@ -17,7 +17,7 @@ export function usePasswordValidation(password: string): PasswordValidation {
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{}|;:',.<>?\/\\]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-=[\]{}|;:',.<>?/\\]/.test(password);
 
     const criteriaCount = [hasMinLength, hasUppercase, hasLowercase, hasNumber, hasSymbol].filter(Boolean).length;
     

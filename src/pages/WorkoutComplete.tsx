@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Clock, Dumbbell, Flame, TrendingUp, ChevronRight, Home } from 'lucide-react';
+import { Check, Clock, Dumbbell, Flame, TrendingUp, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -256,6 +256,28 @@ export default function WorkoutComplete() {
                 {(streak?.current_streak ?? 0) + (streakUpdated ? 0 : 1)}
               </motion.p>
               <p className="text-xs text-muted-foreground">sequência</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Safety message */}
+        <motion.div
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="shadow-card border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">Checklist de segurança</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Se houver dor aguda, tontura, falta de ar fora do normal ou formigamento persistente,
+                    interrompa o exercício e procure orientação profissional.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>

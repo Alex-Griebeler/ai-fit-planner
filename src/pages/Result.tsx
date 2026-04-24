@@ -14,6 +14,9 @@ import { useExerciseLoads } from '@/hooks/useExerciseLoads';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useWorkoutSchedule } from '@/hooks/useWorkoutSchedule';
 import { inferMuscleGroupsFromExercises } from '@/lib/workoutScheduler';
+import { normalizeTrainingDays } from '@/lib/trainingDays';
+import { goalsFromLegacy, normalizeGoals, primaryGoalFromGoals, MAX_GOALS_ALLOWED } from '@/lib/goals';
+import { calculateAgeFromBirthDate } from '@/lib/profileAge';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
@@ -33,7 +36,6 @@ import {
   Settings,
   Download
 } from 'lucide-react';
-import { generateWorkoutPdf } from '@/lib/generateWorkoutPdf';
 import {
   Popover,
   PopoverContent,
@@ -59,6 +61,9 @@ const CARDIO_DESCRIPTIONS: Record<string, { name: string; description: string; i
     icon: '⚡'
   }
 };
+
+const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+const MIN_GOALS_REQUIRED = 1;
 
 // Função para parsear o tipo de cardio e extrair informações
 function parseCardioType(cardioType: string): { type: string; duration: string; info: typeof CARDIO_DESCRIPTIONS[string] | null } {
@@ -142,25 +147,60 @@ export default function Result() {
     return () => clearInterval(interval);
   }, [isRateLimited, rateLimitResetAt]);
 
-  // Sanitiza trainingDays removendo duplicatas e validando dias
-  const sanitizeTrainingDays = (days: string[]): string[] => {
-    const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-    return [...new Set(days)].filter(day => validDays.includes(day));
-  };
-
-  const generatePlan = async (userData: OnboardingData) => {
+  const generatePlan = useCallback(async (userData: OnboardingData) => {
     setLoading(true);
     setError(null);
     setRateLimitResetAt(null);
     setIsRateLimited(false);
-
-    // Sanitiza os dados antes de enviar
-    const sanitizedUserData: OnboardingData = {
-      ...userData,
-      trainingDays: sanitizeTrainingDays(userData.trainingDays),
-    };
+    let rateLimitedResponse = false;
 
     try {
+      // Sanitiza os dados antes de enviar
+      const normalizedHealthDescription = (userData.healthDescription || '').trim();
+      const normalizedGoals = goalsFromLegacy(userData.goal, userData.goals);
+      const computedAge = calculateAgeFromBirthDate(userData.birthDate);
+      const sanitizedUserData: OnboardingData = {
+        ...userData,
+        age: computedAge ?? userData.age,
+        goals: normalizedGoals.slice(0, MAX_GOALS_ALLOWED),
+        goal: primaryGoalFromGoals(normalizedGoals.slice(0, MAX_GOALS_ALLOWED)),
+        trainingDays: normalizeTrainingDays(userData.trainingDays),
+        sessionDuration: userData.sessionDuration === '60plus' ? '60min' : userData.sessionDuration,
+        healthDescription: normalizedHealthDescription,
+      };
+
+      if (sanitizedUserData.goals.length < MIN_GOALS_REQUIRED) {
+        throw new Error('Selecione pelo menos 1 objetivo para gerar o plano.');
+      }
+
+      if (sanitizedUserData.trainingDays.length === 0) {
+        throw new Error('Selecione pelo menos 1 dia de treino válido para gerar o plano.');
+      }
+
+      if (sanitizedUserData.includeCardio && !sanitizedUserData.cardioTiming) {
+        throw new Error('Selecione como prefere fazer o cardio antes de gerar o plano.');
+      }
+
+      if (
+        sanitizedUserData.includeCardio &&
+        sanitizedUserData.cardioTiming &&
+        ['pre_workout', 'post_workout'].includes(sanitizedUserData.cardioTiming) &&
+        sanitizedUserData.sessionDuration === '30min'
+      ) {
+        throw new Error('Com sessão de 30 minutos, o cardio deve ser em dia separado.');
+      }
+
+      if (sanitizedUserData.hasHealthConditions && sanitizedUserData.injuryAreas.length === 0) {
+        throw new Error('Informe ao menos uma região afetada para gerar um plano seguro.');
+      }
+
+      if (
+        sanitizedUserData.hasHealthConditions
+        && normalizedHealthDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH
+      ) {
+        throw new Error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
+      }
+
       const { data: responseData, error: functionError } = await supabase.functions.invoke(
         'generate-workout',
         { body: { userData: sanitizedUserData } }
@@ -168,6 +208,7 @@ export default function Result() {
 
       // Handle rate limit (status 429) - resposta estruturada da Edge Function
       if (responseData?.reset_at || responseData?.error?.includes('Limite')) {
+        rateLimitedResponse = true;
         setRateLimitResetAt(new Date(responseData.reset_at));
         setIsRateLimited(true);
         throw new Error('Limite de gerações atingido. Aguarde o tempo indicado.');
@@ -220,13 +261,13 @@ export default function Result() {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao gerar plano';
       setError(errorMessage);
       
-      if (!isRateLimited) {
+      if (!rateLimitedResponse) {
         toast.error('Erro ao gerar plano de treino. Tente novamente.');
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [createPlan]);
 
   const savePlanToDatabase = async () => {
     if (!plan) return;
@@ -280,14 +321,18 @@ export default function Result() {
     const savedSessionData = sessionStorage.getItem('onboardingData');
     if (savedSessionData) {
       // Prevent duplicate generation even with sessionStorage present
-      if (hasStartedGeneration.current) {
+      // but still allow explicit retries.
+      if (hasStartedGeneration.current && retryCount === 0) {
         return;
       }
       hasStartedGeneration.current = true;
       
       let parsedData: OnboardingData;
       try {
-        parsedData = JSON.parse(savedSessionData);
+        parsedData = {
+          ...initialOnboardingData,
+          ...JSON.parse(savedSessionData),
+        };
         if (!parsedData || typeof parsedData !== 'object' || !Array.isArray(parsedData.trainingDays)) {
           throw new Error('Invalid onboarding data structure');
         }
@@ -298,9 +343,23 @@ export default function Result() {
         return;
       }
       
-      // Sanitize trainingDays from sessionStorage (may be corrupted)
-      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-      parsedData.trainingDays = [...new Set(parsedData.trainingDays)].filter(d => validDays.includes(d));
+      // Sanitize trainingDays from sessionStorage (may be corrupted or legacy aliases)
+      parsedData.trainingDays = normalizeTrainingDays(parsedData.trainingDays);
+      parsedData.goals = goalsFromLegacy(parsedData.goal, parsedData.goals);
+      parsedData.goal = primaryGoalFromGoals(parsedData.goals);
+      parsedData.age = calculateAgeFromBirthDate(parsedData.birthDate) ?? parsedData.age;
+      if (parsedData.trainingDays.length === 0) {
+        sessionStorage.removeItem('onboardingData');
+        toast.error('Seus dias de treino precisam ser revisados antes de gerar o plano.');
+        navigate('/onboarding');
+        return;
+      }
+      if (parsedData.goals.length < MIN_GOALS_REQUIRED) {
+        sessionStorage.removeItem('onboardingData');
+        toast.error('Selecione pelo menos 1 objetivo antes de gerar o plano.');
+        navigate('/onboarding');
+        return;
+      }
       
       // Deactivation is handled inside createPlan hook — no need to call deactivatePlan here
       
@@ -341,13 +400,16 @@ export default function Result() {
     // PRIORITY 3: No active plan and no sessionStorage - check if we can generate from saved onboarding
     if (savedOnboardingData && profile) {
       hasStartedGeneration.current = true;
+      const profileBirthDate = profile.birth_date ?? null;
       const fullData: OnboardingData = {
         ...initialOnboardingData,
         goal: savedOnboardingData.goal || null,
-        secondaryGoal: savedOnboardingData.secondaryGoal || null,
+        goals: goalsFromLegacy(savedOnboardingData.goal, savedOnboardingData.goals),
         timeframe: savedOnboardingData.timeframe || null,
-        trainingDays: savedOnboardingData.trainingDays || [],
-        sessionDuration: savedOnboardingData.sessionDuration || null,
+        trainingDays: normalizeTrainingDays(savedOnboardingData.trainingDays),
+        sessionDuration: savedOnboardingData.sessionDuration === '60plus'
+          ? '60min'
+          : (savedOnboardingData.sessionDuration || null),
         exerciseTypes: savedOnboardingData.exerciseTypes || [],
         includeCardio: savedOnboardingData.includeCardio || false,
         cardioTiming: savedOnboardingData.cardioTiming || null,
@@ -362,11 +424,24 @@ export default function Result() {
         stressLevel: savedOnboardingData.stressLevel || null,
         name: profile.name || '',
         gender: profile.gender as OnboardingData['gender'] || null,
-        age: profile.age || null,
-        birthDate: profile.birth_date || null,
-        height: profile.height || null,
-        weight: profile.weight || null,
+        birthDate: profileBirthDate,
+        age: calculateAgeFromBirthDate(profileBirthDate) ?? profile.age ?? null,
+        height: profile.height ?? null,
+        weight: profile.weight ?? null,
       };
+      fullData.goal = primaryGoalFromGoals(fullData.goals);
+
+      if (fullData.trainingDays.length === 0) {
+        toast.error('Defina seus dias de treino para gerar o plano.');
+        navigate('/onboarding');
+        return;
+      }
+      if (normalizeGoals(fullData.goals).length < MIN_GOALS_REQUIRED) {
+        toast.error('Defina pelo menos 1 objetivo para gerar o plano.');
+        navigate('/onboarding');
+        return;
+      }
+
       setData(fullData);
       generatePlan(fullData);
       return;
@@ -376,10 +451,12 @@ export default function Result() {
     if (!savedOnboardingData) {
       navigate('/onboarding');
     }
-  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan]);
+  }, [navigate, retryCount, activePlan, savedOnboardingData, profile, isLoadingProfile, isLoadingOnboarding, isLoadingPlans, plan, generatePlan]);
 
   const handleRetry = () => {
     if (data) {
+      hasStartedGeneration.current = false;
+      setError(null);
       setRetryCount(prev => prev + 1);
     }
   };
@@ -418,12 +495,17 @@ export default function Result() {
             aria-label="Carregando"
           />
           <p className="text-foreground text-base font-medium mb-2">
-            {isCreatingNewPlan ? 'Criando seu plano' : 'Carregando...'}
+            {isCreatingNewPlan ? 'Analisando seu questionário e montando seu plano' : 'Carregando...'}
           </p>
           {isCreatingNewPlan && (
-            <p className="text-muted-foreground text-sm tracking-wide">
-              Isso pode levar alguns segundos...
-            </p>
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-sm tracking-wide">
+                Validando segurança clínica e tempo da sessão...
+              </p>
+              <p className="text-muted-foreground text-xs tracking-wide">
+                Isso pode levar alguns segundos.
+              </p>
+            </div>
           )}
         </motion.div>
       </div>
@@ -812,9 +894,10 @@ export default function Result() {
                         variant="ghost"
                         size="icon"
                         className="h-11 w-11 shrink-0 rounded-xl"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
                           if (activePlan) {
+                            const { generateWorkoutPdf } = await import('@/lib/generateWorkoutPdf');
                             generateWorkoutPdf({
                               planName: activePlan.plan_name,
                               workout,

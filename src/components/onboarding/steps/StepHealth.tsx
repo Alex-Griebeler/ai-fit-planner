@@ -15,6 +15,8 @@ interface StepHealthProps {
   totalSteps: number;
 }
 
+const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+
 export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: StepHealthProps) {
   const handleConditionChange = (hasCondition: boolean) => {
     updateData('hasHealthConditions', hasCondition);
@@ -27,7 +29,7 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
   const handleInjuryAreaToggle = (areaKey: InjuryArea) => {
     const currentAreas = data.injuryAreas || [];
     const isSelected = currentAreas.includes(areaKey);
-
+    
     if (isSelected) {
       updateData('injuryAreas', currentAreas.filter(a => a !== areaKey));
     } else {
@@ -35,13 +37,11 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
     }
   };
 
-  // When the user reports a health condition, require either at least one
-  // injury area OR a meaningful textual description (>=10 chars). This keeps
-  // the AI prescription safe by ensuring some structured context is provided.
-  const trimmedDescription = (data.healthDescription || '').trim();
-  const hasInjuryArea = (data.injuryAreas || []).length > 0;
-  const hasValidDescription = trimmedDescription.length >= 10;
-  const canProceed = !data.hasHealthConditions || hasInjuryArea || hasValidDescription;
+  const selectedAreasCount = (data.injuryAreas || []).length;
+  const trimmedDescription = data.healthDescription.trim();
+  const missingInjuryArea = data.hasHealthConditions && selectedAreasCount === 0;
+  const missingHealthDescription = data.hasHealthConditions && trimmedDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH;
+  const canProceed = !missingInjuryArea && !missingHealthDescription;
 
   return (
     <OnboardingLayout
@@ -99,6 +99,7 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                       >
                         <Checkbox
                           checked={isSelected}
+                          onClick={(event) => event.stopPropagation()}
                           onCheckedChange={() => handleInjuryAreaToggle(area.key)}
                           className="mt-0.5"
                         />
@@ -114,30 +115,35 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                     );
                   })}
                 </div>
+                {missingInjuryArea && (
+                  <p className="text-xs text-destructive mt-2">
+                    Selecione ao menos uma região para continuarmos com segurança.
+                  </p>
+                )}
               </div>
 
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
-                  Detalhes adicionais{' '}
-                  {hasInjuryArea ? (
-                    <span className="text-muted-foreground font-normal">(opcional)</span>
-                  ) : (
-                    <span className="text-destructive">*</span>
-                  )}
+                  Descrição da condição/lesão <span className="text-destructive">*</span>
                 </p>
                 <Textarea
-                  placeholder={
-                    hasInjuryArea
-                      ? 'Descreva brevemente para adaptarmos seus treinos com segurança...'
-                      : 'Descreva sua condição com pelo menos 10 caracteres para podermos adaptar seus treinos com segurança.'
-                  }
+                  placeholder="Descreva sintomas, limitações e cuidados (mínimo de 15 caracteres)..."
                   value={data.healthDescription}
                   onChange={(e) => updateData('healthDescription', e.target.value)}
                   className="min-h-[80px]"
+                  maxLength={500}
                 />
-                {!hasInjuryArea && !hasValidDescription && (
-                  <p className="text-xs text-destructive mt-1">
-                    Selecione pelo menos uma região afetada ou descreva sua condição (mín. 10 caracteres).
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Quanto mais claro, mais segura fica a prescrição.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {trimmedDescription.length}/500
+                  </p>
+                </div>
+                {missingHealthDescription && (
+                  <p className="text-xs text-destructive mt-2">
+                    Descreva sua condição com pelo menos {MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.
                   </p>
                 )}
               </div>

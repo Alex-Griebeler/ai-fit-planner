@@ -99,19 +99,14 @@ export function useAdminMetrics(period: Period = '30d') {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const periodDays = {
-    '7d': 7,
-    '30d': 30,
-    '90d': 90,
-  };
-
   const fetchMetrics = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
       const endDate = new Date();
-      const startDate = subDays(endDate, periodDays[period]);
+      const daysBack = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+      const startDate = subDays(endDate, daysBack);
 
       const { data, error: fnError } = await supabase.functions.invoke('admin-metrics', {
         body: {

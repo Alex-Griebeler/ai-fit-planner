@@ -1,3 +1,5 @@
+import type { GoalValue } from '@/lib/goals';
+
 // Injury area options for structured health data collection
 export const INJURY_AREA_OPTIONS = [
   { key: 'shoulder', label: 'Ombro', description: 'Dor, instabilidade ou limitação' },
@@ -10,7 +12,7 @@ export const INJURY_AREA_OPTIONS = [
 
 export type InjuryArea = typeof INJURY_AREA_OPTIONS[number]['key'];
 
-export type CardioTiming = 'post_workout' | 'separate_day' | 'ai_decides';
+export type CardioTiming = 'pre_workout' | 'post_workout' | 'separate_day' | 'ai_decides';
 
 export interface OnboardingData {
   // Step 1 - Name
@@ -18,19 +20,14 @@ export interface OnboardingData {
   
   // Step 2 - Personal Data
   gender: 'female' | 'male' | 'other' | null;
-  age: number | null;
-  // birthDate is the new source of truth (ISO yyyy-mm-dd). `age` is derived
-  // from it for backward compatibility with downstream consumers.
   birthDate: string | null;
+  age: number | null;
   height: number | null;
   weight: number | null;
   
   // Step 3 - Goals
-  // `goal` = primary goal (kept as single value for backward compatibility with
-  // generate-workout, validators, dashboards and saved plans).
-  // `secondaryGoal` = optional second goal (max 1). UI enforces 1-2 total.
-  goal: 'weight_loss' | 'hypertrophy' | 'health' | 'performance' | null;
-  secondaryGoal: 'weight_loss' | 'hypertrophy' | 'health' | 'performance' | null;
+  goal: GoalValue | null;
+  goals: GoalValue[];
   
   // Step 4 - Timeframe
   timeframe: '3months' | '6months' | '12months' | null;
@@ -39,8 +36,6 @@ export interface OnboardingData {
   trainingDays: string[];
   
   // Step 6 - Session Duration
-  // Note: '60plus' is kept in the type only to deserialize legacy DB rows.
-  // The UI no longer offers it; useOnboardingData normalizes it to '60min'.
   sessionDuration: '30min' | '45min' | '60min' | '60plus' | null;
   
   // Step 7 - Exercise Types
@@ -73,12 +68,12 @@ export interface OnboardingData {
 export const initialOnboardingData: OnboardingData = {
   name: '',
   gender: null,
-  age: null,
   birthDate: null,
+  age: null,
   height: null,
   weight: null,
   goal: null,
-  secondaryGoal: null,
+  goals: [],
   timeframe: '6months', // Fixo em 6 meses para modelo low-cost
   trainingDays: [],
   sessionDuration: null,

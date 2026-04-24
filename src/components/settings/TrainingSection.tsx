@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { OnboardingData } from '@/types/onboarding';
 import { toast } from 'sonner';
 import { Save, Loader2 } from 'lucide-react';
+import { normalizeTrainingDays } from '@/lib/trainingDays';
+import { goalsFromLegacy, normalizeGoals, primaryGoalFromGoals, MAX_GOALS_ALLOWED } from '@/lib/goals';
 
 interface TrainingSectionProps {
   data: Partial<OnboardingData> | null;
@@ -15,13 +16,13 @@ interface TrainingSectionProps {
 }
 
 const DAYS = [
-  { key: 'monday', label: 'Seg' },
-  { key: 'tuesday', label: 'Ter' },
-  { key: 'wednesday', label: 'Qua' },
-  { key: 'thursday', label: 'Qui' },
-  { key: 'friday', label: 'Sex' },
-  { key: 'saturday', label: 'Sáb' },
-  { key: 'sunday', label: 'Dom' },
+  { key: 'mon', label: 'Seg' },
+  { key: 'tue', label: 'Ter' },
+  { key: 'wed', label: 'Qua' },
+  { key: 'thu', label: 'Qui' },
+  { key: 'fri', label: 'Sex' },
+  { key: 'sat', label: 'Sáb' },
+  { key: 'sun', label: 'Dom' },
 ];
 
 const GOALS = [
@@ -35,7 +36,6 @@ const DURATIONS = [
   { value: '30min', label: '30 min' },
   { value: '45min', label: '45 min' },
   { value: '60min', label: '60 min' },
-  { value: '60plus', label: '+60 min' },
 ];
 
 const EXPERIENCE_LEVELS = [
@@ -47,6 +47,7 @@ const EXPERIENCE_LEVELS = [
 export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps) {
   const [formData, setFormData] = useState({
     goal: '' as OnboardingData['goal'] | '',
+    goals: [] as OnboardingData['goals'],
     trainingDays: [] as string[],
     sessionDuration: '' as OnboardingData['sessionDuration'] | '',
     experienceLevel: '' as OnboardingData['experienceLevel'] | '',
@@ -55,10 +56,12 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
 
   useEffect(() => {
     if (data) {
+      const normalizedGoals = goalsFromLegacy(data.goal, data.goals);
       setFormData({
-        goal: data.goal || '',
-        trainingDays: data.trainingDays || [],
-        sessionDuration: data.sessionDuration || '',
+        goal: primaryGoalFromGoals(normalizedGoals),
+        goals: normalizedGoals,
+        trainingDays: normalizeTrainingDays(data.trainingDays),
+        sessionDuration: data.sessionDuration === '60plus' ? '60min' : (data.sessionDuration || ''),
         experienceLevel: data.experienceLevel || '',
         variationPreference: data.variationPreference || '',
       });
@@ -74,12 +77,43 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
     }));
   };
 
+  const toggleGoal = (goal: NonNullable<OnboardingData['goal']>) => {
+    setFormData((prev) => {
+      const normalized = normalizeGoals(prev.goals);
+      const hasGoal = normalized.includes(goal);
+      if (!hasGoal && normalized.length >= MAX_GOALS_ALLOWED) {
+        return prev;
+      }
+      const nextGoals = hasGoal
+        ? normalized.filter((item) => item !== goal)
+        : [...normalized, goal];
+
+      return {
+        ...prev,
+        goals: nextGoals,
+        goal: primaryGoalFromGoals(nextGoals),
+      };
+    });
+  };
+
   const handleSave = async () => {
+    const sanitizedTrainingDays = normalizeTrainingDays(formData.trainingDays);
+    const sanitizedGoals = normalizeGoals(formData.goals);
+    if (sanitizedTrainingDays.length === 0) {
+      toast.error('Selecione pelo menos 1 dia de treino');
+      return;
+    }
+    if (sanitizedGoals.length < 1) {
+      toast.error('Selecione pelo menos 1 objetivo');
+      return;
+    }
+
     try {
       await onSave({
-        goal: formData.goal || null,
-        trainingDays: formData.trainingDays,
-        sessionDuration: formData.sessionDuration || null,
+        goal: primaryGoalFromGoals(sanitizedGoals),
+        goals: sanitizedGoals,
+        trainingDays: sanitizedTrainingDays,
+        sessionDuration: formData.sessionDuration === '60plus' ? '60min' : (formData.sessionDuration || null),
         experienceLevel: formData.experienceLevel || null,
         variationPreference: formData.variationPreference || null,
       });
@@ -97,19 +131,24 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
       <CardContent className="space-y-6">
         {/* Objetivo */}
         <div className="space-y-3">
-          <Label>Objetivo Principal</Label>
-          <RadioGroup
-            value={formData.goal || ''}
-            onValueChange={(value) => setFormData({ ...formData, goal: value as OnboardingData['goal'] })}
-            className="grid grid-cols-2 gap-2"
-          >
+          <Label>Objetivos (1 ou 2)</Label>
+          <div className="grid grid-cols-2 gap-2">
             {GOALS.map(goal => (
-              <div key={goal.value} className="flex items-center space-x-2">
-                <RadioGroupItem value={goal.value} id={goal.value} />
-                <Label htmlFor={goal.value} className="font-normal cursor-pointer">{goal.label}</Label>
-              </div>
+              <Button
+                key={goal.value}
+                type="button"
+                variant={formData.goals.includes(goal.value as NonNullable<OnboardingData['goal']>) ? 'default' : 'outline'}
+                size="sm"
+                disabled={!formData.goals.includes(goal.value as NonNullable<OnboardingData['goal']>) && formData.goals.length >= MAX_GOALS_ALLOWED}
+                onClick={() => toggleGoal(goal.value as NonNullable<OnboardingData['goal']>)}
+              >
+                {goal.label}
+              </Button>
             ))}
-          </RadioGroup>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Selecionados: {normalizeGoals(formData.goals).length}/{MAX_GOALS_ALLOWED}
+          </p>
         </div>
 
         {/* Dias de Treino */}
@@ -146,6 +185,9 @@ export function TrainingSection({ data, onSave, isSaving }: TrainingSectionProps
               </div>
             ))}
           </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Limite recomendado: até 60 minutos totais por sessão (força + cardio) para manter aderência e qualidade técnica.
+          </p>
         </div>
 
         {/* Nível de Experiência */}

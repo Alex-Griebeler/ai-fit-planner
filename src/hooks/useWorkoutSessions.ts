@@ -29,6 +29,12 @@ interface StartSessionParams {
   exercisesData?: Json;
 }
 
+interface SessionIdentity {
+  id: string;
+  workout_plan_id: string | null;
+  workout_day: string;
+}
+
 interface UpdateSessionParams {
   completedSets?: number;
   exercisesData?: Json;
@@ -73,6 +79,7 @@ export function useWorkoutSessions() {
         .eq('user_id', user.id)
         .eq('status', 'in_progress')
         .order('started_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
@@ -94,7 +101,12 @@ export function useWorkoutSessions() {
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .gte('completed_at', new Date(Date.now() - 30000).toISOString())
+        .limit(1)
         .maybeSingle();
+
+      if (recentlyCompleted.error) {
+        throw recentlyCompleted.error;
+      }
 
       if (recentlyCompleted.data) {
         throw new Error('Session recently completed - preventing duplicate');
@@ -103,7 +115,10 @@ export function useWorkoutSessions() {
       // Abandon any existing in-progress sessions
       const { error: abandonError } = await supabase
         .from('workout_sessions')
-        .update({ status: 'abandoned' })
+        .update({
+          status: 'abandoned',
+          completed_at: new Date().toISOString(),
+        })
         .eq('user_id', user.id)
         .eq('status', 'in_progress');
 
@@ -123,11 +138,68 @@ export function useWorkoutSessions() {
           exercises_data: params.exercisesData ?? [],
           status: 'in_progress',
         })
-        .select('id')
+        .select('id, workout_plan_id, workout_day')
         .single();
 
-      if (error) throw error;
-      return data.id;
+      if (error) {
+        // If another request created an in-progress session first, reuse it.
+        if (error.code === '23505') {
+          const { data: existingSession, error: existingError } = await supabase
+            .from('workout_sessions')
+            .select('id, workout_plan_id, workout_day')
+            .eq('user_id', user.id)
+            .eq('status', 'in_progress')
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingError) throw existingError;
+          if (existingSession?.id) {
+            const sameWorkout =
+              existingSession.workout_plan_id === params.workoutPlanId &&
+              existingSession.workout_day === params.workoutDay;
+
+            if (sameWorkout) {
+              return existingSession.id;
+            }
+
+            // Best effort retry: abandon conflicting session and try one more insert.
+            await supabase
+              .from('workout_sessions')
+              .update({
+                status: 'abandoned',
+                completed_at: new Date().toISOString(),
+              })
+              .eq('user_id', user.id)
+              .eq('status', 'in_progress');
+
+            const { data: retryData, error: retryError } = await supabase
+              .from('workout_sessions')
+              .insert({
+                user_id: user.id,
+                workout_plan_id: params.workoutPlanId,
+                workout_day: params.workoutDay,
+                workout_name: params.workoutName,
+                total_sets: params.totalSets,
+                completed_sets: 0,
+                exercises_data: params.exercisesData ?? [],
+                status: 'in_progress',
+              })
+              .select('id')
+              .single();
+
+            if (!retryError && retryData?.id) {
+              return retryData.id;
+            }
+
+            throw new Error('Unable to start session due to concurrent session conflict');
+          }
+        }
+
+        throw error;
+      }
+      const sessionIdentity = data as SessionIdentity;
+      return sessionIdentity.id;
     },
     onSuccess: (sessionId, params) => {
       // Immediately set the current session in cache for fast UI response
@@ -242,7 +314,9 @@ export function useWorkoutSessions() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.setQueryData(['workout-sessions', user?.id, 'current'], null);
       queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['workout-sessions', user?.id, 'current'] });
     },
   });
 
@@ -267,6 +341,7 @@ export function useWorkoutSessions() {
   return {
     sessions: sessionsQuery.data ?? [],
     currentSession: currentSessionQuery.data,
+    isCurrentSessionLoading: currentSessionQuery.isLoading,
     isLoading: sessionsQuery.isLoading,
     startSession: startMutation.mutateAsync,
     isStarting: startMutation.isPending,

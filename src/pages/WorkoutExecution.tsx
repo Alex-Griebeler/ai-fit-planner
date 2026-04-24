@@ -35,12 +35,14 @@ export default function WorkoutExecution() {
   // the presence of a valid dayParam + activePlan as sufficient context for a legitimate entry.
   const hasStartSignal = location.state?.startWorkout === true;
   const sessionInitializedRef = useRef(false);
+  const lastSessionKeyRef = useRef<string | null>(null);
   const loadSaveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const { activePlan, isLoading } = useWorkoutPlans();
   const { loads, saveLoad } = useExerciseLoads(activePlan?.id || null);
   const { 
     currentSession,
+    isCurrentSessionLoading,
     startSession, 
     updateSession, 
     completeSession, 
@@ -55,6 +57,7 @@ export default function WorkoutExecution() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [localLoads, setLocalLoads] = useState<Record<string, string>>({});
   const [workoutStartTime] = useState(new Date());
+  const [isInitializingSession, setIsInitializingSession] = useState(false);
 
   // Get workout data
   const workout: WorkoutDay | null = useMemo(() => {
@@ -64,6 +67,29 @@ export default function WorkoutExecution() {
     
     return planData.workouts.find((w: WorkoutDay) => w.day === dayParam) || planData.workouts[0];
   }, [activePlan, dayParam]);
+
+  const sessionKey = useMemo(() => {
+    if (!activePlan?.id || !workout?.day) return null;
+    return `${activePlan.id}:${workout.day}`;
+  }, [activePlan?.id, workout?.day]);
+
+  // Reset the "already initialized" guard whenever user targets a different workout.
+  useEffect(() => {
+    if (sessionKey !== lastSessionKeyRef.current) {
+      sessionInitializedRef.current = false;
+      lastSessionKeyRef.current = sessionKey;
+      setActiveExerciseIndex(0);
+      setCompletedSets({});
+      setLocalLoads({});
+    }
+  }, [sessionKey]);
+
+  const isCurrentSessionForWorkout = useMemo(() => {
+    if (!currentSession || !activePlan?.id || !workout?.day) return false;
+    return currentSession.workout_plan_id === activePlan.id && currentSession.workout_day === workout.day;
+  }, [currentSession, activePlan?.id, workout?.day]);
+
+  const executionSession = isCurrentSessionForWorkout ? currentSession : null;
 
   // Initialize local loads from saved loads
   useEffect(() => {
@@ -80,41 +106,90 @@ export default function WorkoutExecution() {
   }, [loads, workout]);
 
   // Determine if we should start a new session:
-  // 1. If there's already a currentSession → resume it (no new session needed)
+  // 1. If there's already a matching currentSession → resume it (no new session needed)
   // 2. If startWorkout state is present → explicit intent from navigation
-  // 3. If no state but dayParam is present + no currentSession → legitimate entry
+  // 3. If no state but dayParam is present + no matching session → legitimate entry
   //    (covers refresh, deep link, re-entry scenarios)
   // The 30s lock guard in useWorkoutSessions prevents actual duplicates at DB level.
   const shouldStartSession = useMemo(() => {
-    if (!workout || !activePlan || currentSession || sessionInitializedRef.current) return false;
+    if (!workout || !activePlan || isCurrentSessionLoading || isCurrentSessionForWorkout || sessionInitializedRef.current) return false;
     // Strong signal: explicit navigation intent
     if (hasStartSignal) return true;
     // Fallback: dayParam present means user targeted a specific workout day
     if (dayParam) return true;
     return false;
-  }, [workout, activePlan, currentSession, hasStartSignal, dayParam]);
+  }, [workout, activePlan, isCurrentSessionLoading, isCurrentSessionForWorkout, hasStartSignal, dayParam]);
 
   useEffect(() => {
-    if (shouldStartSession) {
-      sessionInitializedRef.current = true;
-      const totalSets = workout!.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
-      startSession({
-        workoutPlanId: activePlan!.id,
-        workoutDay: workout!.day,
-        workoutName: workout!.name,
-        totalSets,
-      }).catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error ?? '');
-        if (/recently completed/i.test(message)) {
+    if (!shouldStartSession) return;
+
+    let isCancelled = false;
+    sessionInitializedRef.current = true;
+    setIsInitializingSession(true);
+
+    const totalSets = workout!.exercises.reduce((sum: number, ex: WorkoutExercise) => sum + ex.sets, 0);
+
+    startSession({
+      workoutPlanId: activePlan!.id,
+      workoutDay: workout!.day,
+      workoutName: workout!.name,
+      totalSets,
+    })
+      .catch((error) => {
+        if (isCancelled) return;
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('[WorkoutExecution] Error starting session:', error);
+        if (message.includes('recently completed')) {
           toast.info('Sessão finalizada recentemente. Aguarde alguns segundos antes de iniciar outra.');
         } else {
-          console.error('[WorkoutExecution] Error starting session:', error);
-          toast.error('Não foi possível iniciar o treino agora. Voltando ao dashboard.');
+          toast.error('Erro ao iniciar sessão de treino. Voltando ao dashboard.');
         }
         navigate('/dashboard', { replace: true });
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsInitializingSession(false);
+        }
       });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [shouldStartSession, workout, activePlan, startSession, navigate]);
+
+  // Hydrate local progress from an existing in-progress session for this workout.
+  useEffect(() => {
+    if (!executionSession || !workout) return;
+
+    const rawExercisesData = executionSession.exercises_data;
+    if (!Array.isArray(rawExercisesData)) return;
+
+    const hydratedCompletedSets: Record<number, number> = {};
+    const hydratedLoads: Record<string, string> = {};
+
+    workout.exercises.forEach((exercise, index) => {
+      const rawItem = rawExercisesData[index] as Record<string, unknown> | undefined;
+      if (!rawItem || typeof rawItem !== 'object') return;
+
+      const rawCompleted = rawItem.completedSets;
+      if (typeof rawCompleted === 'number' && Number.isFinite(rawCompleted)) {
+        hydratedCompletedSets[index] = Math.max(0, Math.min(exercise.sets, Math.floor(rawCompleted)));
+      }
+
+      const rawLoad = rawItem.load;
+      if (typeof rawLoad === 'string' && rawLoad.trim().length > 0) {
+        hydratedLoads[exercise.name] = rawLoad;
+      }
+    });
+
+    if (Object.keys(hydratedCompletedSets).length > 0) {
+      setCompletedSets(hydratedCompletedSets);
     }
-  }, [shouldStartSession, workout, activePlan, startSession]);
+
+    if (Object.keys(hydratedLoads).length > 0) {
+      setLocalLoads((prev) => ({ ...prev, ...hydratedLoads }));
+    }
+  }, [executionSession, workout]);
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -173,7 +248,7 @@ export default function WorkoutExecution() {
     }
 
     // Update session in database
-    if (currentSession) {
+    if (executionSession) {
       const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
       const exercisesData = workout?.exercises.map((ex: WorkoutExercise, idx: number) => ({
         name: ex.name,
@@ -182,7 +257,7 @@ export default function WorkoutExecution() {
         load: localLoads[ex.name] || null,
       }));
       
-      updateSession(currentSession.id, {
+      updateSession(executionSession.id, {
         completedSets: totalCompleted,
         exercisesData,
       }).catch(console.error);
@@ -196,17 +271,20 @@ export default function WorkoutExecution() {
     }
 
     toast.success(`${exercise.name} completo!`, { duration: 2000 });
-  }, [workout, completedSets, currentSession, localLoads, updateSession]);
+  }, [workout, completedSets, executionSession, localLoads, updateSession]);
 
   // Handle single set completion (for granular tracking)
-  const handleSetComplete = useCallback((exerciseIndex: number, setNumber: number) => {
+  const handleSetComplete = useCallback((exerciseIndex: number, _setNumber: number) => {
+    const exercise = workout?.exercises[exerciseIndex];
+    if (!exercise) return;
+
+    const nextCompleted = Math.min(exercise.sets, (completedSets[exerciseIndex] || 0) + 1);
     const newCompletedSets = {
       ...completedSets,
-      [exerciseIndex]: (completedSets[exerciseIndex] || 0) + 1,
+      [exerciseIndex]: nextCompleted,
     };
     setCompletedSets(newCompletedSets);
 
-    const exercise = workout?.exercises[exerciseIndex];
     if (exercise) {
       // Haptic feedback
       if (navigator.vibrate) {
@@ -214,7 +292,7 @@ export default function WorkoutExecution() {
       }
 
       // Update session in database
-      if (currentSession) {
+      if (executionSession) {
         const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
         const exercisesData = workout?.exercises.map((ex: WorkoutExercise, idx: number) => ({
           name: ex.name,
@@ -223,16 +301,16 @@ export default function WorkoutExecution() {
           load: localLoads[ex.name] || null,
         }));
         
-        updateSession(currentSession.id, {
+        updateSession(executionSession.id, {
           completedSets: totalCompleted,
           exercisesData,
         }).catch(console.error);
       }
     }
-  }, [workout, completedSets, currentSession, localLoads, updateSession]);
+  }, [workout, completedSets, executionSession, localLoads, updateSession]);
 
   // Handle set undo
-  const handleSetUndo = useCallback((exerciseIndex: number, setNumber: number) => {
+  const handleSetUndo = useCallback((exerciseIndex: number, _setNumber: number) => {
     const newCompletedSets = {
       ...completedSets,
       [exerciseIndex]: Math.max(0, (completedSets[exerciseIndex] || 0) - 1),
@@ -240,7 +318,7 @@ export default function WorkoutExecution() {
     setCompletedSets(newCompletedSets);
 
     // Persist undo to backend
-    if (currentSession && workout) {
+    if (executionSession && workout) {
       const totalCompleted = Object.values(newCompletedSets).reduce((sum: number, sets: number) => sum + sets, 0);
       const exercisesData = workout.exercises.map((ex: WorkoutExercise, idx: number) => ({
         name: ex.name,
@@ -249,12 +327,12 @@ export default function WorkoutExecution() {
         load: localLoads[ex.name] || null,
       }));
 
-      updateSession(currentSession.id, {
+      updateSession(executionSession.id, {
         completedSets: totalCompleted,
         exercisesData,
       }).catch(console.error);
     }
-  }, [workout, completedSets, currentSession, localLoads, updateSession]);
+  }, [workout, completedSets, executionSession, localLoads, updateSession]);
 
   // Handle manual timer start
   const handleStartTimer = useCallback((exerciseIndex: number) => {
@@ -285,23 +363,29 @@ export default function WorkoutExecution() {
   }, [workout, saveLoad]);
 
   // Handle exit
-  const handleExit = useCallback(() => {
+  const handleExit = useCallback(async () => {
     if (progressStats.completedSets > 0 && !isWorkoutComplete) {
       setShowExitDialog(true);
     } else {
+      if (progressStats.completedSets === 0 && executionSession) {
+        await abandonSession(executionSession.id).catch(console.error);
+      }
       navigate('/dashboard');
     }
-  }, [progressStats.completedSets, isWorkoutComplete, navigate]);
+  }, [progressStats.completedSets, isWorkoutComplete, executionSession, abandonSession, navigate]);
 
   // Handle workout completion
   const handleFinishWorkout = useCallback(async () => {
-    if (currentSession) {
+    if (executionSession) {
       try {
-        await completeSession(currentSession.id);
-        const duration = Math.round((new Date().getTime() - workoutStartTime.getTime()) / 60000);
+        await completeSession(executionSession.id);
+        const startedAt = executionSession.started_at
+          ? new Date(executionSession.started_at)
+          : workoutStartTime;
+        const duration = Math.round((new Date().getTime() - startedAt.getTime()) / 60000);
         navigate('/workout-complete', {
           state: {
-            sessionId: currentSession.id,
+            sessionId: executionSession.id,
             durationMinutes: duration,
             completedSets: progressStats.completedSets,
             totalSets: progressStats.totalSets,
@@ -315,7 +399,7 @@ export default function WorkoutExecution() {
     } else {
       navigate('/dashboard');
     }
-  }, [currentSession, completeSession, workoutStartTime, navigate, progressStats, workout]);
+  }, [executionSession, completeSession, workoutStartTime, navigate, progressStats, workout]);
 
   // Navigate between exercises
   const goToNextExercise = useCallback(() => {
@@ -346,6 +430,10 @@ export default function WorkoutExecution() {
         }
       />
     );
+  }
+
+  if ((isCurrentSessionLoading || isInitializingSession || shouldStartSession) && !executionSession) {
+    return <LoadingScreen message="Iniciando sessao de treino..." />;
   }
 
   const activeExercise = workout.exercises[activeExerciseIndex];
@@ -521,8 +609,8 @@ export default function WorkoutExecution() {
           <AlertDialogFooter>
             <AlertDialogCancel>Continuar treino</AlertDialogCancel>
             <AlertDialogAction onClick={async () => {
-              if (currentSession) {
-                await abandonSession(currentSession.id).catch(console.error);
+              if (executionSession) {
+                await abandonSession(executionSession.id).catch(console.error);
               }
               navigate('/dashboard');
             }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -42,7 +42,13 @@ export function useSubscription(): UseSubscriptionReturn {
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (dbError) {
+        throw dbError;
+      }
 
       if (dbSubscription && dbSubscription.plan_type === 'premium') {
         // User has premium in database, check if still valid
@@ -84,61 +90,6 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [user]);
 
-  const openCustomerPortalRef = useRef<() => Promise<void>>();
-
-  const createCheckout = useCallback(async () => {
-    if (!user) {
-      toast.error('Você precisa estar logado para assinar');
-      return;
-    }
-
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke('create-checkout');
-
-      // Detect "already subscribed" (HTTP 409 / SUBSCRIPTION_EXISTS) from either
-      // the FunctionsHttpError envelope or the JSON body.
-      const errMessage =
-        (fnError as { message?: string } | null)?.message ??
-        (data && typeof data === 'object' ? (data as { error?: string }).error : undefined) ??
-        '';
-      const errCode =
-        data && typeof data === 'object' ? (data as { code?: string }).code : undefined;
-
-      const isAlreadySubscribed =
-        errCode === 'SUBSCRIPTION_EXISTS' ||
-        /409/.test(errMessage) ||
-        /already.*(active|subscri)/i.test(errMessage) ||
-        /assinatura ativa/i.test(errMessage) ||
-        /subscription_exists/i.test(errMessage);
-
-      if (isAlreadySubscribed) {
-        toast.info('Você já possui uma assinatura ativa. Abrindo o portal de gerenciamento...');
-        // Refresh state and open the customer portal automatically.
-        await checkSubscription();
-        if (openCustomerPortalRef.current) {
-          await openCustomerPortalRef.current();
-        }
-        return;
-      }
-
-      if (fnError) {
-        throw new Error(fnError.message);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to create checkout');
-      toast.error('Erro ao criar sessão de pagamento');
-      console.error('Checkout error:', error);
-    }
-  }, [user, checkSubscription]);
-
   const openCustomerPortal = useCallback(async () => {
     if (!user) {
       toast.error('Você precisa estar logado');
@@ -166,32 +117,62 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [user]);
 
-  // Keep a ref to openCustomerPortal so createCheckout can call it without
-  // creating a circular useCallback dependency.
-  useEffect(() => {
-    openCustomerPortalRef.current = openCustomerPortal;
-  }, [openCustomerPortal]);
+  const createCheckout = useCallback(async () => {
+    if (!user) {
+      toast.error('Você precisa estar logado para assinar');
+      return;
+    }
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('create-checkout');
+      const checkoutError = data?.error ?? fnError?.message ?? null;
+
+      if (checkoutError) {
+        const normalizedError = String(checkoutError).toLowerCase();
+        if (normalizedError.includes('active subscription') || normalizedError.includes('subscription_exists')) {
+          toast.info('Sua assinatura já está ativa. Abrindo o portal para gerenciamento.');
+          await openCustomerPortal();
+          return;
+        }
+        throw new Error(String(checkoutError));
+      }
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to create checkout');
+      toast.error('Erro ao criar sessão de pagamento');
+      console.error('Checkout error:', error);
+    }
+  }, [user, openCustomerPortal]);
 
   // Initial check on mount
   useEffect(() => {
     checkSubscription();
   }, [checkSubscription]);
 
-  // Listen for checkout success via URL params and refresh
+  // Refresh immediately after returning from Stripe checkout.
   useEffect(() => {
     if (!user) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success' || params.get('session_id')) {
-      // Immediate check + delayed retry to allow Stripe propagation
+
+    const url = new URL(window.location.href);
+    const hasCheckoutSuccess = url.searchParams.get('checkout') === 'success'
+      || url.searchParams.has('session_id');
+
+    if (!hasCheckoutSuccess) return;
+
+    checkSubscription();
+    const retryTimer = setTimeout(() => {
       checkSubscription();
-      const timer = setTimeout(() => checkSubscription(), 3000);
-      // Clean URL params
-      const url = new URL(window.location.href);
-      url.searchParams.delete('checkout');
-      url.searchParams.delete('session_id');
-      window.history.replaceState({}, '', url.pathname);
-      return () => clearTimeout(timer);
-    }
+    }, 3000);
+
+    url.searchParams.delete('checkout');
+    url.searchParams.delete('session_id');
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, '', nextUrl);
+
+    return () => clearTimeout(retryTimer);
   }, [user, checkSubscription]);
 
   // Polling every 60 seconds

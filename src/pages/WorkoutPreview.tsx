@@ -5,7 +5,6 @@ import { Download, Play, Clock, Dumbbell, Info, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useWorkoutPlans } from '@/hooks/useWorkoutPlans';
-import { generateWorkoutPdf } from '@/lib/generateWorkoutPdf';
 import { toast } from 'sonner';
 import {
   Popover,
@@ -70,10 +69,11 @@ export default function WorkoutPreview() {
     setIsRetrying(false);
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!workout || !activePlan) return;
     
     try {
+      const { generateWorkoutPdf } = await import('@/lib/generateWorkoutPdf');
       generateWorkoutPdf({
         planName: activePlan.plan_name,
         workout,

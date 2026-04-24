@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { OnboardingData } from '@/types/onboarding';
 import { OnboardingLayout } from '../OnboardingLayout';
 import { OptionCard } from '../OptionCard';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Moon, Zap, Loader2 } from 'lucide-react';
 
 interface StepSleepStressProps {
@@ -28,7 +31,8 @@ const STRESS_OPTIONS = [
 ] as const;
 
 export function StepSleepStress({ data, updateData, onFinish, onBack, totalSteps, isLoading }: StepSleepStressProps) {
-  const canProceed = data.sleepHours !== null && data.stressLevel !== null;
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const canProceed = data.sleepHours !== null && data.stressLevel !== null && consentAccepted;
 
   return (
     <OnboardingLayout
@@ -72,6 +76,25 @@ export function StepSleepStress({ data, updateData, onFinish, onBack, totalSteps
               />
             ))}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="health-consent"
+              checked={consentAccepted}
+              onCheckedChange={(checked) => setConsentAccepted(checked === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="health-consent" className="cursor-pointer leading-relaxed">
+              Confirmo que as informações fornecidas são verdadeiras e que interromperei o exercício se houver dor aguda, tontura ou mal-estar.
+            </Label>
+          </div>
+          {!consentAccepted && (
+            <p className="text-xs text-destructive">
+              É necessário aceitar o termo para finalizar o questionário.
+            </p>
+          )}
         </div>
       </div>
 

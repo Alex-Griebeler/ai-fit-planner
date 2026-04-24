@@ -61,7 +61,7 @@ export default function TermsOfUse() {
               Para utilizar os serviços da Plataforma, o Usuário deve:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
-              <li>Ter pelo menos 18 anos de idade ou consentimento do responsável legal;</li>
+              <li>Ter pelo menos 13 anos de idade e, quando menor de 18 anos, utilizar a Plataforma com consentimento do responsável legal;</li>
               <li>Fornecer informações verdadeiras, precisas e atualizadas;</li>
               <li>Manter a confidencialidade de suas credenciais de acesso;</li>
               <li>Notificar imediatamente sobre qualquer uso não autorizado de sua conta.</li>

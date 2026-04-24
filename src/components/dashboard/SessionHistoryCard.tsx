@@ -52,6 +52,33 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
 
   const recentSessions = sessions.slice(0, 5);
 
+  const getStatusConfig = (status: WorkoutSession['status']) => {
+    if (status === 'completed') {
+      return {
+        icon: CheckCircle2,
+        badge: 'Completo',
+        iconClasses: 'bg-green-500/20 text-green-500',
+        badgeVariant: 'default' as const,
+      };
+    }
+
+    if (status === 'in_progress') {
+      return {
+        icon: Clock,
+        badge: 'Em andamento',
+        iconClasses: 'bg-amber-500/20 text-amber-500',
+        badgeVariant: 'secondary' as const,
+      };
+    }
+
+    return {
+      icon: XCircle,
+      badge: 'Abandonado',
+      iconClasses: 'bg-destructive/20 text-destructive',
+      badgeVariant: 'destructive' as const,
+    };
+  };
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="bg-card border-border">
@@ -84,7 +111,11 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
                 <p className="text-sm">Nenhum treino registrado</p>
               </div>
             ) : (
-              recentSessions.map((session, index) => (
+              recentSessions.map((session, index) => {
+                const statusConfig = getStatusConfig(session.status);
+                const StatusIcon = statusConfig.icon;
+
+                return (
                 <motion.div
                   key={session.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -92,17 +123,8 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
                   transition={{ delay: index * 0.05 }}
                   className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group"
                 >
-                  <div className={`
-                    w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                    ${session.status === 'completed' 
-                      ? 'bg-green-500/20 text-green-500' 
-                      : 'bg-destructive/20 text-destructive'}
-                  `}>
-                    {session.status === 'completed' ? (
-                      <CheckCircle2 className="w-5 h-5" />
-                    ) : (
-                      <XCircle className="w-5 h-5" />
-                    )}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${statusConfig.iconClasses}`}>
+                    <StatusIcon className="w-5 h-5" />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -120,10 +142,10 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col items-end gap-1">
                       <Badge 
-                        variant={session.status === 'completed' ? 'default' : 'destructive'}
+                        variant={statusConfig.badgeVariant}
                         className="text-xs"
                       >
-                        {session.status === 'completed' ? 'Completo' : 'Abandonado'}
+                        {statusConfig.badge}
                       </Badge>
                       
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -175,7 +197,8 @@ export function SessionHistoryCard({ sessions, isLoading, onDeleteSession }: Ses
                     )}
                   </div>
                 </motion.div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </CollapsibleContent>

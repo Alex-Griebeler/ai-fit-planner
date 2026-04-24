@@ -1,145 +1,81 @@
 # Checklist de Deploy - Migration (16/03/2026)
 
 ## Objetivo
-
 Aplicar com segurança a migration:
-
 - `supabase/migrations/20260316191500_6f3a5c2b-restore-free-default-and-session-integrity.sql`
 
 ## Pré-requisitos
-
 1. Supabase CLI instalado (`supabase --version`).
 2. Projeto linkado (`supabase link --project-ref drudjgrbludyqdogwvqc`).
 3. Credenciais de banco remoto disponíveis (se necessário `--password` ou `--db-url`).
 4. Janela de deploy aprovada (migration mexe em `profiles.weight` e `workout_sessions`).
 
 ## 1. Validação local (sem aplicar)
-
 1. Confirmar migration nova no diretório:
-
 ```bash
 ls -1 supabase/migrations | tail -n 5
 ```
-
-2. Revisar conteúdo da migration:
-
+2. Dry-run da aplicação no remoto:
 ```bash
-cat supabase/migrations/20260316191500_6f3a5c2b-restore-free-default-and-session-integrity.sql
+supabase db push --linked --dry-run
 ```
-
-## 2. Backup prévio
-
-Antes de aplicar, verificar estado atual:
-
-```sql
--- Verificar default atual da função handle_new_user_subscription
-SELECT prosrc FROM pg_proc WHERE proname = 'handle_new_user_subscription';
-
--- Verificar tipo atual de profiles.weight
-SELECT column_name, data_type, numeric_precision, numeric_scale
-FROM information_schema.columns
-WHERE table_name = 'profiles' AND column_name = 'weight';
-
--- Contar sessões in_progress duplicadas por usuário
-SELECT user_id, COUNT(*) as cnt
-FROM workout_sessions
-WHERE status = 'in_progress'
-GROUP BY user_id
-HAVING COUNT(*) > 1;
-
--- Verificar se índice já existe
-SELECT indexname FROM pg_indexes
-WHERE indexname = 'idx_workout_sessions_one_in_progress_per_user';
-```
-
-## 3. Aplicar migration
-
+3. Conferir histórico local vs remoto:
 ```bash
-supabase db push
+supabase migration list --linked
 ```
 
-## 4. Verificações pós-migration
+## 2. Backup recomendado
+1. Snapshot lógico do banco remoto antes do push.
+2. Salvar export em storage seguro.
 
-### 4.1 Função de subscription
+## 3. Aplicação
+1. Aplicar migrations pendentes:
+```bash
+supabase db push --linked
+```
+2. Validar que não restaram pendências:
+```bash
+supabase db push --linked --dry-run
+```
 
+## 4. Verificações pós-deploy
+1. Verificar função de assinatura padrão (`free` para novos usuários):
 ```sql
--- Deve retornar 'free' no corpo da função
-SELECT prosrc FROM pg_proc WHERE proname = 'handle_new_user_subscription';
+select pg_get_functiondef('public.handle_new_user_subscription'::regproc);
 ```
-
-### 4.2 Tipo de weight
-
+2. Verificar coluna `profiles.weight`:
 ```sql
--- Deve retornar numeric com precision 5, scale 1
-SELECT column_name, data_type, numeric_precision, numeric_scale
-FROM information_schema.columns
-WHERE table_name = 'profiles' AND column_name = 'weight';
+select data_type, numeric_precision, numeric_scale
+from information_schema.columns
+where table_schema = 'public' and table_name = 'profiles' and column_name = 'weight';
 ```
-
-### 4.3 Constraint de weight
-
+3. Verificar índice único para sessão em progresso:
 ```sql
--- Deve retornar profiles_weight_check
-SELECT constraint_name, check_clause
-FROM information_schema.check_constraints
-WHERE constraint_name = 'profiles_weight_check';
+select indexname, indexdef
+from pg_indexes
+where schemaname = 'public' and tablename = 'workout_sessions'
+  and indexname = 'idx_workout_sessions_one_in_progress_per_user';
 ```
-
-### 4.4 Sessões duplicadas limpas
-
+4. Garantir ausência de duplicatas `in_progress`:
 ```sql
--- Deve retornar 0 rows (nenhum usuário com mais de 1 sessão in_progress)
-SELECT user_id, COUNT(*) as cnt
-FROM workout_sessions
-WHERE status = 'in_progress'
-GROUP BY user_id
-HAVING COUNT(*) > 1;
+select user_id, count(*)
+from public.workout_sessions
+where status = 'in_progress'
+group by user_id
+having count(*) > 1;
 ```
 
-### 4.5 Índice único criado
+## 5. Smoke tests funcionais
+1. Criar usuário novo e validar assinatura inicial gratuita.
+2. Iniciar treino normal e validar criação de sessão `in_progress`.
+3. Simular clique duplo em iniciar treino e validar que não cria 2 sessões em progresso.
+4. Finalizar treino e conferir navegação/registro no histórico.
 
-```sql
--- Deve retornar idx_workout_sessions_one_in_progress_per_user
-SELECT indexname, indexdef FROM pg_indexes
-WHERE indexname = 'idx_workout_sessions_one_in_progress_per_user';
-```
+## 6. Rollback (plano)
+1. Se houver falha após deploy:
+- pausar tráfego de escrita sensível (treino/onboarding);
+- restaurar backup do banco;
+- reverter commit da migration no repositório antes de novo `db push`.
 
-## 5. Smoke tests
-
-1. **Novo signup**: Criar conta nova → verificar que `subscriptions.plan_type = 'free'`
-2. **Editar peso**: Alterar peso no perfil para valor decimal (ex: 72.5) → deve salvar sem erro
-3. **Iniciar treino**: Iniciar sessão de treino → deve criar sessão `in_progress`
-4. **Sessão duplicada**: Tentar iniciar segunda sessão → deve abandonar a anterior automaticamente (via código) ou falhar no índice único
-5. **Completar treino**: Completar sessão → status deve mudar para `completed`
-
-## 6. Rollback (se necessário)
-
-```sql
--- Reverter função para premium (estado anterior)
-CREATE OR REPLACE FUNCTION public.handle_new_user_subscription()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-BEGIN
-  INSERT INTO public.subscriptions (user_id, plan_type, status)
-  VALUES (NEW.user_id, 'premium', 'active');
-  RETURN NEW;
-END;
-$function$;
-
--- Reverter weight para integer
-ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_weight_check;
-ALTER TABLE public.profiles ALTER COLUMN weight TYPE integer USING weight::integer;
-
--- Remover índice único
-DROP INDEX IF EXISTS idx_workout_sessions_one_in_progress_per_user;
-```
-
-## 7. Decisão de publicação
-
-- [ ] Todas as verificações SQL passaram
-- [ ] Smoke tests OK
-- [ ] Sem erros no console do app
-- [ ] **Aprovado para publicar em produção**
+## Observação desta auditoria
+No ambiente local desta revisão, não foi possível executar `supabase migration list --linked` porque o projeto não estava linkado na CLI.

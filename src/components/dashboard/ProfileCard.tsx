@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User, Settings, Crown } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { calculateAgeFromBirthDate } from '@/lib/profileAge';
 
 interface ProfileCardProps {
   profile: Profile | null;
@@ -66,6 +67,7 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
     male: 'Masculino',
     other: 'Outro',
   };
+  const displayAge = calculateAgeFromBirthDate(profile.birth_date) ?? profile.age;
 
   return (
     <Card className="bg-card border-border">
@@ -103,8 +105,8 @@ export function ProfileCard({ profile, isLoading }: ProfileCardProps) {
                   {genderLabel[profile.gender]}
                 </span>
               )}
-              {profile.age && (
-                <span>{profile.age} anos</span>
+              {displayAge && (
+                <span>{displayAge} anos</span>
               )}
             </div>
           </div>

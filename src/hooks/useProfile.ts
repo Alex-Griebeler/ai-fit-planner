@@ -7,8 +7,8 @@ export interface Profile {
   user_id: string;
   name: string;
   gender: "female" | "male" | "other" | null;
-  age: number | null;
   birth_date: string | null;
+  age: number | null;
   height: number | null;
   weight: number | null;
   avatar_url: string | null;
@@ -19,8 +19,8 @@ export interface Profile {
 export interface ProfileUpdate {
   name?: string;
   gender?: "female" | "male" | "other" | null;
-  age?: number | null;
   birth_date?: string | null;
+  age?: number | null;
   height?: number | null;
   weight?: number | null;
 }
@@ -41,7 +41,12 @@ export function useProfile() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as Profile | null;
+      if (!data) return null;
+
+      return {
+        ...(data as Profile),
+        birth_date: (data as { birth_date?: string | null }).birth_date ?? null,
+      } as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache por 5 minutos
@@ -52,22 +57,36 @@ export function useProfile() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Use upsert to create profile if it doesn't exist
-      const payload = {
+      const fullPayload = {
         user_id: user.id,
         name: updates.name || "Usuário",
         gender: updates.gender,
+        birth_date: updates.birth_date,
         age: updates.age,
         height: updates.height,
         weight: updates.weight,
-        ...(updates.birth_date !== undefined ? { birth_date: updates.birth_date } : {}),
       };
+      const fallbackPayload = { ...fullPayload, birth_date: undefined };
 
-      const { data, error } = await supabase
+      let result = await supabase
         .from("profiles")
-        .upsert(payload, { onConflict: "user_id" })
+        .upsert(fullPayload, {
+          onConflict: "user_id",
+        })
         .select()
         .single();
 
+      if (result.error?.message?.includes('column "birth_date"') || result.error?.message?.includes("birth_date does not exist")) {
+        result = await supabase
+          .from("profiles")
+          .upsert(fallbackPayload, {
+            onConflict: "user_id",
+          })
+          .select()
+          .single();
+      }
+
+      const { data, error } = result;
       if (error) throw error;
       return data as Profile;
     },

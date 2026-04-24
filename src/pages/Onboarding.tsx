@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingData, initialOnboardingData } from '@/types/onboarding';
@@ -6,6 +6,9 @@ import { useProfile } from '@/hooks/useProfile';
 import { useOnboardingData } from '@/hooks/useOnboardingData';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { normalizeTrainingDays } from '@/lib/trainingDays';
+import { goalsFromLegacy, normalizeGoals, primaryGoalFromGoals, MAX_GOALS_ALLOWED } from '@/lib/goals';
+import { calculateAgeFromBirthDate, isAgeInAllowedRange } from '@/lib/profileAge';
 import {
   StepName,
   StepPersonalData,
@@ -24,6 +27,8 @@ import {
 
 // Modelo LOW-COST GYM: 10 steps (removidos Split, Variação e Timeframe)
 const TOTAL_STEPS = 10;
+const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+const MIN_GOALS_REQUIRED = 1;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -49,6 +54,8 @@ export default function Onboarding() {
     if (isLoadingProfile || isLoadingOnboarding || hasInitialized) return;
 
     // Mescla dados salvos com valores iniciais
+    const profileBirthDate = profile?.birth_date ?? null;
+    const ageFromBirthDate = calculateAgeFromBirthDate(profileBirthDate);
     const mergedData: OnboardingData = {
       ...initialOnboardingData,
       // Dados do onboarding salvos
@@ -56,16 +63,16 @@ export default function Onboarding() {
       // Dados do perfil (sobrescrevem)
       name: profile?.name || savedOnboardingData?.name || '',
       gender: profile?.gender as OnboardingData['gender'] || null,
-      age: profile?.age || null,
-      birthDate: profile?.birth_date || null,
-      height: profile?.height || null,
-      weight: profile?.weight || null,
+      birthDate: profileBirthDate || savedOnboardingData?.birthDate || null,
+      age: ageFromBirthDate ?? profile?.age ?? savedOnboardingData?.age ?? null,
+      height: profile?.height ?? savedOnboardingData?.height ?? null,
+      weight: profile?.weight ?? savedOnboardingData?.weight ?? null,
     };
 
-    // Legacy normalization: "60plus" was an old session duration option that no
-    // longer exists in the low-cost gym model. Coerce to "60min" so the UI does
-    // not try to render a non-existent option.
-    if ((mergedData.sessionDuration as unknown as string) === '60plus') {
+    const mergedGoals = goalsFromLegacy(mergedData.goal, mergedData.goals);
+    mergedData.goals = mergedGoals;
+    mergedData.goal = primaryGoalFromGoals(mergedGoals);
+    if (mergedData.sessionDuration === '60plus') {
       mergedData.sessionDuration = '60min';
     }
 
@@ -84,22 +91,59 @@ export default function Onboarding() {
     setIsSubmitting(true);
     
     try {
-      // Salva perfil com dados biométricos (birth_date é a fonte de verdade
-      // para idade; mantemos `age` por compatibilidade).
+      const computedAge = calculateAgeFromBirthDate(data.birthDate);
+      if (!data.birthDate || !isAgeInAllowedRange(computedAge)) {
+        toast.error('Informe uma data de nascimento válida.');
+        setStep(2);
+        return;
+      }
+
+      const normalizedGoals = normalizeGoals(data.goals);
+      const sanitizedGoals = normalizedGoals.slice(0, MAX_GOALS_ALLOWED);
+      if (sanitizedGoals.length < MIN_GOALS_REQUIRED) {
+        toast.error('Selecione pelo menos 1 objetivo.');
+        setStep(3);
+        return;
+      }
+
+      const trimmedHealthDescription = data.healthDescription.trim();
+      if (data.hasHealthConditions && (!data.injuryAreas || data.injuryAreas.length === 0)) {
+        toast.error('Informe as regiões afetadas para gerar um plano seguro.');
+        setStep(9);
+        return;
+      }
+
+      if (data.hasHealthConditions && trimmedHealthDescription.length < MIN_HEALTH_DESCRIPTION_LENGTH) {
+        toast.error(`Descreva sua condição com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres.`);
+        setStep(9);
+        return;
+      }
+
+      // Salva perfil com dados biométricos
       await updateProfile({
         name: data.name,
         gender: data.gender,
-        age: data.age,
         birth_date: data.birthDate,
+        age: computedAge,
         height: data.height,
         weight: data.weight,
       });
 
-      // Sanitiza trainingDays antes de salvar (remove duplicatas e valida dias)
-      const validDays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+      // Sanitiza trainingDays antes de salvar (normaliza aliases legados e remove duplicatas)
+      const normalizedTrainingDays = normalizeTrainingDays(data.trainingDays);
+      if (normalizedTrainingDays.length === 0) {
+        toast.error('Selecione pelo menos 1 dia de treino válido.');
+        return;
+      }
+
       const sanitizedData = {
         ...data,
-        trainingDays: [...new Set(data.trainingDays)].filter(d => validDays.includes(d)),
+        age: computedAge,
+        goals: sanitizedGoals,
+        goal: primaryGoalFromGoals(sanitizedGoals),
+        trainingDays: normalizedTrainingDays,
+        sessionDuration: data.sessionDuration === '60plus' ? '60min' : data.sessionDuration,
+        healthDescription: trimmedHealthDescription,
       };
 
       // Salva preferências de treino
@@ -108,7 +152,7 @@ export default function Onboarding() {
       // Salva no sessionStorage temporariamente para a página de resultado
       sessionStorage.setItem('onboardingData', JSON.stringify(sanitizedData));
       
-      toast.success('Dados salvos com sucesso!');
+      toast.success('Dados salvos com sucesso! Gerando seu plano...');
       
       // Nota: onboardingData será limpo pela Result.tsx após consumo bem-sucedido.
       // Se o usuário voltar ao onboarding, os dados serão recarregados do banco.

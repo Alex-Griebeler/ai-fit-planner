@@ -19,10 +19,15 @@ const EXERCISE_TYPE_OPTIONS = [
 ];
 
 const CARDIO_TIMING_OPTIONS = [
+  {
+    value: 'pre_workout' as CardioTiming,
+    label: 'Antes do treino de força',
+    desc: 'LISS/MICT curto (8-12min) como ativação cardiovascular'
+  },
   { 
     value: 'post_workout' as CardioTiming, 
     label: 'Após o treino de força', 
-    desc: 'Adiciona ~15-20min à sessão' 
+    desc: 'LISS/MICT curto (8-15min), sem HIIT após força' 
   },
   { 
     value: 'separate_day' as CardioTiming, 
@@ -32,13 +37,16 @@ const CARDIO_TIMING_OPTIONS = [
   { 
     value: 'ai_decides' as CardioTiming, 
     label: 'Deixar a IA decidir', 
-    desc: 'Baseado no seu objetivo e disponibilidade' 
+    desc: 'Com base em objetivo, segurança e tempo de sessão' 
   },
 ];
 
 export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps }: StepExerciseTypesProps) {
+  const isShortSession = data.sessionDuration === '30min';
+  const isCardioTimingCompatible = !data.includeCardio || data.cardioTiming === null || !isShortSession || data.cardioTiming === 'separate_day';
   const canProceed = data.exerciseTypes.length >= 1 && 
-    (!data.includeCardio || data.cardioTiming !== null);
+    (!data.includeCardio || data.cardioTiming !== null) &&
+    isCardioTimingCompatible;
 
   const toggleExerciseType = (value: string) => {
     const isSelected = data.exerciseTypes.includes(value);
@@ -53,6 +61,10 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
     updateData('includeCardio', checked);
     if (!checked) {
       updateData('cardioTiming', null);
+      return;
+    }
+    if (isShortSession) {
+      updateData('cardioTiming', 'separate_day');
     }
   };
 
@@ -89,6 +101,9 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
 
       {data.includeCardio && (
         <div className="space-y-3 mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+          <p className="text-xs text-muted-foreground">
+            Tempo total da sessão: <span className="font-medium">{data.sessionDuration || 'não definido'}</span> (força + cardio).
+          </p>
           <p className="text-sm text-muted-foreground font-medium">
             Como você prefere fazer o cardio? <span className="text-destructive">*</span>
           </p>
@@ -99,7 +114,11 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
               description={option.desc}
               icon={<Heart className="w-6 h-6" />}
               selected={data.cardioTiming === option.value}
-              onClick={() => updateData('cardioTiming', option.value)}
+              disabled={isShortSession && option.value !== 'separate_day'}
+              onClick={() => {
+                if (isShortSession && option.value !== 'separate_day') return;
+                updateData('cardioTiming', option.value);
+              }}
             />
           ))}
           {data.cardioTiming === null && (
@@ -107,6 +126,14 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
               Selecione uma opção para continuar
             </p>
           )}
+          {isShortSession && data.cardioTiming !== 'separate_day' && (
+            <p className="text-xs text-destructive mt-2">
+              Com sessões de 30 min, cardio deve ser feito em dia separado.
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Regra de segurança: HIIT só em dia separado. Após treino de força, usar apenas cardio leve a moderado.
+          </p>
         </div>
       )}
 

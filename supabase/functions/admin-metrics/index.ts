@@ -10,35 +10,38 @@ interface MetricsRequest {
   endDate: string;
 }
 
+class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new HttpError(500, "Missing Supabase environment variables");
+    }
     
     // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Get user from auth header
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new HttpError(401, "Unauthorized");
     }
     const token = authHeader.replace("Bearer ", "");
     
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new HttpError(401, "Unauthorized");
     }
 
     // Check if user is admin using the has_role function
@@ -48,38 +51,25 @@ Deno.serve(async (req) => {
     });
 
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden - Admin access required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new HttpError(403, "Forbidden - Admin access required");
     }
 
-    let body: MetricsRequest;
+    let requestBody: MetricsRequest;
     try {
-      body = await req.json();
+      requestBody = await req.json();
     } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new HttpError(400, "Invalid JSON body");
     }
 
-    const { startDate, endDate } = body;
+    const { startDate, endDate } = requestBody;
     if (!startDate || !endDate) {
-      return new Response(JSON.stringify({ error: "Missing startDate or endDate" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      throw new HttpError(400, "Missing startDate or endDate");
     }
-
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return new Response(JSON.stringify({ error: "Invalid date format. Use ISO 8601." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      throw new HttpError(400, "Invalid startDate/endDate");
     }
 
     // Fetch all data in parallel
@@ -257,10 +247,15 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error fetching admin metrics:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const status = error instanceof HttpError ? error.status : 500;
+    const message = error instanceof HttpError
+      ? error.message
+      : "Internal server error";
+    if (status >= 500) {
+      console.error("Error fetching admin metrics:", error);
+    }
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+      status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

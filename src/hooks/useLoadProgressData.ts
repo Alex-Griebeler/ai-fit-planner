@@ -61,7 +61,10 @@ export function useLoadProgressData(): UseLoadProgressDataReturn {
           }
 
           // Parse load value (could be "60kg" or "60")
-          const numericValue = parseFloat(load.load_value.replace(/[^\\d.]/g, ''));
+          const normalizedValue = load.load_value
+            .replace(',', '.')
+            .replace(/[^\d.-]/g, '');
+          const numericValue = parseFloat(normalizedValue);
           
           if (!isNaN(numericValue)) {
             // Keep the highest value for each exercise on the same date

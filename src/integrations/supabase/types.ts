@@ -488,6 +488,7 @@ export type Database = {
           exercise_types: string[] | null
           experience_level: string | null
           goal: string | null
+          goals: string[] | null
           has_health_conditions: boolean | null
           health_description: string | null
           id: string
@@ -510,6 +511,7 @@ export type Database = {
           exercise_types?: string[] | null
           experience_level?: string | null
           goal?: string | null
+          goals?: string[] | null
           has_health_conditions?: boolean | null
           health_description?: string | null
           id?: string
@@ -532,6 +534,7 @@ export type Database = {
           exercise_types?: string[] | null
           experience_level?: string | null
           goal?: string | null
+          goals?: string[] | null
           has_health_conditions?: boolean | null
           health_description?: string | null
           id?: string

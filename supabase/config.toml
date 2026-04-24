@@ -1,9 +1,8 @@
 project_id = "drudjgrbludyqdogwvqc"
 
 [auth]
-# Enable leaked password protection via Have I Been Pwned (HIBP)
-# This prevents users from using passwords that have been exposed in data breaches
-hibp_enabled = true
+# HIBP remains enabled in Supabase dashboard.
+# Local CLI config omits this key for compatibility with current supabase CLI.
 
 [functions.generate-workout]
 enabled = true

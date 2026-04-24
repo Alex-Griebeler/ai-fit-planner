@@ -13,9 +13,9 @@ interface StepExperienceProps {
 }
 
 const EXPERIENCE_OPTIONS = [
-  { value: 'beginner', label: 'Iniciante', desc: 'Pouca ou nenhuma experiência com exercícios' },
-  { value: 'intermediate', label: 'Intermediário', desc: 'Alguma experiência, treino há alguns meses' },
-  { value: 'advanced', label: 'Avançado', desc: 'Muita experiência, treino há anos' },
+  { value: 'beginner', label: 'Iniciante', desc: 'Até 6 meses de treino regular ou com muitas interrupções' },
+  { value: 'intermediate', label: 'Intermediário', desc: 'Entre 6 meses e 2 anos de treino regular' },
+  { value: 'advanced', label: 'Avançado', desc: 'Mais de 2 anos de treino regular e consistente' },
 ] as const;
 
 export function StepExperience({ data, updateData, onNext, onBack, totalSteps }: StepExperienceProps) {
@@ -25,8 +25,8 @@ export function StepExperience({ data, updateData, onNext, onBack, totalSteps }:
     <OnboardingLayout
       step={7}
       totalSteps={totalSteps}
-      title="Qual é o seu nível de experiência?"
-      subtitle="Isso nos ajuda a ajustar a intensidade dos treinos"
+      title="Há quanto tempo você treina regularmente?"
+      subtitle="Combinamos experiência e assiduidade para ajustar intensidade e segurança"
       onBack={onBack}
     >
       <div className="space-y-3 mb-6">

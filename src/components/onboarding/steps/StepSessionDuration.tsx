@@ -25,8 +25,8 @@ export function StepSessionDuration({ data, updateData, onNext, onBack, totalSte
     <OnboardingLayout
       step={5}
       totalSteps={totalSteps}
-      title="Quanto tempo você tem disponível para treinar?"
-      subtitle="Vamos adequar os treinos ao seu tempo disponível"
+      title="Quanto tempo total você tem por sessão?"
+      subtitle="Considere o tempo total da sessão. Se incluir cardio, esse tempo também entra na conta."
       onBack={onBack}
     >
       <div className="space-y-3 mb-6">
@@ -40,6 +40,9 @@ export function StepSessionDuration({ data, updateData, onNext, onBack, totalSte
           />
         ))}
       </div>
+      <p className="text-xs text-muted-foreground mb-6">
+        Para melhor aderência e fluxo da academia, limitamos sessões totais em até 60 minutos.
+      </p>
       <Button
         variant="gradient"
         size="lg"

@@ -9,6 +9,13 @@ import { Profile, ProfileUpdate } from '@/hooks/useProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { toast } from 'sonner';
 import { Save, Loader2, Camera, Trash2 } from 'lucide-react';
+import {
+  calculateAgeFromBirthDate,
+  getBirthDateBounds,
+  isAgeInAllowedRange,
+  MAX_ALLOWED_AGE,
+  MIN_ALLOWED_AGE,
+} from '@/lib/profileAge';
 
 interface ProfileSectionProps {
   profile: Profile | null;
@@ -23,10 +30,12 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
   const [formData, setFormData] = useState({
     name: '',
     gender: '' as 'female' | 'male' | 'other' | '',
-    age: '',
+    birthDate: '',
     height: '',
     weight: '',
   });
+  const birthDateBounds = getBirthDateBounds();
+  const computedAge = calculateAgeFromBirthDate(formData.birthDate || null);
 
   const initials = profile?.name
     ?.split(' ')
@@ -51,7 +60,7 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
       setFormData({
         name: profile.name || '',
         gender: profile.gender || '',
-        age: profile.age?.toString() || '',
+        birthDate: profile.birth_date?.slice(0, 10) || '',
         height: profile.height?.toString() || '',
         weight: profile.weight?.toString() || '',
       });
@@ -60,10 +69,16 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
 
   const handleSave = async () => {
     try {
+      if (formData.birthDate && !isAgeInAllowedRange(computedAge)) {
+        toast.error(`Data de nascimento inválida. A idade deve estar entre ${MIN_ALLOWED_AGE} e ${MAX_ALLOWED_AGE} anos.`);
+        return;
+      }
+
       await onSave({
         name: formData.name || 'Usuário',
         gender: formData.gender || null,
-        age: formData.age ? parseInt(formData.age) : null,
+        birth_date: formData.birthDate || null,
+        age: formData.birthDate ? computedAge : (profile?.age ?? null),
         height: formData.height ? parseInt(formData.height) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
       });
@@ -175,18 +190,27 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
           </RadioGroup>
         </div>
 
-        {/* Idade */}
+        {/* Data de nascimento */}
         <div className="space-y-2">
-          <Label htmlFor="age">Idade</Label>
+          <Label htmlFor="birthDate">Data de nascimento</Label>
           <Input
-            id="age"
-            type="number"
-            value={formData.age}
-            onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-            placeholder="Sua idade"
-            min="1"
-            max="120"
+            id="birthDate"
+            type="date"
+            value={formData.birthDate}
+            min={birthDateBounds.min}
+            max={birthDateBounds.max}
+            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
           />
+          {formData.birthDate && computedAge === null && (
+            <p className="text-xs text-destructive">
+              Data inválida para cálculo de idade.
+            </p>
+          )}
+          {computedAge !== null && (
+            <p className="text-xs text-muted-foreground">
+              Idade calculada automaticamente: {computedAge} anos
+            </p>
+          )}
         </div>
 
         {/* Altura e Peso */}

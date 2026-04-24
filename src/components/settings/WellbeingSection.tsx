@@ -15,11 +15,11 @@ interface WellbeingSectionProps {
 }
 
 const SLEEP_OPTIONS = [
-  { value: 'less_than_5', label: 'Menos de 5h' },
-  { value: '5_to_6', label: '5-6h' },
-  { value: '6_to_7', label: '6-7h' },
-  { value: '7_to_8', label: '7-8h' },
-  { value: 'more_than_8', label: 'Mais de 8h' },
+  { value: 'less5', label: 'Menos de 5h' },
+  { value: '5-6', label: '5-6h' },
+  { value: '6-7', label: '6-7h' },
+  { value: '7-8', label: '7-8h' },
+  { value: 'more8', label: 'Mais de 8h' },
 ];
 
 export function WellbeingSection({ data, onSave, isSaving }: WellbeingSectionProps) {

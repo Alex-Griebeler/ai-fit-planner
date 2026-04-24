@@ -50,7 +50,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside text-muted-foreground space-y-1 ml-4 mb-4">
               <li>Nome completo</li>
               <li>Endereço de email</li>
-              <li>Idade</li>
+              <li>Data de nascimento e idade derivada</li>
               <li>Gênero</li>
             </ul>
 

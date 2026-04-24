@@ -2,20 +2,69 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-// CORS configuration - restrict to trusted origins
-const ALLOWED_ORIGINS = [
-  Deno.env.get("SUPABASE_URL") || "",
-  "http://localhost:5173",
-  "http://localhost:8080",
-  "https://lovable.dev",
-  "https://www.lovable.dev",
-].filter(Boolean);
+const DEFAULT_FALLBACK_ORIGIN = "https://smartfit-starter.lovable.app";
+const LOVABLE_SUFFIXES = [".lovable.dev", ".lovable.app", ".lovableproject.com"];
+const ENV_ORIGIN_KEYS = ["APP_ORIGIN", "SITE_URL", "WEB_URL", "CUSTOM_DOMAIN", "ALLOWED_ORIGINS"];
+
+function normalizeOrigin(value: string): string | null {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+function buildAllowedOrigins(): string[] {
+  const baseOrigins = [
+    Deno.env.get("SUPABASE_URL") ?? "",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "https://lovable.dev",
+    "https://www.lovable.dev",
+  ];
+
+  const envOrigins = ENV_ORIGIN_KEYS.flatMap((key) =>
+    (Deno.env.get(key) ?? "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  );
+
+  const normalized = [...baseOrigins, ...envOrigins]
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .map((origin) => (origin.startsWith("*.") ? origin.toLowerCase() : normalizeOrigin(origin)))
+    .filter((origin): origin is string => Boolean(origin));
+
+  return [...new Set(normalized)];
+}
+
+const ALLOWED_ORIGINS = buildAllowedOrigins();
+const DEFAULT_APP_ORIGIN = normalizeOrigin(
+  Deno.env.get("APP_ORIGIN")
+  ?? Deno.env.get("SITE_URL")
+  ?? Deno.env.get("WEB_URL")
+  ?? "",
+) ?? DEFAULT_FALLBACK_ORIGIN;
+
+function matchesAllowedOrigin(origin: string, allowed: string): boolean {
+  if (allowed.startsWith("*.")) {
+    return origin.endsWith(allowed.slice(1));
+  }
+  return origin === allowed;
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.some((allowed) => matchesAllowedOrigin(origin, allowed))
+    || LOVABLE_SUFFIXES.some((suffix) => origin.endsWith(suffix));
+}
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => 
-    origin === allowed || origin.endsWith(".lovable.dev") || origin.endsWith(".lovable.app") || origin.endsWith(".lovableproject.com")
-  ) ? origin : ALLOWED_ORIGINS[0] || "";
-  
+  const normalizedOrigin = origin ? normalizeOrigin(origin) : null;
+  const allowedOrigin = normalizedOrigin && isAllowedOrigin(normalizedOrigin)
+    ? normalizedOrigin
+    : DEFAULT_APP_ORIGIN;
+
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -24,20 +73,54 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
+const VALID_TRAINING_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const MIN_HEALTH_DESCRIPTION_LENGTH = 15;
+const GOAL_VALUES = ["weight_loss", "hypertrophy", "health", "performance"] as const;
+
+function normalizeGoals(
+  goal: string | null | undefined,
+  goals: string[] | null | undefined,
+): (typeof GOAL_VALUES)[number][] {
+  const deduped = new Set<(typeof GOAL_VALUES)[number]>();
+
+  if (Array.isArray(goals)) {
+    for (const item of goals) {
+      if ((GOAL_VALUES as readonly string[]).includes(item)) {
+        deduped.add(item as (typeof GOAL_VALUES)[number]);
+      }
+    }
+  }
+
+  if (goal && (GOAL_VALUES as readonly string[]).includes(goal)) {
+    deduped.add(goal as (typeof GOAL_VALUES)[number]);
+  }
+
+  return Array.from(deduped);
+}
+
 // Input validation schema with injury areas
 const OnboardingSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres").max(50, "Nome deve ter no máximo 50 caracteres"),
   gender: z.enum(["female", "male", "other"]).nullable(),
   age: z.number().int().min(13, "Idade mínima é 13 anos").max(120, "Idade máxima é 120 anos").nullable(),
   height: z.number().int().min(100, "Altura mínima é 100 cm").max(250, "Altura máxima é 250 cm").nullable(),
-  weight: z.number().int().min(30, "Peso mínimo é 30 kg").max(300, "Peso máximo é 300 kg").nullable(),
-  goal: z.enum(["weight_loss", "hypertrophy", "health", "performance"]).nullable(),
+  // Allow decimal values (e.g. 72.5kg) to match profile schema and UI.
+  weight: z.number().min(30, "Peso mínimo é 30 kg").max(300, "Peso máximo é 300 kg").nullable(),
+  goal: z.enum(GOAL_VALUES).nullable(),
+  goals: z.array(z.enum(GOAL_VALUES)).max(2).optional().default([]),
   timeframe: z.enum(["3months", "6months", "12months"]).nullable().optional(),
-  trainingDays: z.array(z.string().max(20)).max(7),
-  sessionDuration: z.enum(["30min", "45min", "60min", "60plus"]).nullable(),
+  trainingDays: z
+    .array(z.enum(VALID_TRAINING_DAYS))
+    .min(1, "Selecione pelo menos 1 dia de treino")
+    .max(7)
+    .refine((days) => new Set(days).size === days.length, "Dias de treino duplicados não são permitidos"),
+  sessionDuration: z.preprocess(
+    (value) => value === "60plus" ? "60min" : value,
+    z.enum(["30min", "45min", "60min"]).nullable(),
+  ),
   exerciseTypes: z.array(z.string().max(20)).max(5),
   includeCardio: z.boolean(),
-  cardioTiming: z.enum(["post_workout", "separate_day", "ai_decides"]).nullable().optional(),
+  cardioTiming: z.enum(["pre_workout", "post_workout", "separate_day", "ai_decides"]).nullable().optional(),
   experienceLevel: z.enum(["beginner", "intermediate", "advanced"]).nullable(),
   splitPreference: z.enum(["fullbody", "push_pull_legs", "hybrid", "no_preference"]).nullable().optional(),
   variationPreference: z.enum(["high", "moderate", "low"]).nullable(),
@@ -50,6 +133,53 @@ const OnboardingSchema = z.object({
   healthDescription: z.string().max(500, "Descrição de saúde deve ter no máximo 500 caracteres").optional().default(""),
   sleepHours: z.string().max(10).nullable(),
   stressLevel: z.enum(["low", "moderate", "high"]).nullable(),
+}).superRefine((data, ctx) => {
+  const normalizedGoals = normalizeGoals(data.goal, data.goals);
+  if (normalizedGoals.length < 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Selecione pelo menos 1 objetivo",
+      path: ["goals"],
+    });
+  }
+
+  if (data.includeCardio && !data.cardioTiming) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Selecione o timing do cardio quando cardio estiver habilitado",
+      path: ["cardioTiming"],
+    });
+  }
+
+  if (
+    data.includeCardio &&
+    data.sessionDuration === "30min" &&
+    (data.cardioTiming === "pre_workout" || data.cardioTiming === "post_workout")
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Com sessão de 30 minutos, cardio deve ser em dia separado",
+      path: ["cardioTiming"],
+    });
+  }
+
+  if (data.hasHealthConditions) {
+    if (!data.injuryAreas || data.injuryAreas.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecione ao menos uma região afetada",
+        path: ["injuryAreas"],
+      });
+    }
+
+    if ((data.healthDescription ?? "").trim().length < MIN_HEALTH_DESCRIPTION_LENGTH) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Descreva a condição/lesão com pelo menos ${MIN_HEALTH_DESCRIPTION_LENGTH} caracteres`,
+        path: ["healthDescription"],
+      });
+    }
+  }
 });
 
 type ValidatedUserData = z.infer<typeof OnboardingSchema>;
@@ -69,7 +199,7 @@ function sanitizeForPrompt(text: string, maxLength: number = 500): string {
 function sanitizeName(text: string): string {
   if (!text) return "";
   // Remove common prompt injection patterns
-  let sanitized = text
+  const sanitized = text
     .replace(/ignore\s*(all\s*)?(previous|above|prior)\s*(instructions?)?/gi, "")
     .replace(/system\s*:/gi, "")
     .replace(/assistant\s*:/gi, "")
@@ -141,7 +271,6 @@ const SESSION_SETS_PER_WORKOUT: Record<string, VolumeRange> = {
   "30min":  { min: 10, max: 14 },  // 30min = ~12-14 séries realista
   "45min":  { min: 14, max: 20 },  // 45min = ~16-20 séries realista
   "60min":  { min: 20, max: 26 },  // 60min = ~22-26 séries realista
-  "60plus": { min: 24, max: 32 },  // 60+min = ~28-32 séries realista
 };
 
 // NOTA: Validação de volume agora é APENAS por número de SÉRIES, não por exercícios.
@@ -845,13 +974,6 @@ const WARMUP_STRATEGY: Record<string, WarmupStrategy> = {
     intensity: "progressivo 50-70%",
     timeMinutes: 5,
     description: "Aquecimento geral (3min) + específico (2min)"
-  },
-  "60plus": {
-    type: "general_plus_specific",
-    sets: 2,
-    intensity: "progressivo 50-70%",
-    timeMinutes: 5,
-    description: "Aquecimento geral + específico completo"
   }
 };
 
@@ -895,7 +1017,6 @@ function calculateDensityStrategy(params: {
     "30min": { min: 10, max: 14 },
     "45min": { min: 14, max: 20 },
     "60min": { min: 20, max: 26 },
-    "60plus": { min: 24, max: 32 }
   };
   
   const warmupStrategy = WARMUP_STRATEGY[sessionDuration] || WARMUP_STRATEGY["45min"];
@@ -913,8 +1034,30 @@ function calculateDensityStrategy(params: {
 function getDurationMinutes(duration: string): number {
   if (duration.includes("30")) return 30;
   if (duration.includes("45")) return 45;
-  if (duration.includes("60") && !duration.includes("+") && !duration.includes("plus")) return 60;
-  return 75; // 60plus
+  if (duration.includes("60")) return 60;
+  return 45;
+}
+
+function parseCardioMinutes(cardio: unknown): number {
+  if (!cardio || typeof cardio !== "object") return 0;
+  const payload = cardio as Record<string, unknown>;
+  const candidates = [payload.duration, payload.type, payload.description, payload.notes]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.toLowerCase());
+
+  for (const text of candidates) {
+    const rangeMatch = text.match(/(\d+)\s*[-a]\s*(\d+)\s*(min|minuto|minutos)/i);
+    if (rangeMatch) {
+      return Math.max(Number(rangeMatch[1]), Number(rangeMatch[2]));
+    }
+
+    const singleMatch = text.match(/(\d+)\s*(min|minuto|minutos)/i);
+    if (singleMatch) {
+      return Number(singleMatch[1]);
+    }
+  }
+
+  return 0;
 }
 
 function getFrequencyKey(days: number): string {
@@ -1758,6 +1901,8 @@ function validateWorkoutPlan(
     injuryAreas: string[];
     experienceLevel: string | null;
     goal: string | null;
+    includeCardio: boolean;
+    cardioTiming: string | null | undefined;
     sessionDuration: string | null;
     sleepHours: string | null;
     stressLevel: string | null;
@@ -1965,9 +2110,9 @@ function validateWorkoutPlan(
     const totalSets = workout.exercises?.reduce(
       (sum: number, ex: any) => sum + (ex.sets || 0), 0
     ) || 0;
-    
+    const cardioMinutes = parseCardioMinutes(workout.cardio);
     const estimatedMinutes = Math.round((totalSets * timePerSet) / 60);
-    const totalSessionMinutes = estimatedMinutes + warmupMinutes;
+    const totalSessionMinutes = estimatedMinutes + warmupMinutes + cardioMinutes;
     
     // Log detalhado para debug
     console.log(`Session time validation "${workout.name}": ${totalSets} sets, ~${totalSessionMinutes}min (limit: ${maxMinutes}min)`);
@@ -1988,6 +2133,12 @@ function validateWorkoutPlan(
     if (totalSessionMinutes > maxMinutes * (1 + SESSION_TIME_TOLERANCE)) {
       warnings.push(
         `Treino "${workout.name}": tempo estimado ~${totalSessionMinutes}min excede ${maxMinutes}min disponíveis`
+      );
+    }
+
+    if (userData.includeCardio && userData.cardioTiming === "separate_day" && cardioMinutes > 0) {
+      warnings.push(
+        `Treino "${workout.name}": cardio foi incluído na sessão de força, mas o timing solicitado era em dia separado`
       );
     }
   }
@@ -3401,6 +3552,13 @@ serve(async (req) => {
     }
 
     const validatedData = validationResult.data;
+    const normalizedGoals = normalizeGoals(validatedData.goal, validatedData.goals);
+    const primaryGoal = normalizedGoals[0] ?? "health";
+    const enrichedValidatedData: ValidatedUserData = {
+      ...validatedData,
+      goals: normalizedGoals,
+      goal: primaryGoal,
+    };
 
     // === FETCH EXERCISES FROM CATALOG ===
     const allowedLevels = getAllowedLevels(validatedData.experienceLevel || "beginner");
@@ -3417,14 +3575,14 @@ serve(async (req) => {
     // === FILTER EXERCISES BY EQUIPMENT ===
     let filteredExercises = filterExercisesByEquipment(
       exercises || [],
-      validatedData.exerciseTypes || []
+      enrichedValidatedData.exerciseTypes || []
     );
-    console.log(`Exercise filtering: ${exercises?.length || 0} total -> ${filteredExercises.length} after equipment filter (prefs: ${validatedData.exerciseTypes?.join(', ') || 'all'})`);
+    console.log(`Exercise filtering: ${exercises?.length || 0} total -> ${filteredExercises.length} after equipment filter (prefs: ${enrichedValidatedData.exerciseTypes?.join(', ') || 'all'})`);
 
     // === FILTER EXERCISES BY INJURIES ===
     const injuryResult = filterExercisesByInjuries(
       filteredExercises,
-      validatedData.injuryAreas || []
+      enrichedValidatedData.injuryAreas || []
     );
     filteredExercises = injuryResult.filtered;
     
@@ -3435,7 +3593,7 @@ serve(async (req) => {
     // === FETCH USER HISTORY FOR LEARNING CONTEXT V2 ===
     let learningContext = "";
     let learningContextV2: LearningContextV2 | null = null;
-    const plannedFrequency = validatedData.trainingDays?.length || 3;
+    const plannedFrequency = enrichedValidatedData.trainingDays?.length || 3;
     
     try {
       // 1. Fetch last 10 completed sessions for RPE and completion analysis
@@ -3517,7 +3675,7 @@ serve(async (req) => {
     
     console.log(`[LC-V2] Volume multiplier: ${volumeMultiplier} (canApply: ${learningContextV2?.guardrails.canApplyAdjustments ?? false})`);
     
-    const userPrompt = buildUserPrompt(validatedData, filteredExercises, learningContext, volumeMultiplier);
+    const userPrompt = buildUserPrompt(enrichedValidatedData, filteredExercises, learningContext, volumeMultiplier);
 
     // === CALL AI ===
     console.log("Calling Lovable AI for user:", userId);
@@ -3595,7 +3753,7 @@ serve(async (req) => {
     }
 
     // === POST-PROCESSING: FORCE CORRECT NUMBER OF WORKOUTS ===
-    const expectedDays = validatedData.trainingDays?.length || 3;
+    const expectedDays = enrichedValidatedData.trainingDays?.length || 3;
     console.log(`Post-processing: Expected ${expectedDays} workouts based on trainingDays`);
     
     if (workoutPlan.workouts && Array.isArray(workoutPlan.workouts)) {
@@ -3661,15 +3819,15 @@ serve(async (req) => {
       
       // 3. REORDER workouts to match the expected dayStructure (Empurrar → Puxar → Pernas)
       const splitRule = getSplitRule({
-        trainingDays: validatedData.trainingDays || [],
-        splitPreference: validatedData.splitPreference,
-        experienceLevel: validatedData.experienceLevel,
+        trainingDays: enrichedValidatedData.trainingDays || [],
+        splitPreference: enrichedValidatedData.splitPreference,
+        experienceLevel: enrichedValidatedData.experienceLevel,
       });
       
       const reorderedWorkouts = reorderWorkoutsByDayStructure(finalWorkouts, splitRule.dayStructure);
       
       // 3b. REORDER EXERCISES within each workout (prioritize user's body areas + large groups)
-      const userPriorities = validatedData.bodyAreas || [];
+      const userPriorities = enrichedValidatedData.bodyAreas || [];
       const workoutsWithReorderedExercises = reorderedWorkouts.map((workout: any) => {
         if (workout.exercises && Array.isArray(workout.exercises)) {
           return {
@@ -3701,14 +3859,16 @@ serve(async (req) => {
       workoutPlan,
       filteredExercises,
       {
-        trainingDays: validatedData.trainingDays,
-        injuryAreas: validatedData.injuryAreas || [],
-        experienceLevel: validatedData.experienceLevel,
-        goal: validatedData.goal,
-        sessionDuration: validatedData.sessionDuration,
-        sleepHours: validatedData.sleepHours,
-        stressLevel: validatedData.stressLevel,
-        bodyAreas: validatedData.bodyAreas || [],
+        trainingDays: enrichedValidatedData.trainingDays,
+        injuryAreas: enrichedValidatedData.injuryAreas || [],
+        experienceLevel: enrichedValidatedData.experienceLevel,
+        goal: enrichedValidatedData.goal,
+        includeCardio: enrichedValidatedData.includeCardio,
+        cardioTiming: enrichedValidatedData.cardioTiming,
+        sessionDuration: enrichedValidatedData.sessionDuration,
+        sleepHours: enrichedValidatedData.sleepHours,
+        stressLevel: enrichedValidatedData.stressLevel,
+        bodyAreas: enrichedValidatedData.bodyAreas || [],
       }
     );
     
@@ -4162,6 +4322,9 @@ function buildUserPrompt(
 
   // Calculate volume ranges using NEW system with Learning Context V2 multiplier
   const level = userData.experienceLevel || "beginner";
+  const goalsLabel = (userData.goals && userData.goals.length > 0)
+    ? userData.goals.map((goal) => getGoalShort(goal)).join(" + ")
+    : getGoalShort(userData.goal);
   const volumeRanges = calculateVolumeRanges({
     experienceLevel: level,
     goal: userData.goal,
@@ -4326,7 +4489,7 @@ ${!densityStrategy.allowIsolation ? `
   const volumeSection = `
 ## 🎯 VOLUME CALCULADO PARA ESTE USUÁRIO
 
-**Perfil**: ${getLevelLabel(userData.experienceLevel)} | ${getGoalShort(userData.goal)} | ${userData.sessionDuration || "45min"} | ${userData.trainingDays?.length || 3} dias/sem
+**Perfil**: ${getLevelLabel(userData.experienceLevel)} | ${goalsLabel} | ${userData.sessionDuration || "45min"} | ${userData.trainingDays?.length || 3} dias/sem
 **Split recomendado**: ${splitRule?.split || volumeRanges.recommendedSplit}
 **Séries por treino**: ${densityStrategy.enabled ? `${densityStrategy.targetSetsPerSession.min}-${densityStrategy.targetSetsPerSession.max}` : `${volumeRanges.setsPerWorkout.min}-${volumeRanges.setsPerWorkout.max}`}
 **Aquecimento**: ${densityStrategy.warmupStrategy.timeMinutes} min (${densityStrategy.warmupStrategy.type === 'specific' ? 'específico' : 'geral + específico'})
@@ -4374,6 +4537,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 
 ## OBJETIVO E PRAZO
 - Objetivo: ${getGoalLabel(userData.goal)}
+- Objetivos combinados: ${goalsLabel}
 - Prazo: ${getTimeframeLabel(userData.timeframe)}
 
 ## DISPONIBILIDADE
@@ -4458,16 +4622,27 @@ ${!densityStrategy.allowIsolation ? `15. ❌ SEM ISOLADOS: Use APENAS exercício
 ${userData.includeCardio ? `
 ## CARDIO SOLICITADO
 - Timing preferido: ${getCardioTimingLabel(userData.cardioTiming)}
-${userData.cardioTiming === 'post_workout' ? 
-  `- INCLUIR cardio ao final de cada treino (10-20min dependendo da duração da sessão)
-- Se sessão = 30min: Avisar no "notes" que cardio deve ser feito separadamente por falta de tempo` :
+${userData.cardioTiming === 'pre_workout' ? 
+  `- INCLUIR cardio ANTES da força apenas em intensidade leve a moderada (LISS/MICT), NUNCA HIIT
+- Duração pré-força:
+  - Sessão de 45min: 8-10min
+  - Sessão de 60min: 8-12min
+- Se sessão = 30min: NÃO incluir cardio no treino de força; orientar cardio em dia separado` :
+  userData.cardioTiming === 'post_workout' ? 
+  `- INCLUIR cardio apenas em intensidade leve a moderada (LISS/MICT), NUNCA HIIT após treino de força
+- Duração pós-força:
+  - Sessão de 45min: 8-12min
+  - Sessão de 60min: 10-15min
+- Se sessão = 30min: NÃO incluir cardio no treino de força; orientar cardio em dia separado` :
   userData.cardioTiming === 'separate_day' ?
   `- NÃO incluir cardio na sessão de força
-- Indicar no progressionPlan os dias ideais para cardio separado (dias sem treino de força)` :
+- Indicar no progressionPlan os dias ideais para cardio separado (dias sem treino de força)
+- Se optar por HIIT, usar apenas em dia separado, duração total de 6-10min e máximo 2x/semana` :
   `- Decidir timing baseado em:
-  - Objetivo: ${userData.goal === 'weight_loss' ? 'pós-treino preferível para maximizar gasto calórico' : 'flexível'}
-  - Duração: ${userData.sessionDuration === '30min' ? 'sessão curta = cardio em dia separado obrigatório' : 'pós-treino possível'}
-  - Nível: ${userData.experienceLevel}`
+  - Objetivo: ${userData.goal === 'weight_loss' ? 'priorizar gasto calórico sem comprometer recuperação' : 'priorizar recuperação e aderência'}
+  - Duração: ${userData.sessionDuration === '30min' ? 'sessão curta = cardio em dia separado obrigatório' : 'pós-treino curto pode ser usado com LISS/MICT'}
+  - Nível e segurança: evitar HIIT em iniciantes com dor lombar, joelho ou quadril
+  - REGRA FIXA: NUNCA prescrever HIIT após treino de força`
 }` : ''}
 ${learningContext}`;
 }
@@ -4517,7 +4692,6 @@ function getSessionLabel(duration: string | null): string {
     "30min": "30 min - 4-6 exercícios, supersets",
     "45min": "45 min - 5-7 exercícios",
     "60min": "60 min - 6-8 exercícios",
-    "60plus": "60+ min - 7-10 exercícios",
   };
   return labels[duration || "45min"] || "45 min";
 }
@@ -4542,7 +4716,8 @@ function getVariationLabel(variation: string | null): string {
 
 function getCardioTimingLabel(timing: string | null | undefined): string {
   const labels: Record<string, string> = {
-    post_workout: "Pós-treino (adicionar ao final da sessão)",
+    pre_workout: "Pré-treino (apenas LISS/MICT curto)",
+    post_workout: "Pós-treino (apenas LISS/MICT curto)",
     separate_day: "Em dias separados (não incluir na sessão de força)",
     ai_decides: "IA decide baseado no objetivo e tempo disponível",
   };
