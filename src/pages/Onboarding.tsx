@@ -151,9 +151,9 @@ export default function Onboarding() {
       // Se o usuário voltar ao onboarding, os dados serão recarregados do banco.
       navigate('/result');
     } catch (error) {
-      // Log error without sensitive details
-      console.error('Error saving onboarding data');
-      toast.error('Erro ao salvar dados. Tente novamente.');
+      console.error('[onboarding] save failed:', error);
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao salvar dados: ${message}`, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }

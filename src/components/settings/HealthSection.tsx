@@ -95,7 +95,9 @@ export function HealthSection({ data, onSave, isSaving }: HealthSectionProps) {
       });
       toast.success('Dados de saúde atualizados!');
     } catch (error) {
-      toast.error('Erro ao atualizar dados de saúde');
+      console.error('[health-section] save failed:', error);
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao atualizar dados de saúde: ${message}`, { duration: 6000 });
     }
   };
 
