@@ -57,7 +57,7 @@ export function useProfile() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Use upsert to create profile if it doesn't exist
-      const fullPayload = {
+      const fullPayload: Record<string, unknown> = {
         user_id: user.id,
         name: updates.name || "Usuário",
         gender: updates.gender,
@@ -66,7 +66,7 @@ export function useProfile() {
         height: updates.height,
         weight: updates.weight,
       };
-      const fallbackPayload = { ...fullPayload, birth_date: undefined };
+      const fallbackPayload: Record<string, unknown> = { ...fullPayload, birth_date: undefined };
 
       let result = await supabase
         .from("profiles")
