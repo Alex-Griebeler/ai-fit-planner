@@ -344,6 +344,7 @@ export default function Result() {
       const fullData: OnboardingData = {
         ...initialOnboardingData,
         goal: savedOnboardingData.goal || null,
+        secondaryGoal: savedOnboardingData.secondaryGoal || null,
         timeframe: savedOnboardingData.timeframe || null,
         trainingDays: savedOnboardingData.trainingDays || [],
         sessionDuration: savedOnboardingData.sessionDuration || null,
@@ -362,6 +363,7 @@ export default function Result() {
         name: profile.name || '',
         gender: profile.gender as OnboardingData['gender'] || null,
         age: profile.age || null,
+        birthDate: profile.birth_date || null,
         height: profile.height || null,
         weight: profile.weight || null,
       };

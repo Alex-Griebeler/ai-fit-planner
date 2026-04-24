@@ -27,13 +27,21 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
   const handleInjuryAreaToggle = (areaKey: InjuryArea) => {
     const currentAreas = data.injuryAreas || [];
     const isSelected = currentAreas.includes(areaKey);
-    
+
     if (isSelected) {
       updateData('injuryAreas', currentAreas.filter(a => a !== areaKey));
     } else {
       updateData('injuryAreas', [...currentAreas, areaKey]);
     }
   };
+
+  // When the user reports a health condition, require either at least one
+  // injury area OR a meaningful textual description (>=10 chars). This keeps
+  // the AI prescription safe by ensuring some structured context is provided.
+  const trimmedDescription = (data.healthDescription || '').trim();
+  const hasInjuryArea = (data.injuryAreas || []).length > 0;
+  const hasValidDescription = trimmedDescription.length >= 10;
+  const canProceed = !data.hasHealthConditions || hasInjuryArea || hasValidDescription;
 
   return (
     <OnboardingLayout
@@ -110,14 +118,28 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
 
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
-                  Detalhes adicionais (opcional):
+                  Detalhes adicionais{' '}
+                  {hasInjuryArea ? (
+                    <span className="text-muted-foreground font-normal">(opcional)</span>
+                  ) : (
+                    <span className="text-destructive">*</span>
+                  )}
                 </p>
                 <Textarea
-                  placeholder="Descreva brevemente para que possamos adaptar seus treinos com segurança..."
+                  placeholder={
+                    hasInjuryArea
+                      ? 'Descreva brevemente para adaptarmos seus treinos com segurança...'
+                      : 'Descreva sua condição com pelo menos 10 caracteres para podermos adaptar seus treinos com segurança.'
+                  }
                   value={data.healthDescription}
                   onChange={(e) => updateData('healthDescription', e.target.value)}
                   className="min-h-[80px]"
                 />
+                {!hasInjuryArea && !hasValidDescription && (
+                  <p className="text-xs text-destructive mt-1">
+                    Selecione pelo menos uma região afetada ou descreva sua condição (mín. 10 caracteres).
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -130,6 +152,7 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
           size="lg"
           className="w-full"
           onClick={onNext}
+          disabled={!canProceed}
         >
           Continuar
         </Button>

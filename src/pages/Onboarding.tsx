@@ -57,6 +57,7 @@ export default function Onboarding() {
       name: profile?.name || savedOnboardingData?.name || '',
       gender: profile?.gender as OnboardingData['gender'] || null,
       age: profile?.age || null,
+      birthDate: profile?.birth_date || null,
       height: profile?.height || null,
       weight: profile?.weight || null,
     };
@@ -83,11 +84,13 @@ export default function Onboarding() {
     setIsSubmitting(true);
     
     try {
-      // Salva perfil com dados biométricos
+      // Salva perfil com dados biométricos (birth_date é a fonte de verdade
+      // para idade; mantemos `age` por compatibilidade).
       await updateProfile({
         name: data.name,
         gender: data.gender,
         age: data.age,
+        birth_date: data.birthDate,
         height: data.height,
         weight: data.weight,
       });
