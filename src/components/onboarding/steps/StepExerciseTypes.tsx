@@ -22,12 +22,12 @@ const CARDIO_TIMING_OPTIONS = [
   {
     value: 'pre_workout' as CardioTiming,
     label: 'Antes do treino de força',
-    desc: 'LISS/MICT curto (8-12min) como ativação cardiovascular'
+    desc: 'Cardio contínuo leve/moderado (8-12min) como ativação'
   },
   { 
     value: 'post_workout' as CardioTiming, 
     label: 'Após o treino de força', 
-    desc: 'LISS/MICT curto (8-15min), sem HIIT após força' 
+    desc: 'Cardio contínuo leve/moderado (8-15min), sem intervalado intenso após força'
   },
   { 
     value: 'separate_day' as CardioTiming, 
@@ -132,7 +132,7 @@ export function StepExerciseTypes({ data, updateData, onNext, onBack, totalSteps
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-1">
-            Regra de segurança: HIIT só em dia separado. Após treino de força, usar apenas cardio leve a moderado.
+            Regra de segurança: intervalado intenso só em dia separado. Após treino de força, usar apenas cardio contínuo leve ou moderado.
           </p>
         </div>
       )}
