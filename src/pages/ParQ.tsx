@@ -51,7 +51,9 @@ export default function ParQ() {
       // If anyYes is true the ParQGate will flip status.blocked on refetch
       // and this page will render BlockedView on next render.
     } catch (error) {
-      toast.error('Não foi possível salvar suas respostas. Tente novamente.');
+      console.error('[PAR-Q] submit failed:', error);
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Não foi possível salvar suas respostas: ${message}`, { duration: 6000 });
     }
   };
 
