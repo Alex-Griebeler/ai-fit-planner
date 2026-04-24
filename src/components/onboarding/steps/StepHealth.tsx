@@ -27,13 +27,21 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
   const handleInjuryAreaToggle = (areaKey: InjuryArea) => {
     const currentAreas = data.injuryAreas || [];
     const isSelected = currentAreas.includes(areaKey);
-    
+
     if (isSelected) {
       updateData('injuryAreas', currentAreas.filter(a => a !== areaKey));
     } else {
       updateData('injuryAreas', [...currentAreas, areaKey]);
     }
   };
+
+  // When the user reports a health condition, require either at least one
+  // injury area OR a meaningful textual description (>=10 chars). This keeps
+  // the AI prescription safe by ensuring some structured context is provided.
+  const trimmedDescription = (data.healthDescription || '').trim();
+  const hasInjuryArea = (data.injuryAreas || []).length > 0;
+  const hasValidDescription = trimmedDescription.length >= 10;
+  const canProceed = !data.hasHealthConditions || hasInjuryArea || hasValidDescription;
 
   return (
     <OnboardingLayout
