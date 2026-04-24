@@ -70,7 +70,7 @@ export function useProfile() {
 
       let result = await supabase
         .from("profiles")
-        .upsert(fullPayload, {
+        .upsert(fullPayload as never, {
           onConflict: "user_id",
         })
         .select()
@@ -79,7 +79,7 @@ export function useProfile() {
       if (result.error?.message?.includes('column "birth_date"') || result.error?.message?.includes("birth_date does not exist")) {
         result = await supabase
           .from("profiles")
-          .upsert(fallbackPayload, {
+          .upsert(fallbackPayload as never, {
             onConflict: "user_id",
           })
           .select()
