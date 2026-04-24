@@ -106,8 +106,14 @@ export function useSubmitParQ() {
       if (error) throw error;
       return data as ParQResponseRow;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['par-q-status', user?.id] });
+    onSuccess: (row) => {
+      // Seed the cache with the fresh status synchronously so a navigation
+      // immediately after submit does not read stale data and bounce the
+      // user back to the questionnaire.
+      queryClient.setQueryData<ParQStatus>(
+        ['par-q-status', user?.id],
+        computeStatus(row),
+      );
     },
   });
 }
