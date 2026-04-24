@@ -1,0 +1,102 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import {
+  PAR_Q_VERSION,
+  PAR_Q_EXPIRATION_DAYS,
+  ParQAnswers,
+  ParQStatus,
+} from '@/types/parQ';
+
+interface ParQResponseRow {
+  id: string;
+  user_id: string;
+  version: number;
+  answers: ParQAnswers;
+  any_yes: boolean;
+  submitted_at: string;
+}
+
+function computeStatus(row: ParQResponseRow | null): ParQStatus {
+  if (!row) {
+    return { requiresAnswers: true, blocked: false, lastSubmittedAt: null };
+  }
+
+  if (row.version !== PAR_Q_VERSION) {
+    return { requiresAnswers: true, blocked: false, lastSubmittedAt: row.submitted_at };
+  }
+
+  const submittedAt = new Date(row.submitted_at);
+  const ageDays = (Date.now() - submittedAt.getTime()) / (1000 * 60 * 60 * 24);
+  if (ageDays > PAR_Q_EXPIRATION_DAYS) {
+    return { requiresAnswers: true, blocked: false, lastSubmittedAt: row.submitted_at };
+  }
+
+  return {
+    requiresAnswers: false,
+    blocked: row.any_yes,
+    lastSubmittedAt: row.submitted_at,
+  };
+}
+
+export function useParQStatus() {
+  const { user } = useAuth();
+
+  const query = useQuery({
+    queryKey: ['par-q-status', user?.id],
+    queryFn: async (): Promise<ParQStatus> => {
+      if (!user?.id) {
+        return { requiresAnswers: true, blocked: false, lastSubmittedAt: null };
+      }
+
+      const { data, error } = await supabase
+        .from('par_q_responses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('submitted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return computeStatus((data as ParQResponseRow | null) ?? null);
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  return {
+    status: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+}
+
+export function useSubmitParQ() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (answers: ParQAnswers) => {
+      if (!user?.id) throw new Error('Usuário não autenticado');
+
+      const anyYes = Object.values(answers).some(Boolean);
+
+      const { data, error } = await supabase
+        .from('par_q_responses')
+        .insert({
+          user_id: user.id,
+          version: PAR_Q_VERSION,
+          answers,
+          any_yes: anyYes,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ParQResponseRow;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['par-q-status', user?.id] });
+    },
+  });
+}

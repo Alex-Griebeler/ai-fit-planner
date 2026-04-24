@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
+import { ParQGate } from "@/components/ParQGate";
 import { BottomNav } from "@/components/BottomNav";
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +31,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const ParQ = lazy(() => import('./pages/ParQ'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,79 +92,105 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route 
-                    path="/dashboard" 
+                  <Route
+                    path="/dashboard"
                     element={
                       <ProtectedRoute>
-                        <Dashboard />
+                        <ParQGate>
+                          <Dashboard />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/onboarding" 
+                  <Route
+                    path="/onboarding"
                     element={
                       <ProtectedRoute>
-                        <Onboarding />
+                        <ParQGate>
+                          <Onboarding />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/result" 
+                  <Route
+                    path="/result"
                     element={
                       <ProtectedRoute>
-                        <Result />
+                        <ParQGate>
+                          <Result />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/settings" 
+                  <Route
+                    path="/settings"
                     element={
                       <ProtectedRoute>
-                        <Settings />
+                        <ParQGate>
+                          <Settings />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/workout" 
+                  <Route
+                    path="/workout"
                     element={
                       <ProtectedRoute>
-                        <WorkoutExecution />
+                        <ParQGate>
+                          <WorkoutExecution />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
                   {/* /workout-preview route removed - users now go directly to /workout */}
                   <Route path="/pricing" element={<Pricing />} />
-                  <Route 
-                    path="/progress" 
+                  <Route
+                    path="/progress"
                     element={
                       <ProtectedRoute>
-                        <Progress />
+                        <ParQGate>
+                          <Progress />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/workout-complete" 
+                  <Route
+                    path="/workout-complete"
                     element={
                       <ProtectedRoute>
-                        <WorkoutComplete />
+                        <ParQGate>
+                          <WorkoutComplete />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/achievements" 
+                  <Route
+                    path="/achievements"
                     element={
                       <ProtectedRoute>
-                        <Achievements />
+                        <ParQGate>
+                          <Achievements />
+                        </ParQGate>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/admin" 
+                  <Route
+                    path="/admin"
                     element={
                       <AdminRoute>
-                        <AdminDashboard />
+                        <ParQGate>
+                          <AdminDashboard />
+                        </ParQGate>
                       </AdminRoute>
-                    } 
+                    }
+                  />
+                  <Route
+                    path="/par-q"
+                    element={
+                      <ProtectedRoute>
+                        <ParQ />
+                      </ProtectedRoute>
+                    }
                   />
                   {/* Public legal pages */}
                   <Route path="/termos" element={<TermsOfUse />} />
