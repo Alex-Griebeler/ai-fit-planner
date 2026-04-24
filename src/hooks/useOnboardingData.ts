@@ -4,6 +4,9 @@ import { useAuth } from "./useAuth";
 import { OnboardingData, InjuryArea, InjuryDetails, CardioTiming } from "@/types/onboarding";
 import { normalizeTrainingDays } from "@/lib/trainingDays";
 import { goalsFromLegacy, normalizeGoals, primaryGoalFromGoals } from "@/lib/goals";
+import { isMissingColumnError, omitKeys } from "@/lib/supabaseErrors";
+
+const OPTIONAL_SCHEMA_COLUMNS = ["goals", "injury_details", "cardio_timing"];
 
 export interface UserOnboardingData {
   id: string;
@@ -109,26 +112,31 @@ export function useOnboardingData() {
       const dbData = appToDbFormat(onboardingData);
 
       const fullPayload: Record<string, unknown> = { user_id: user.id, ...dbData };
-      const fallbackPayload: Record<string, unknown> = { ...fullPayload, goals: undefined };
+      let payload = fullPayload;
+      let omittedColumns: string[] = [];
 
       let result = await supabase
         .from("user_onboarding_data")
         .upsert(
-          fullPayload as never,
+          payload as never,
           { onConflict: "user_id" }
         )
         .select()
         .single();
 
-      if (result.error?.message?.includes('column "goals"') || result.error?.message?.includes("goals does not exist")) {
+      for (const column of OPTIONAL_SCHEMA_COLUMNS) {
+        if (!isMissingColumnError(result.error, column)) continue;
+        omittedColumns = [...omittedColumns, column];
+        payload = omitKeys(fullPayload, omittedColumns);
         result = await supabase
           .from("user_onboarding_data")
           .upsert(
-            fallbackPayload as never,
+            payload as never,
             { onConflict: "user_id" }
           )
           .select()
           .single();
+        if (!result.error) break;
       }
 
       const { data, error } = result;
@@ -176,26 +184,31 @@ export function useOnboardingData() {
       if (partialData.stressLevel !== undefined) updateFields.stress_level = partialData.stressLevel;
 
       const fullPayload: Record<string, unknown> = { user_id: user.id, ...updateFields };
-      const fallbackPayload: Record<string, unknown> = { ...fullPayload, goals: undefined };
+      let payload = fullPayload;
+      let omittedColumns: string[] = [];
 
       let result = await supabase
         .from("user_onboarding_data")
         .upsert(
-          fullPayload as never,
+          payload as never,
           { onConflict: "user_id" }
         )
         .select()
         .single();
 
-      if (result.error?.message?.includes('column "goals"') || result.error?.message?.includes("goals does not exist")) {
+      for (const column of OPTIONAL_SCHEMA_COLUMNS) {
+        if (!isMissingColumnError(result.error, column)) continue;
+        omittedColumns = [...omittedColumns, column];
+        payload = omitKeys(fullPayload, omittedColumns);
         result = await supabase
           .from("user_onboarding_data")
           .upsert(
-            fallbackPayload as never,
+            payload as never,
             { onConflict: "user_id" }
           )
           .select()
           .single();
+        if (!result.error) break;
       }
 
       const { data, error } = result;

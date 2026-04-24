@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { isMissingColumnError, omitKeys } from "@/lib/supabaseErrors";
 
 export interface Profile {
   id: string;
@@ -59,14 +60,14 @@ export function useProfile() {
       // Use upsert to create profile if it doesn't exist
       const fullPayload: Record<string, unknown> = {
         user_id: user.id,
-        name: updates.name || "Usuário",
+        name: updates.name ?? query.data?.name ?? "Usuário",
         gender: updates.gender,
         birth_date: updates.birth_date,
         age: updates.age,
         height: updates.height,
         weight: updates.weight,
       };
-      const fallbackPayload: Record<string, unknown> = { ...fullPayload, birth_date: undefined };
+      const fallbackPayload = omitKeys(fullPayload, ["birth_date"]);
 
       let result = await supabase
         .from("profiles")
@@ -76,7 +77,7 @@ export function useProfile() {
         .select()
         .single();
 
-      if (result.error?.message?.includes('column "birth_date"') || result.error?.message?.includes("birth_date does not exist")) {
+      if (isMissingColumnError(result.error, "birth_date")) {
         result = await supabase
           .from("profiles")
           .upsert(fallbackPayload as never, {
