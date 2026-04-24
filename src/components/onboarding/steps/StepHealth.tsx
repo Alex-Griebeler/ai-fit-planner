@@ -90,9 +90,9 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                         key={area.key}
                         onClick={() => handleInjuryAreaToggle(area.key)}
                         className={`
-                          flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all
-                          ${isSelected 
-                            ? 'border-primary bg-primary/10' 
+                          flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
+                          ${isSelected
+                            ? 'border-primary bg-primary/10'
                             : 'border-border bg-card hover:border-primary/50'
                           }
                         `}
@@ -101,16 +101,10 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                           checked={isSelected}
                           onClick={(event) => event.stopPropagation()}
                           onCheckedChange={() => handleInjuryAreaToggle(area.key)}
-                          className="mt-0.5"
                         />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {area.label}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {area.description}
-                          </p>
-                        </div>
+                        <p className="text-sm font-medium text-foreground flex-1 min-w-0">
+                          {area.label}
+                        </p>
                       </div>
                     );
                   })}
