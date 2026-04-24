@@ -57,7 +57,7 @@ export function useProfile() {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       // Use upsert to create profile if it doesn't exist
-      const fullPayload = {
+      const fullPayload: Record<string, unknown> = {
         user_id: user.id,
         name: updates.name || "Usuário",
         gender: updates.gender,
@@ -66,11 +66,11 @@ export function useProfile() {
         height: updates.height,
         weight: updates.weight,
       };
-      const fallbackPayload = { ...fullPayload, birth_date: undefined };
+      const fallbackPayload: Record<string, unknown> = { ...fullPayload, birth_date: undefined };
 
       let result = await supabase
         .from("profiles")
-        .upsert(fullPayload, {
+        .upsert(fullPayload as never, {
           onConflict: "user_id",
         })
         .select()
@@ -79,7 +79,7 @@ export function useProfile() {
       if (result.error?.message?.includes('column "birth_date"') || result.error?.message?.includes("birth_date does not exist")) {
         result = await supabase
           .from("profiles")
-          .upsert(fallbackPayload, {
+          .upsert(fallbackPayload as never, {
             onConflict: "user_id",
           })
           .select()

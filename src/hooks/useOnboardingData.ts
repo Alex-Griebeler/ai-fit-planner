@@ -105,8 +105,8 @@ export function useOnboardingData() {
 
       const dbData = appToDbFormat(onboardingData);
 
-      const fullPayload = { user_id: user.id, ...dbData };
-      const fallbackPayload = { ...fullPayload, goals: undefined };
+      const fullPayload: Record<string, unknown> = { user_id: user.id, ...dbData };
+      const fallbackPayload: Record<string, unknown> = { ...fullPayload, goals: undefined };
 
       let result = await supabase
         .from("user_onboarding_data")
@@ -171,8 +171,8 @@ export function useOnboardingData() {
       if (partialData.sleepHours !== undefined) updateFields.sleep_hours = partialData.sleepHours;
       if (partialData.stressLevel !== undefined) updateFields.stress_level = partialData.stressLevel;
 
-      const fullPayload = { user_id: user.id, ...updateFields };
-      const fallbackPayload = { ...fullPayload, goals: undefined };
+      const fullPayload: Record<string, unknown> = { user_id: user.id, ...updateFields };
+      const fallbackPayload: Record<string, unknown> = { ...fullPayload, goals: undefined };
 
       let result = await supabase
         .from("user_onboarding_data")

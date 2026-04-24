@@ -4538,7 +4538,7 @@ ${periodizationConfig.progressionRules.map((rule, i) => `${i + 1}. ${rule}`).joi
 ## OBJETIVO E PRAZO
 - Objetivo: ${getGoalLabel(userData.goal)}
 - Objetivos combinados: ${goalsLabel}
-- Prazo: ${getTimeframeLabel(userData.timeframe)}
+- Prazo: ${getTimeframeLabel(userData.timeframe ?? null)}
 
 ## DISPONIBILIDADE
 - Dias por semana: ${userData.trainingDays?.length || 3} dias
