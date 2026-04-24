@@ -240,6 +240,33 @@ export type Database = {
         }
         Relationships: []
       }
+      par_q_responses: {
+        Row: {
+          answers: Json
+          any_yes: boolean
+          id: string
+          submitted_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          answers?: Json
+          any_yes?: boolean
+          id?: string
+          submitted_at?: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          answers?: Json
+          any_yes?: boolean
+          id?: string
+          submitted_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       prescription_feedback: {
         Row: {
           completed_sets: number
