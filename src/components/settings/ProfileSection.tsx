@@ -193,14 +193,15 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
         {/* Data de nascimento */}
         <div className="space-y-2">
           <Label htmlFor="birthDate">Data de nascimento</Label>
-          <Input
-            id="birthDate"
-            type="date"
-            value={formData.birthDate}
-            min={birthDateBounds.min}
-            max={birthDateBounds.max}
-            onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-          />
+            <Input
+              id="birthDate"
+              type="date"
+              value={formData.birthDate}
+              min={birthDateBounds.min}
+              max={birthDateBounds.max}
+              onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+              className="h-12 [appearance:textfield] [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-normal"
+            />
           {formData.birthDate && computedAge === null && (
             <p className="text-xs text-destructive">
               Data inválida para cálculo de idade.
@@ -225,6 +226,7 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
               placeholder="170"
               min="100"
               max="250"
+              className="h-12"
             />
           </div>
           <div className="space-y-2">
@@ -238,6 +240,7 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
               placeholder="70"
               min="30"
               max="300"
+              className="h-12"
             />
           </div>
         </div>

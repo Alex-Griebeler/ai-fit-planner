@@ -73,6 +73,7 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
                 updateData('birthDate', birthDate);
                 updateData('age', age);
               }}
+              className="h-12 [appearance:textfield] [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-normal"
             />
             {data.birthDate && !ageIsValid && (
               <p className="text-xs text-destructive mt-1">
@@ -92,6 +93,7 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
               max={MAX_HEIGHT}
               value={data.height || ''}
               onChange={(e) => updateData('height', parseInt(e.target.value) || null)}
+              className="h-12"
             />
             {data.height !== null && (data.height < MIN_HEIGHT || data.height > MAX_HEIGHT) && (
               <p className="text-xs text-destructive mt-1">Altura deve estar entre {MIN_HEIGHT} e {MAX_HEIGHT} cm</p>
@@ -110,6 +112,7 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
                 const val = parseFloat(e.target.value);
                 updateData('weight', Number.isNaN(val) ? null : val);
               }}
+              className="h-12"
             />
             {data.weight !== null && (data.weight < MIN_WEIGHT || data.weight > MAX_WEIGHT) && (
               <p className="text-xs text-destructive mt-1">Peso deve estar entre {MIN_WEIGHT} e {MAX_WEIGHT} kg</p>
