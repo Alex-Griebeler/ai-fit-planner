@@ -6,11 +6,16 @@ export type InputProps = React.ComponentProps<"input">;
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
+    const isDateType = type === "date";
+    
     return (
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-xl border-2 border-border bg-card px-4 py-3 text-base ring-offset-background",
+          "flex h-12 w-full rounded-xl border-2 border-border bg-card px-4 text-base ring-offset-background",
+          isDateType 
+            ? "py-0 [appearance:textfield] [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit]:min-h-[44px] [&::-webkit-datetime-edit]:leading-[44px] [&::-webkit-date-and-time-value]:text-left"
+            : "py-3",
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
           "placeholder:text-muted-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:border-primary",

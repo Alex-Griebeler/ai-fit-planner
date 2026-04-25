@@ -73,7 +73,7 @@ export function StepPersonalData({ data, updateData, onNext, onBack, totalSteps 
                 updateData('birthDate', birthDate);
                 updateData('age', age);
               }}
-              className="h-12 [appearance:textfield] [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-normal"
+              className="h-12"
             />
             {data.birthDate && !ageIsValid && (
               <p className="text-xs text-destructive mt-1">
