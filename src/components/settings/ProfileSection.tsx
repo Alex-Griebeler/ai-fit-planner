@@ -200,7 +200,7 @@ export function ProfileSection({ profile, onSave, isSaving }: ProfileSectionProp
               min={birthDateBounds.min}
               max={birthDateBounds.max}
               onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-              className="h-12 [appearance:textfield] [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:leading-normal"
+              className="h-12"
             />
           {formData.birthDate && computedAge === null && (
             <p className="text-xs text-destructive">
