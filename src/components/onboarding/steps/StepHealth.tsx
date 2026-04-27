@@ -249,10 +249,10 @@ function ChipRow<V extends string>({ label, options, value, onChange }: ChipRowP
               key={option.value}
               type="button"
               onClick={() => onChange(option.value)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs border font-medium transition-all ${
                 selected
-                  ? 'border-primary bg-primary/10 text-foreground'
-                  : 'border-border text-muted-foreground hover:border-primary/50'
+                  ? 'border-destructive bg-destructive text-destructive-foreground shadow-[0_0_0_1px_hsl(var(--destructive)/0.25)]'
+                  : 'border-border text-muted-foreground hover:border-destructive/50 hover:text-foreground'
               }`}
             >
               {option.label}
