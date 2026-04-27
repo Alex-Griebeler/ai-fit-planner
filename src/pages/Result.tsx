@@ -194,10 +194,23 @@ export default function Result() {
         throw new Error('Informe ao menos uma região afetada para gerar um plano seguro.');
       }
 
-      const { data: responseData, error: functionError } = await supabase.functions.invoke(
+      // Timeout de segurança: se a geração passar de 45s, abortamos para evitar tela presa
+      const GENERATION_TIMEOUT_MS = 45_000;
+      const invokePromise = supabase.functions.invoke(
         'generate-workout',
         { body: { userData: sanitizedUserData } }
       );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('A geração demorou mais que o esperado. Tente novamente.')),
+          GENERATION_TIMEOUT_MS,
+        );
+      });
+
+      const { data: responseData, error: functionError } = await Promise.race([
+        invokePromise,
+        timeoutPromise,
+      ]);
 
       // Handle rate limit (status 429) - resposta estruturada da Edge Function
       if (responseData?.reset_at || responseData?.error?.includes('Limite')) {
