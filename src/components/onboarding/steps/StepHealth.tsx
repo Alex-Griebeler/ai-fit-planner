@@ -120,8 +120,8 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                         className={`
                           flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
                           ${isSelected
-                            ? 'border-destructive bg-destructive/10 hover:bg-destructive/15'
-                            : 'border-border bg-card hover:border-destructive/40'
+                            ? 'border-destructive bg-destructive/15 shadow-[0_0_0_1px_hsl(var(--destructive)/0.25)] hover:bg-destructive/20'
+                            : 'border-border bg-card hover:border-destructive/40 hover:bg-destructive/5'
                           }
                         `}
                       >
@@ -129,10 +129,12 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                           checked={isSelected}
                           onClick={(event) => event.stopPropagation()}
                           onCheckedChange={() => handleInjuryAreaToggle(area.key)}
-                          className={isSelected ? 'border-destructive data-[state=checked]:bg-destructive data-[state=checked]:text-destructive-foreground data-[state=checked]:border-destructive' : ''}
+                          className={`h-5 w-5 rounded-full border-2 ${isSelected ? 'border-destructive bg-destructive text-destructive-foreground data-[state=checked]:border-destructive data-[state=checked]:bg-destructive data-[state=checked]:text-destructive-foreground' : 'border-muted-foreground/40'}`}
                         />
-                        <p className={`text-sm font-medium flex-1 min-w-0 ${isSelected ? 'text-destructive' : 'text-foreground'}`}>
+                        <p className="text-sm font-medium flex-1 min-w-0 text-foreground">
+                          <span className={`inline-flex max-w-full rounded-full px-2 py-0.5 transition-colors ${isSelected ? 'bg-destructive text-destructive-foreground' : 'bg-transparent'}`}>
                           {area.label}
+                          </span>
                         </p>
                       </div>
                     );
