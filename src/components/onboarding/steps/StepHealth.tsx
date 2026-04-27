@@ -158,10 +158,12 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                     return (
                       <div
                         key={areaKey}
-                        className="rounded-lg border border-border bg-card/40 p-3 space-y-3"
+                        className="rounded-lg border border-destructive bg-destructive/15 shadow-[0_0_0_1px_hsl(var(--destructive)/0.25)] p-3 space-y-3"
                       >
-                        <p className="text-sm font-medium text-foreground">
-                          {getAreaLabel(areaKey)}
+                        <p className="text-sm font-semibold">
+                          <span className="inline-flex max-w-full rounded-full bg-destructive text-destructive-foreground px-2 py-0.5">
+                            {getAreaLabel(areaKey)}
+                          </span>
                         </p>
                         {sideApplies && (
                           <ChipRow
