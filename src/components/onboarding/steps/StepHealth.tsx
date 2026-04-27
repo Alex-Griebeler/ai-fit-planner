@@ -120,8 +120,8 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                         className={`
                           flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
                           ${isSelected
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border bg-card hover:border-primary/50'
+                            ? 'border-destructive bg-destructive/10 hover:bg-destructive/15'
+                            : 'border-border bg-card hover:border-destructive/40'
                           }
                         `}
                       >
@@ -129,8 +129,9 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                           checked={isSelected}
                           onClick={(event) => event.stopPropagation()}
                           onCheckedChange={() => handleInjuryAreaToggle(area.key)}
+                          className={isSelected ? 'border-destructive data-[state=checked]:bg-destructive data-[state=checked]:text-destructive-foreground data-[state=checked]:border-destructive' : ''}
                         />
-                        <p className="text-sm font-medium text-foreground flex-1 min-w-0">
+                        <p className={`text-sm font-medium flex-1 min-w-0 ${isSelected ? 'text-destructive' : 'text-foreground'}`}>
                           {area.label}
                         </p>
                       </div>
