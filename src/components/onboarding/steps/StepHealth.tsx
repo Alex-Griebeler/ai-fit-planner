@@ -120,8 +120,8 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                         className={`
                           flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
                           ${isSelected
-                            ? 'border-destructive bg-destructive/15 shadow-[0_0_0_1px_hsl(var(--destructive)/0.25)] hover:bg-destructive/20'
-                            : 'border-border bg-card hover:border-destructive/40 hover:bg-destructive/5'
+                            ? 'border-destructive/60 bg-card hover:bg-card'
+                            : 'border-border bg-card hover:border-destructive/40'
                           }
                         `}
                       >
