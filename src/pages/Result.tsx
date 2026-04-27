@@ -477,10 +477,12 @@ export default function Result() {
 
   const userName = profile?.name || data?.name || 'Atleta';
 
-  // Determine if we're generating a new plan (vs just loading an existing one)
-  const isCreatingNewPlan = loading && !activePlan && !plan;
-  
-  // Show loading only when: 
+  // Determine if we're generating a new plan.
+  // `loading` é setado apenas dentro de generatePlan(), então sempre que estiver true
+  // significa que uma nova geração está em curso — independente de já existir um activePlan.
+  const isCreatingNewPlan = loading;
+
+  // Show loading only when:
   // 1. Generating a new plan, OR
   // 2. Initial data loading AND no plan to display yet
   const shouldShowLoading = isCreatingNewPlan || (isInitialLoading && !plan && !activePlan);
