@@ -41,6 +41,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GeneratingPlanScreen } from '@/components/GeneratingPlanScreen';
 
 
 // Descrições dos tipos de cardio para exibição
