@@ -41,6 +41,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GeneratingPlanScreen } from '@/components/GeneratingPlanScreen';
 
 
 // Descrições dos tipos de cardio para exibição
@@ -473,36 +474,7 @@ export default function Result() {
 
   // Loading State - Apple minimal with progress indicator
   if (shouldShowLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center px-6"
-        >
-          <motion.div
-            className="w-10 h-10 mx-auto mb-6 border-2 border-primary border-t-transparent rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            role="status"
-            aria-label="Carregando"
-          />
-          <p className="text-foreground text-base font-medium mb-2">
-            {isCreatingNewPlan ? 'Analisando seu questionário e montando seu plano' : 'Carregando...'}
-          </p>
-          {isCreatingNewPlan && (
-            <div className="space-y-1">
-              <p className="text-muted-foreground text-sm tracking-wide">
-                Validando segurança clínica e tempo da sessão...
-              </p>
-              <p className="text-muted-foreground text-xs tracking-wide">
-                Isso pode levar alguns segundos.
-              </p>
-            </div>
-          )}
-        </motion.div>
-      </div>
-    );
+    return <GeneratingPlanScreen isCreatingNewPlan={isCreatingNewPlan} />;
   }
 
   // Error State
