@@ -194,6 +194,10 @@ export default function Result() {
         throw new Error('Informe ao menos uma região afetada para gerar um plano seguro.');
       }
 
+      if (sanitizedUserData.hasHealthConditions && sanitizedUserData.healthDescription.length < 10) {
+        throw new Error('Descreva sua condição/lesão com pelo menos 10 caracteres.');
+      }
+
       // Timeout de segurança: se a geração passar de 45s, abortamos para evitar tela presa
       const GENERATION_TIMEOUT_MS = 45_000;
       const invokePromise = supabase.functions.invoke(
