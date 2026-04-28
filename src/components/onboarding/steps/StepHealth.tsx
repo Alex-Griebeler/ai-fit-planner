@@ -69,7 +69,9 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
 
   const selectedAreasCount = (data.injuryAreas || []).length;
   const missingInjuryArea = data.hasHealthConditions && selectedAreasCount === 0;
-  const canProceed = !missingInjuryArea;
+  const descriptionLength = data.healthDescription.trim().length;
+  const missingDescription = data.hasHealthConditions && descriptionLength < 10;
+  const canProceed = !missingInjuryArea && !missingDescription;
 
   return (
     <OnboardingLayout
@@ -192,7 +194,7 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
                   Descrição da condição/lesão
-                  <span className="text-xs font-normal text-muted-foreground ml-2">(opcional)</span>
+                  <span className="text-xs font-normal text-destructive ml-2">(obrigatório, mín. 10 caracteres)</span>
                 </p>
                 <Textarea
                   placeholder="Ex.: dor no ombro direito há 3 meses, piora ao elevar o braço acima da cabeça."
@@ -202,11 +204,13 @@ export function StepHealth({ data, updateData, onNext, onBack, totalSteps }: Ste
                   maxLength={500}
                 />
                 <div className="mt-2 flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Quanto mais claro, mais segura fica a prescrição.
+                  <p className={`text-xs ${missingDescription ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {missingDescription
+                      ? `Descreva com pelo menos 10 caracteres (${descriptionLength}/10).`
+                      : 'Quanto mais claro, mais segura fica a prescrição.'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {data.healthDescription.trim().length}/500
+                    {descriptionLength}/500
                   </p>
                 </div>
               </div>

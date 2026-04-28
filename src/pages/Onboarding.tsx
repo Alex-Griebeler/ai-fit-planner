@@ -111,6 +111,11 @@ export default function Onboarding() {
         setStep(9);
         return;
       }
+      if (data.hasHealthConditions && trimmedHealthDescription.length < 10) {
+        toast.error('Descreva sua condição/lesão com pelo menos 10 caracteres.');
+        setStep(9);
+        return;
+      }
 
       // Salva perfil com dados biométricos
       await updateProfile({

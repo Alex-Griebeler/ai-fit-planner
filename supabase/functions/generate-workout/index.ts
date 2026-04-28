@@ -178,6 +178,13 @@ const OnboardingSchema = z.object({
         path: ["injuryAreas"],
       });
     }
+    if (!data.healthDescription || data.healthDescription.trim().length < 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Descreva sua condição/lesão com pelo menos 10 caracteres para gerar um plano seguro.",
+        path: ["healthDescription"],
+      });
+    }
   }
 });
 
