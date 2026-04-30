@@ -12,6 +12,7 @@ import {
   EngagementCard,
   LearningContextCard,
   PremiumGrantCard,
+  BetaPremiumCard,
 } from '@/components/admin';
 
 export default function AdminDashboard() {
@@ -148,7 +149,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Admin Tools */}
-        <PremiumGrantCard />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <BetaPremiumCard />
+          <PremiumGrantCard />
+        </div>
       </div>
     </div>
   );
