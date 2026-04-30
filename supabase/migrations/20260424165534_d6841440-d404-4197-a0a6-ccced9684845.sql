@@ -12,11 +12,13 @@ CREATE INDEX IF NOT EXISTS idx_par_q_responses_user_submitted
 
 ALTER TABLE public.par_q_responses ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can read their own par_q responses" ON public.par_q_responses;
 CREATE POLICY "Users can read their own par_q responses"
 ON public.par_q_responses
 FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own par_q responses" ON public.par_q_responses;
 CREATE POLICY "Users can insert their own par_q responses"
 ON public.par_q_responses
 FOR INSERT

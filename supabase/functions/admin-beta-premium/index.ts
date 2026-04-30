@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@18.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,20 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function hasPaidStripeSubscription(stripe: Stripe, email: string): Promise<boolean> {
+  const customers = await stripe.customers.list({ email, limit: 10 });
+  for (const customer of customers.data) {
+    const [activeSubs, trialingSubs] = await Promise.all([
+      stripe.subscriptions.list({ customer: customer.id, status: "active", limit: 1 }),
+      stripe.subscriptions.list({ customer: customer.id, status: "trialing", limit: 1 }),
+    ]);
+    if (activeSubs.data.length > 0 || trialingSubs.data.length > 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 Deno.serve(async (req) => {
@@ -166,31 +181,90 @@ Deno.serve(async (req) => {
         .eq("id", 1);
       if (cfgErr) throw new HttpError(500, cfgErr.message);
 
-      // 2. Revoke beta grants — but skip users who upgraded to paid Stripe
+      // 2. Revoke beta grants — skip paid users verified directly in Stripe
       const { data: revokeTargets, error: selErr } = await supabase
         .from("subscriptions")
-        .select("user_id, stripe_subscription_id")
+        .select("user_id")
         .eq("is_beta_grant", true)
         .eq("plan_type", "premium");
       if (selErr) throw new HttpError(500, selErr.message);
 
-      const toRevoke = (revokeTargets ?? []).filter((r) => !r.stripe_subscription_id);
+      const targetIds = [...new Set((revokeTargets ?? []).map((r) => r.user_id))];
+      if (targetIds.length === 0) {
+        return jsonResponse({ success: true, revoked: 0, skipped_paid: 0, skipped_unverified: 0 });
+      }
+
+      // Resolve emails for Stripe verification
+      const idSet = new Set(targetIds);
+      const idToEmail = new Map<string, string | null>();
+      let page = 1;
+      const perPage = 1000;
+      while (page <= 50) {
+        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) throw new HttpError(500, error.message);
+        for (const u of data.users) {
+          if (idSet.has(u.id)) idToEmail.set(u.id, u.email ?? null);
+        }
+        if (data.users.length < perPage) break;
+        page += 1;
+      }
+
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" }) : null;
+      if (!stripe) {
+        console.warn("admin-beta-premium: STRIPE_SECRET_KEY missing during revoke; preserving users.");
+      }
+
+      const toRevoke: string[] = [];
+      const paidIds: string[] = [];
+      let skippedUnverified = 0;
+      for (const userId of targetIds) {
+        const email = idToEmail.get(userId);
+        if (!stripe || !email) {
+          skippedUnverified += 1;
+          continue;
+        }
+        try {
+          const isPaid = await hasPaidStripeSubscription(stripe, email);
+          if (isPaid) {
+            paidIds.push(userId);
+          } else {
+            toRevoke.push(userId);
+          }
+        } catch (verifyError) {
+          console.error("admin-beta-premium stripe verify failed:", verifyError);
+          skippedUnverified += 1;
+        }
+      }
+
+      // Paid users should keep premium, but no longer count as beta grants.
+      if (paidIds.length > 0) {
+        const { error: paidErr } = await supabase
+          .from("subscriptions")
+          .update({
+            is_beta_grant: false,
+            updated_at: new Date().toISOString(),
+          })
+          .in("user_id", paidIds)
+          .eq("plan_type", "premium");
+        if (paidErr) throw new HttpError(500, paidErr.message);
+      }
+
       let revoked = 0;
       if (toRevoke.length > 0) {
-        const ids = toRevoke.map((r) => r.user_id);
         const { error: updErr, count } = await supabase
           .from("subscriptions")
           .update(
             {
               plan_type: "free",
-              status: "canceled",
+              status: "active",
               current_period_end: new Date().toISOString(),
               is_beta_grant: false,
               updated_at: new Date().toISOString(),
             },
             { count: "exact" },
           )
-          .in("user_id", ids);
+          .in("user_id", toRevoke);
         if (updErr) throw new HttpError(500, updErr.message);
         revoked = count ?? toRevoke.length;
       }
@@ -198,7 +272,8 @@ Deno.serve(async (req) => {
       return jsonResponse({
         success: true,
         revoked,
-        skipped_paid: (revokeTargets?.length ?? 0) - toRevoke.length,
+        skipped_paid: paidIds.length,
+        skipped_unverified: skippedUnverified,
       });
     }
 

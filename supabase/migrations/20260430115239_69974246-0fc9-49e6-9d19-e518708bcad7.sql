@@ -27,9 +27,9 @@ CREATE POLICY "Admins can insert beta config"
   ON public.beta_premium_config FOR INSERT
   WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
 
--- Inicializa singleton já ativo
+-- Inicializa singleton inativo (ativação deve ser ação explícita no admin)
 INSERT INTO public.beta_premium_config (id, is_active, max_slots, slots_used, default_duration_days, started_at)
-VALUES (1, true, 30, 0, 30, now())
+VALUES (1, false, 30, 0, 30, null)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Coluna is_beta_grant em subscriptions
