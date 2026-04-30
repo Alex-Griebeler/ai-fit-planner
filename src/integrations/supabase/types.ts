@@ -267,6 +267,39 @@ export type Database = {
         }
         Relationships: []
       }
+      premium_test_emails_backup: {
+        Row: {
+          backed_up_at: string
+          email: string | null
+          had_subscription: boolean | null
+          previous_current_period_end: string | null
+          previous_current_period_start: string | null
+          previous_plan_type: string | null
+          previous_status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          backed_up_at?: string
+          email?: string | null
+          had_subscription?: boolean | null
+          previous_current_period_end?: string | null
+          previous_current_period_start?: string | null
+          previous_plan_type?: string | null
+          previous_status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          backed_up_at?: string
+          email?: string | null
+          had_subscription?: boolean | null
+          previous_current_period_end?: string | null
+          previous_current_period_start?: string | null
+          previous_plan_type?: string | null
+          previous_status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       prescription_feedback: {
         Row: {
           completed_sets: number

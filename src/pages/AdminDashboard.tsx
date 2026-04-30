@@ -11,6 +11,7 @@ import {
   PeriodSelector,
   EngagementCard,
   LearningContextCard,
+  PremiumGrantCard,
 } from '@/components/admin';
 
 export default function AdminDashboard() {
@@ -145,6 +146,9 @@ export default function AdminDashboard() {
           />
           <LearningContextCard metrics={metrics.learningContext} />
         </div>
+
+        {/* Admin Tools */}
+        <PremiumGrantCard />
       </div>
     </div>
   );
