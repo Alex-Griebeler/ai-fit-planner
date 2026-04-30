@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
           .update(
             {
               plan_type: "free",
-              status: "canceled",
+              status: "active",
               current_period_end: new Date().toISOString(),
               is_beta_grant: false,
               updated_at: new Date().toISOString(),
