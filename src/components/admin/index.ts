@@ -4,3 +4,4 @@ export { ConversionFunnel } from './ConversionFunnel';
 export { PeriodSelector } from './PeriodSelector';
 export { EngagementCard } from './EngagementCard';
 export { LearningContextCard } from './LearningContextCard';
+export { PremiumGrantCard } from './PremiumGrantCard';
