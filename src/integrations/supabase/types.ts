@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      beta_premium_config: {
+        Row: {
+          created_at: string
+          default_duration_days: number
+          ended_at: string | null
+          id: number
+          is_active: boolean
+          max_slots: number
+          slots_used: number
+          started_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_duration_days?: number
+          ended_at?: string | null
+          id?: number
+          is_active?: boolean
+          max_slots?: number
+          slots_used?: number
+          started_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_duration_days?: number
+          ended_at?: string | null
+          id?: number
+          is_active?: boolean
+          max_slots?: number
+          slots_used?: number
+          started_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       exercise_loads: {
         Row: {
           created_at: string
@@ -486,6 +522,7 @@ export type Database = {
           current_period_end: string | null
           current_period_start: string | null
           id: string
+          is_beta_grant: boolean
           plan_type: string
           status: string
           stripe_customer_id: string | null
@@ -498,6 +535,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          is_beta_grant?: boolean
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
@@ -510,6 +548,7 @@ export type Database = {
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          is_beta_grant?: boolean
           plan_type?: string
           status?: string
           stripe_customer_id?: string | null
